@@ -1,10 +1,8 @@
 #ifndef traverse_lazy_h
 #define traverse_lazy_h
-#include "types.h"
+#include "exafmm.h"
 
 namespace exafmm {
-  real_t theta;                                                 //!< Multipole acceptance criterion
-
   //! Recursive call to post-order tree traversal for upward pass
   void upwardPass(Cell * Ci) {
     for (Cell * Cj=Ci->CHILD; Cj!=Ci->CHILD+Ci->NCHILD; Cj++) { // Loop over child cells

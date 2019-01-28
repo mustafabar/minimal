@@ -1,10 +1,8 @@
 #ifndef buildtree_h
 #define buildtree_h
-#include "types.h"
+#include "exafmm.h"
 
 namespace exafmm {
-  int ncrit;                                                    //!< Number of bodies per leaf cell
-
   //! Get bounding box of bodies
   void getBounds(Bodies & bodies, real_t & R0, real_t * X0) {
     real_t Xmin[3], Xmax[3];                                    // Min, max of domain

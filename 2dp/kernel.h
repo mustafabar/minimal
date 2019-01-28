@@ -1,13 +1,8 @@
 #ifndef kernel_h
 #define kernel_h
-#include "types.h"
+#include "exafmm.h"
 
 namespace exafmm {
-  int P;                                                        //!< Order of expansions
-  real_t dX[2];                                                 //!< Distance vector
-  real_t Xperiodic[2];                                          //!< Periodic coordinate offset
-#pragma omp threadprivate(dX,Xperiodic)                         //!< Make global variables private
-
   //!< L2 norm of vector X
   inline real_t norm(real_t * X) {
     return X[0] * X[0] + X[1] * X[1];                           // L2 norm
@@ -20,7 +15,7 @@ namespace exafmm {
     for (int i=0; i<Ci->NBODY; i++) {                           // Loop over target bodies
       real_t p = 0, F[2] = {0, 0};                              //  Initialize potential, force
       for (int j=0; j<Cj->NBODY; j++) {                         //  Loop over source bodies
-        for (int d=0; d<2; d++) dX[d] = Bi[i].X[d] - Bj[j].X[d] - Xperiodic[d];// Calculate distance vector
+        for (int d=0; d<2; d++) dX[d] = Bi[i].X[d] - Bj[j].X[d] - iX[d] * cycle;// Calculate distance vector
         real_t R2 = norm(dX);                                   //   Calculate distance squared
         if (R2 != 0) {                                          //   If not the same point
           real_t invR = 1 / sqrt(R2);                           //    1 / R
@@ -68,7 +63,7 @@ namespace exafmm {
 
   //!< M2L kernel between cells Ci and Cj
   void M2L(Cell * Ci, Cell * Cj) {
-    for (int d=0; d<2; d++) dX[d] = Ci->X[d] - Cj->X[d] - Xperiodic[d];// Get distance vector
+    for (int d=0; d<2; d++) dX[d] = Ci->X[d] - Cj->X[d] - iX[d] * cycle;// Get distance vector
     complex_t Z(dX[0],dX[1]), powZn(1.0, 0.0), powZnk(1.0, 0.0), invZ(powZn/Z);// Convert to complex plane
     Ci->L[0] += -Cj->M[0] * log(Z);                             // Log term (for 0th order)
     Ci->L[0] += Cj->M[1] * invZ;                                // Constant term

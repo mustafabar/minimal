@@ -1,10 +1,8 @@
 #ifndef traverse_eager_h
 #define traverse_eager_h
-#include "types.h"
+#include "exafmm.h"
 
 namespace exafmm {
-  real_t theta;                                                 //!< Multipole acceptance criteria
-
   //! Recursive call to post-order tree traversal for upward pass
   void upwardPass(Cell * Ci) {
     for (Cell * Cj=Ci->CHILD; Cj!=Ci->CHILD+Ci->NCHILD; Cj++) { // Loop over child cells

@@ -1,12 +1,12 @@
-#ifndef types_h
-#define types_h
+#ifndef exafmm_h
+#define exafmm_h
 #include <complex>
 #include <cstdio>
 #include <cstdlib>
 #include <vector>
 
 namespace exafmm {
-  // Basic type definitions
+  //! Basic type definitions
   typedef double real_t;                                        //!< Floating point type is single precision
   typedef std::complex<real_t> complex_t;                       //!< Complex type
 
@@ -27,12 +27,26 @@ namespace exafmm {
     Body * BODY;                                                //!< Pointer of first body
     real_t X[2];                                                //!< Cell center
     real_t R;                                                   //!< Cell radius
+#if EXAFMM_LAZY
     std::vector<Cell*> listM2L;                                 //!< M2L interaction list
     std::vector<Cell*> listP2P;                                 //!< P2P interaction list
+    std::vector<int> periodicM2L;                               //!< M2L periodic index
+    std::vector<int> periodicP2P;                               //!< P2P periodic index
+#endif
     std::vector<complex_t> M;                                   //!< Multipole expansion coefficients
     std::vector<complex_t> L;                                   //!< Local expansion coefficients
   };
   typedef std::vector<Cell> Cells;                              //!< Vector of cells
+
+  //! Global variables
+  int P;                                                        //!< Order of expansions
+  int ncrit;                                                    //!< Number of bodies per leaf cell
+  int images;                                                   //!< Number of periodic image sublevels
+  int iX[2];                                                    //!< 2-D periodic index
+  real_t cycle;                                                 //!< Cycle of periodic boundary condition
+  real_t theta;                                                 //!< Multipole acceptance criterion
+  real_t dX[2];                                                 //!< Distance vector
+#pragma omp threadprivate(iX,dX)                                //!< Make global variables private
 }
 
 #endif

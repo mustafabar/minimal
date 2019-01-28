@@ -1,13 +1,9 @@
 #ifndef kernel_h
 #define kernel_h
-#include "types.h"
+#include "exafmm.h"
 
 namespace exafmm {
   const complex_t I(0.,1.);                                     //!< Imaginary unit
-  int P;                                                        //!< Order of expansions
-  int NTERM;                                                    //!< Number of coefficients
-  real_t dX[3];                                                 //!< Distance vector
-#pragma omp threadprivate(dX)                                   //!< Make global variables private
 
   //!< L2 norm of vector X
   inline real_t norm(real_t * X) {

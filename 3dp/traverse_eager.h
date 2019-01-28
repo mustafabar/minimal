@@ -1,11 +1,8 @@
 #ifndef traverse_eager_h
 #define traverse_eager_h
-#include "types.h"
+#include "exafmm.h"
 
 namespace exafmm {
-  int images;                                                   //!< Number of periodic image sublevels
-  real_t theta;                                                 //!< Multipole acceptance criteria
-
   //! Recursive call to post-order tree traversal for upward pass
   void upwardPass(Cell * Ci) {
     for (Cell * Cj=Ci->CHILD; Cj!=Ci->CHILD+Ci->NCHILD; Cj++) { // Loop over child cells
@@ -28,7 +25,7 @@ namespace exafmm {
 
   //! Recursive call to dual tree traversal for horizontal pass
   void horizontalPass(Cell * Ci, Cell * Cj) {
-    for (int d=0; d<3; d++) dX[d] = Ci->X[d] - Cj->X[d] - Xperiodic[d];// Distance vector from source to target
+    for (int d=0; d<3; d++) dX[d] = Ci->X[d] - Cj->X[d] - iX[d] * cycle;// Distance vector from source to target
     real_t R2 = norm(dX) * theta * theta;                       // Scalar distance squared
     if (R2 > (Ci->R + Cj->R) * (Ci->R + Cj->R)) {               // If distance is far enough
       M2L(Ci, Cj);                                              //  M2L kernel
@@ -46,7 +43,7 @@ namespace exafmm {
   }
 
   //! Horizontal pass for periodic images
-  void periodic(Cell * Ci0, Cell * Cj0, real_t cycle) {
+  void periodic(Cell * Ci0, Cell * Cj0) {
     Cells pcells(27);                                           // Create cells
     for (size_t c=0; c<pcells.size(); c++) {                    // Loop over periodic cells
       pcells[c].M.resize(NTERM, 0.0);                           //  Allocate & initialize M coefs
@@ -64,9 +61,9 @@ namespace exafmm {
               for (int cx=-1; cx<=1; cx++) {                    //      Loop over x periodic direction (child)
                 for (int cy=-1; cy<=1; cy++) {                  //       Loop over y periodic direction (child)
                   for (int cz=-1; cz<=1; cz++) {                //        Loop over z periodic direction (child)
-                    Xperiodic[0] = (ix * 3 + cx) * cycle;       //   Coordinate offset for x periodic direction
-                    Xperiodic[1] = (iy * 3 + cy) * cycle;       //   Coordinate offset for y periodic direction
-                    Xperiodic[2] = (iz * 3 + cz) * cycle;       //   Coordinate offset for z periodic direction
+                    iX[0] = ix * 3 + cx;                        //         Periodic index for x direction
+                    iX[1] = iy * 3 + cy;                        //         Periodic index for y direction
+                    iX[2] = iz * 3 + cz;                        //         Periodic index for z direction
                     M2L(Ci0, Ci);                               //         M2L kernel
                   }                                             //        End loop over z periodic direction (child)
                 }                                               //       End loop over y periodic direction (child)
@@ -95,21 +92,20 @@ namespace exafmm {
   }
 
   //! Horizontal pass interface
-  void horizontalPass(Cells & icells, Cells & jcells, real_t cycle) {
+  void horizontalPass(Cells & icells, Cells & jcells) {
     if (images == 0) {                                          // If non-periodic boundary condition
       horizontalPass(&icells[0], &jcells[0]);                   //  Pass root cell to recursive call
     } else {                                                    // If periodic boundary condition
-      for (int ix=-1; ix<=1; ix++) {                            //  Loop over x periodic direction
-        for (int iy=-1; iy<=1; iy++) {                          //   Loop over y periodic direction
-          for (int iz=-1; iz<=1; iz++) {                        //    Loop over z periodic direction
-            Xperiodic[0] = ix * cycle;                          //     Coordinate shift for x periodic direction
-            Xperiodic[1] = iy * cycle;                          //     Coordinate shift for y periodic direction
-            Xperiodic[2] = iz * cycle;                          //     Coordinate shift for z periodic direction
+      for (iX[0]=-1; iX[0]<=1; iX[0]++) {                       //  Loop over x periodic direction
+        for (iX[1]=-1; iX[1]<=1; iX[1]++) {                     //   Loop over y periodic direction
+          for (iX[2]=-1; iX[2]<=1; iX[2]++) {                   //    Loop over z periodic direction
             horizontalPass(&icells[0], &jcells[0]);             //     Horizontal pass for this periodic image
           }                                                     //    End loop over z periodic direction
         }                                                       //   End loop over y periodic direction
       }                                                         //  End loop over x periodic direction
-      periodic(&icells[0], &jcells[0], cycle);                  //  Horizontal pass for periodic images
+      real_t saveCycle = cycle;                                 //  Copy cycle
+      periodic(&icells[0], &jcells[0]);                         //  Horizontal pass for periodic images
+      cycle = saveCycle;                                        //  Copy back cycle
     }                                                           // End if for periodic boundary condition
   }
 
@@ -132,24 +128,29 @@ namespace exafmm {
   }
 
   //! Direct summation
-  void direct(Bodies & bodies, Bodies & jbodies, real_t cycle) {
+  void direct(Bodies & bodies, Bodies & jbodies) {
     Cells cells(2);                                             // Define a pair of cells to pass to P2P kernel
     Cell * Ci = &cells[0];                                      // Allocate single target
     Cell * Cj = &cells[1];                                      // Allocate single source
-    for (int ix=-1; ix<=1; ix++) {                              //  Loop over x periodic direction
-      for (int iy=-1; iy<=1; iy++) {                            //   Loop over y periodic direction
-        for (int iz=-1; iz<=1; iz++) {                          //    Loop over z periodic direction
-          Xperiodic[0] = ix * cycle;                            //     Coordinate shift for x periodic direction
-          Xperiodic[1] = iy * cycle;                            //     Coordinate shift for y periodic direction
-          Xperiodic[2] = iz * cycle;                            //     Coordinate shift for z periodic direction
-          Ci->BODY = &bodies[0];                                //     Iterator of first target body
-          Ci->NBODY = bodies.size();                            //     Number of target bodies
-          Cj->BODY = &jbodies[0];                               //     Iterator of first source body
-          Cj->NBODY = jbodies.size();                           //     Number of source bodies
-          P2P(Ci, Cj);                                          //     Evaluate P2P kenrel
-        }                                                       //    End loop over z periodic direction
-      }                                                         //   End loop over y periodic direction
-    }                                                           //  End loop over x periodic direction
+    Ci->BODY = &bodies[0];                                      // Pointer of first target body
+    Ci->NBODY = bodies.size();                                  // Number of target bodies
+    Cj->BODY = &jbodies[0];                                     // Pointer of first source body
+    Cj->NBODY = jbodies.size();                                 // Number of source bodies
+    int prange = 0;                                             // Range of periodic images
+    for (int i=0; i<images; i++) {                              // Loop over periodic image sublevels
+      prange += int(powf(3.,i));                                //  Accumulate range of periodic images
+    }                                                           // End loop over perioidc image sublevels
+#pragma omp parallel for collapse(3)
+    for (int ix=-prange; ix<=prange; ix++) {                    // Loop over x periodic direction
+      for (int iy=-prange; iy<=prange; iy++) {                  //  Loop over y periodic direction
+        for (int iz=-prange; iz<=prange; iz++) {                //   Loop over z periodic direction
+          iX[0] = ix;                                           //    Periodic index for x direction
+          iX[1] = iy;                                           //    Periodic index for y direction
+          iX[2] = iz;                                           //    Periodic index for z direction
+          P2P(Ci, Cj);                                          //    Evaluate P2P kenrel
+        }                                                       //   End loop over z periodic direction
+      }                                                         //  End loop over y periodic direction
+    }                                                           // End loop over x periodic direction
   }
 }
 #endif

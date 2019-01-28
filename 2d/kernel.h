@@ -1,12 +1,8 @@
 #ifndef kernel_h
 #define kernel_h
-#include "types.h"
+#include "exafmm.h"
 
 namespace exafmm {
-  int P;                                                        //!< Order of expansions
-  real_t dX[2];                                                 //!< Distance vector
-#pragma omp threadprivate(dX)                                   //!< Make global variables private
-
   //!< L2 norm of vector X
   inline real_t norm(real_t * X) {
     return X[0] * X[0] + X[1] * X[1];                           // L2 norm
