@@ -15,7 +15,7 @@ namespace EXAFMM_NAMESPACE {
     int multipoleCount[10][26];
     int leafsDispl[26];
     int leafsCount[26];
-    int IX[10][3];
+    ivec3 IX[10];
     int gatherLevel;
     MPI_Comm MPI_COMM_LOCAL, MPI_COMM_GLOBAL;
 
@@ -29,7 +29,7 @@ namespace EXAFMM_NAMESPACE {
 	assert( mpisize % 8 == 0 || mpisize == 1 );
 	mpisize /= 8;
       }
-      int checkLevel[3], partition[3];
+      ivec3 checkLevel, partition;
       for_3d partition[d] = maxPartition[d];
       for( int d=0; d<3; d++ ) {
 	int lev = 1;
@@ -57,10 +57,10 @@ namespace EXAFMM_NAMESPACE {
 
     void setSendCounts() {
       int leafsType[3] = {1, (1 << maxLevel), (1 << (2 * maxLevel))};
-      int bodiesType[3];
+      ivec3 bodiesType;
       for_3d bodiesType[d] = leafsType[d] * float(numBodies) / numLeafs * 4;
       int i = 0;
-      int iX[3];
+      ivec3 iX;
       bodiesDispl[0] = leafsDispl[0] = 0;
       for( iX[2]=-1; iX[2]<=1; iX[2]++ ) {
 	for( iX[1]=-1; iX[1]<=1; iX[1]++ ) {
@@ -233,7 +233,7 @@ namespace EXAFMM_NAMESPACE {
       if(gatherLevel > maxGlobLevel) gatherLevel = maxGlobLevel;
 #if EXAFMM_SERIAL
 #else
-      int iX[3], numChild[3];
+      ivec3 iX, numChild;
       for_3d numChild[d] = numPartition[maxGlobLevel][d] / numPartition[gatherLevel][d];
       for_3d iX[d] = IX[maxGlobLevel][d] % numChild[d];
       int key = iX[0] + (iX[1] + iX[2] * numChild[1]) * numChild[0];
