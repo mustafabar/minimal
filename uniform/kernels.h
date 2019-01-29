@@ -69,7 +69,7 @@ namespace EXAFMM_NAMESPACE {
 
   private:
     inline void getIndex(ivec3 &iX, int index) const {
-      for_3d iX[d] = 0;
+      iX = 0;
       int d = 0, level = 0;
       while (index != 0) {
 	iX[d] += (index % 2) * (1 << level);
@@ -79,7 +79,7 @@ namespace EXAFMM_NAMESPACE {
       }
     }
 
-    void getCenter(real_t *dX, int index, int level) const {
+    void getCenter(vec3 &dX, int index, int level) const {
       real_t R = R0 / (1 << level);
       ivec3 iX = 0;
       getIndex(iX, index);
@@ -251,7 +251,7 @@ namespace EXAFMM_NAMESPACE {
       int levelOffset = ((1 << 3 * maxLevel) - 1) / 7 + 13 * numCells;
 #pragma omp parallel for
       for (int i=0; i<numLeafs; i++) {
-	real_t center[3];
+	vec3 center;
 	getCenter(center,i,maxLevel);
 	for (int j=Leafs[i+rankOffset][0]; j<Leafs[i+rankOffset][1]; j++) {
 	  real_t dX[3];
@@ -384,7 +384,7 @@ namespace EXAFMM_NAMESPACE {
       int levelOffset = ((1 << 3 * maxLevel) - 1) / 7;
 #pragma omp parallel for
       for (int i=0; i<numLeafs; i++) {
-	real_t center[3];
+	vec3 center;
 	getCenter(center,i,maxLevel);
 	real_t L[LTERM];
 	for_l L[l] = Local[i+levelOffset][l];
