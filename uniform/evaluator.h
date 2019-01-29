@@ -1,5 +1,4 @@
 #include "kernels.h"
-//#include "kernels_smooth.h"
 #include "logger.h"
 #include "namespace.h"
 
@@ -9,7 +8,7 @@ namespace EXAFMM_NAMESPACE {
     bool printNow;
 
   public:
-    Evaluator() : printNow(true) {}
+    Evaluator(int P) : UniformKernel(P), printNow(true) {}
 
     double getTime() const {
       struct timeval tv;

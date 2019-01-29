@@ -18,6 +18,7 @@
 using namespace EXAFMM_NAMESPACE;
 
 int main(int argc, char ** argv) {
+  const int P = 6;
   const int ksize = 11;
   const vec3 cycle = 20 * M_PI;
   const real_t alpha = 10 / max(cycle);
@@ -26,20 +27,18 @@ int main(int argc, char ** argv) {
   const real_t eps2 = 0.0;
   const complex_t wavek = complex_t(10.,1.) / real_t(2 * M_PI);
   Args args(argc, argv);
-  args.ncrit = 32;
-  args.images = 1;
   BaseMPI baseMPI;
   BoundBox boundBox;
   BuildTree buildTree(args.ncrit);
   Dataset data;
   Ewald ewald(ksize, alpha, sigma, cutoff, cycle);
-  Kernel kernel(args.P, eps2, wavek);
+  Kernel kernel(args.P, eps2);
   Traversal traversal(kernel, args.theta, args.nspawn, args.images, args.path);
   UpDownPass upDownPass(kernel);
 #if EXAFMM_SERIAL
-  SerialFMM FMM;
+  SerialFMM FMM(P);
 #else
-  ParallelFMM FMM;
+  ParallelFMM FMM(P);
 #endif
   TreeMPI treeMPI(kernel, baseMPI, args.theta, args.images);
   Verify verify(args.path);

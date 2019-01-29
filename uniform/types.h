@@ -85,15 +85,6 @@ namespace EXAFMM_NAMESPACE {
   typedef std::vector<Body> Bodies;                             //!< Vector of bodies
   typedef typename Bodies::iterator B_iter;                     //!< Iterator of body vector
 
-  /*
-#ifdef EXAFMM_PMAX
-  const int Pmax = EXAFMM_PMAX;                                 //!< Max order of expansions
-#else
-  const int Pmax = 10;                                          //!< Max order of expansions
-#endif
-  const int Pmin = 4;                                           //!< Min order of expansions
-  */
-
   //! Base components of cells
   struct CellBase {
     int IPARENT;                                                //!< Index of parent cell

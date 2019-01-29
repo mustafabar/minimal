@@ -1,0 +1,9 @@
+switch to spherical kernel
+fix FMM accuracy
+test periodic convergence
+test in parallel
+remove unused files
+remove unnecessary functions
+remove unnecessary compiler options
+use args,timer from exafmm-beta
+write Ewald using uniform FMM
