@@ -56,8 +56,8 @@ namespace EXAFMM_NAMESPACE {
     int (*Leafs)[2];
     int (*sendLeafs)[2];
     int (*recvLeafs)[2];
-    real_t (*Ibodies)[4];
-    real_t (*Jbodies)[4];
+    vec4 *Ibodies;
+    vec4 *Jbodies;
     real_t (*Multipole)[MTERM];
     real_t (*Local)[LTERM];
     real_t (*globMultipole)[MTERM];

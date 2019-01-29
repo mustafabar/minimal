@@ -618,7 +618,7 @@ namespace EXAFMM_NAMESPACE {
 #endif
   }
 
-  void L2PSum(real_t *TRG, const real_t *C, const real_t *L) {
+  void L2PSum(vec4 &TRG, const real_t *C, const real_t *L) {
 #if EXAFMM_PP > 1
     TRG[1] += C[1]*L[4]+C[2]*L[5]+C[3]*L[6];
     TRG[2] += C[1]*L[5]+C[2]*L[7]+C[3]*L[8];
