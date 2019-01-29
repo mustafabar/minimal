@@ -68,11 +68,11 @@ namespace EXAFMM_NAMESPACE {
     float (*recvMultipole)[MTERM];
 
   private:
-    inline void getIndex(int *ix, int index) const {
-      for_3d ix[d] = 0;
+    inline void getIndex(int *iX, int index) const {
+      for_3d iX[d] = 0;
       int d = 0, level = 0;
       while (index != 0) {
-	ix[d] += (index % 2) * (1 << level);
+	iX[d] += (index % 2) * (1 << level);
 	index >>= 1;
 	d = (d+1) % 3;
 	if (d == 0) level++;
@@ -81,9 +81,9 @@ namespace EXAFMM_NAMESPACE {
 
     void getCenter(real_t *dX, int index, int level) const {
       real_t R = R0 / (1 << level);
-      ivec3 ix = 0;
-      getIndex(ix, index);
-      for_3d dX[d] = X0[d] - R0 + (2 * ix[d] + 1) * R;
+      ivec3 iX = 0;
+      getIndex(iX, index);
+      for_3d dX[d] = X0[d] - R0 + (2 * iX[d] + 1) * R;
     }
 
     inline int oddOrEven(int n) {
@@ -174,8 +174,8 @@ namespace EXAFMM_NAMESPACE {
     }
     
   protected:
-    inline int getGlobKey(int *ix, int level) const {
-      return ix[0] + (ix[1] + ix[2] * numPartition[level][1]) * numPartition[level][0];
+    inline int getGlobKey(int *iX, int level) const {
+      return iX[0] + (iX[1] + iX[2] * numPartition[level][1]) * numPartition[level][0];
     }
 
     void P2P(int ibegin, int iend, int jbegin, int jend, vec3 periodic) const {
@@ -202,13 +202,13 @@ namespace EXAFMM_NAMESPACE {
     }
 
     void P2P() const {
-      int ixc[3];
-      getGlobIndex(ixc,MPIRANK,maxGlobLevel);
+      int iXc[3];
+      getGlobIndex(iXc,MPIRANK,maxGlobLevel);
       int nunit = 1 << maxLevel;
       int nunitGlob[3];
       for_3d nunitGlob[d] = nunit * numPartition[maxGlobLevel][d];
       int nxmin[3], nxmax[3];
-      for_3d nxmin[d] = -ixc[d] * nunit;
+      for_3d nxmin[d] = -iXc[d] * nunit;
       for_3d nxmax[d] = nunitGlob[d] + nxmin[d] - 1;
       if (numImages != 0) {
 	for_3d nxmin[d] -= nunitGlob[d];
@@ -216,11 +216,11 @@ namespace EXAFMM_NAMESPACE {
       }
 #pragma omp parallel for
       for (int i=0; i<numLeafs; i++) {
-	int ix[3] = {0, 0, 0};
-	getIndex(ix,i);
+	ivec3 iX = 0;
+	getIndex(iX,i);
 	int jxmin[3], jxmax[3];
-	for_3d jxmin[d] = std::max(nxmin[d],ix[d] - DP2P);
-	for_3d jxmax[d] = std::min(nxmax[d],ix[d] + DP2P);
+	for_3d jxmin[d] = std::max(nxmin[d],iX[d] - DP2P);
+	for_3d jxmax[d] = std::min(nxmax[d],iX[d] + DP2P);
 	int jx[3];
 	for (jx[2]=jxmin[2]; jx[2]<=jxmax[2]; jx[2]++) {
 	  for (jx[1]=jxmin[1]; jx[1]<=jxmax[1]; jx[1]++) {
@@ -237,7 +237,7 @@ namespace EXAFMM_NAMESPACE {
 	      j += rankOffset;
 	      rankOffset = 13 * numLeafs;
 	      vec3 periodic = 0;
-	      for_3d jxp[d] = (jx[d] + ixc[d] * nunit + nunitGlob[d]) / nunitGlob[d];
+	      for_3d jxp[d] = (jx[d] + iXc[d] * nunit + nunitGlob[d]) / nunitGlob[d];
 	      for_3d periodic[d] = (jxp[d] - 1) * 2 * RGlob[d];
 	      P2P(Leafs[i+rankOffset][0],Leafs[i+rankOffset][1],Leafs[j][0],Leafs[j][1],periodic);
 	    }
@@ -274,12 +274,12 @@ namespace EXAFMM_NAMESPACE {
 	for (int i=0; i<(1 << 3 * lev); i++) {
 	  int c = i + childOffset;
 	  int p = (i >> 3) + parentOffset;
-	  int ix[3];
-	  ix[0] = 1 - (i & 1) * 2;
-	  ix[1] = 1 - ((i / 2) & 1) * 2;
-	  ix[2] = 1 - ((i / 4) & 1) * 2;
+	  int iX[3];
+	  iX[0] = 1 - (i & 1) * 2;
+	  iX[1] = 1 - ((i / 2) & 1) * 2;
+	  iX[2] = 1 - ((i / 4) & 1) * 2;
 	  real_t dX[3];
-	  for_3d dX[d] = ix[d] * radius;
+	  for_3d dX[d] = iX[d] * radius;
 	  real_t M[MTERM];
 	  real_t C[LTERM];
 	  C[0] = 1;
@@ -292,9 +292,9 @@ namespace EXAFMM_NAMESPACE {
     }
 
     void M2L() const {
-      int ixc[3];
+      int iXc[3];
       int DM2LC = DM2L;
-      getGlobIndex(ixc,MPIRANK,maxGlobLevel);
+      getGlobIndex(iXc,MPIRANK,maxGlobLevel);
       for (int lev=1; lev<=maxLevel; lev++) {
 	if (lev==maxLevel) DM2LC = DP2P;
 	int levelOffset = ((1 << 3 * lev) - 1) / 7;
@@ -302,7 +302,7 @@ namespace EXAFMM_NAMESPACE {
 	int nunitGlob[3];
 	for_3d nunitGlob[d] = nunit * numPartition[maxGlobLevel][d];
 	int nxmin[3], nxmax[3];
-	for_3d nxmin[d] = -ixc[d] * (nunit >> 1);
+	for_3d nxmin[d] = -iXc[d] * (nunit >> 1);
 	for_3d nxmax[d] = (nunitGlob[d] >> 1) + nxmin[d] - 1;
 	if (numImages != 0) {
 	  for_3d nxmin[d] -= (nunitGlob[d] >> 1);
@@ -313,19 +313,19 @@ namespace EXAFMM_NAMESPACE {
 	for (int i=0; i<(1 << 3 * lev); i++) {
 	  real_t L[LTERM];
 	  for_l L[l] = 0;
-	  int ix[3] = {0, 0, 0};
-	  getIndex(ix,i);
+	  int iX[3] = {0, 0, 0};
+	  getIndex(iX,i);
 	  int jxmin[3];
-	  for_3d jxmin[d] = (std::max(nxmin[d],(ix[d] >> 1) - DM2L) << 1);
+	  for_3d jxmin[d] = (std::max(nxmin[d],(iX[d] >> 1) - DM2L) << 1);
 	  int jxmax[3];
-	  for_3d jxmax[d] = (std::min(nxmax[d],(ix[d] >> 1) + DM2L) << 1) + 1;
+	  for_3d jxmax[d] = (std::min(nxmax[d],(iX[d] >> 1) + DM2L) << 1) + 1;
 	  int jx[3];
 	  for (jx[2]=jxmin[2]; jx[2]<=jxmax[2]; jx[2]++) {
 	    for (jx[1]=jxmin[1]; jx[1]<=jxmax[1]; jx[1]++) {
 	      for (jx[0]=jxmin[0]; jx[0]<=jxmax[0]; jx[0]++) {
-		if(jx[0] < ix[0]-DM2LC || ix[0]+DM2LC < jx[0] ||
-		   jx[1] < ix[1]-DM2LC || ix[1]+DM2LC < jx[1] ||
-		   jx[2] < ix[2]-DM2LC || ix[2]+DM2LC < jx[2]) {
+		if(jx[0] < iX[0]-DM2LC || iX[0]+DM2LC < jx[0] ||
+		   jx[1] < iX[1]-DM2LC || iX[1]+DM2LC < jx[1] ||
+		   jx[2] < iX[2]-DM2LC || iX[2]+DM2LC < jx[2]) {
 		  int jxp[3];
 		  for_3d jxp[d] = (jx[d] + nunit) % nunit;
 		  int j = getKey(jxp,lev);
@@ -339,7 +339,7 @@ namespace EXAFMM_NAMESPACE {
 		  real_t M[MTERM];
 		  for_m M[m] = Multipole[j][m];
 		  real_t dX[3];
-		  for_3d dX[d] = (ix[d] - jx[d]) * diameter;
+		  for_3d dX[d] = (iX[d] - jx[d]) * diameter;
 		  real_t invR2 = 1. / (dX[0] * dX[0] + dX[1] * dX[1] + dX[2] * dX[2]);
 		  real_t invR  = sqrt(invR2);
 		  real_t C[LTERM];
@@ -363,12 +363,12 @@ namespace EXAFMM_NAMESPACE {
 	for (int i=0; i<(1 << 3 * lev); i++) {
 	  int c = i + childOffset;
 	  int p = (i >> 3) + parentOffset;
-	  int ix[3];
-	  ix[0] = (i & 1) * 2 - 1;
-	  ix[1] = ((i / 2) & 1) * 2 - 1;
-	  ix[2] = ((i / 4) & 1) * 2 - 1;
+	  int iX[3];
+	  iX[0] = (i & 1) * 2 - 1;
+	  iX[1] = ((i / 2) & 1) * 2 - 1;
+	  iX[2] = ((i / 4) & 1) * 2 - 1;
 	  real_t dX[3];
-	  for_3d dX[d] = ix[d] * radius;
+	  for_3d dX[d] = iX[d] * radius;
 	  real_t C[LTERM];
 	  C[0] = 1;
 	  powerL(C,dX);
@@ -405,20 +405,20 @@ namespace EXAFMM_NAMESPACE {
     UniformKernel(int _P) : P(_P), NTERM(P*(P+1)/2), MPISIZE(1), MPIRANK(0) {}
     ~UniformKernel() {}
 
-    inline int getKey(int *ix, int level, bool levelOffset=true) const {
+    inline int getKey(int *iX, int level, bool levelOffset=true) const {
       int id = 0;
       if (levelOffset) id = ((1 << 3 * level) - 1) / 7;
       for(int lev=0; lev<level; ++lev ) {
-	for_3d id += ix[d] % 2 << (3 * lev + d);
-	for_3d ix[d] >>= 1;
+	for_3d id += iX[d] % 2 << (3 * lev + d);
+	for_3d iX[d] >>= 1;
       }
       return id;
     }
 
-    inline void getGlobIndex(int *ix, int index, int level) const {
-      ix[0] = index % numPartition[level][0];
-      ix[1] = index / numPartition[level][0] % numPartition[level][1];
-      ix[2] = index / numPartition[level][0] / numPartition[level][1];
+    inline void getGlobIndex(int *iX, int index, int level) const {
+      iX[0] = index % numPartition[level][0];
+      iX[1] = index / numPartition[level][0] % numPartition[level][1];
+      iX[2] = index / numPartition[level][0] / numPartition[level][1];
     }
   };
 }
