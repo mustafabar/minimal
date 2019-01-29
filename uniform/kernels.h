@@ -202,7 +202,7 @@ namespace EXAFMM_NAMESPACE {
     }
 
     void P2P() const {
-      int iXc[3];
+      ivec3 iXc;
       getGlobIndex(iXc,MPIRANK,maxGlobLevel);
       int nunit = 1 << maxLevel;
       int nunitGlob[3];
@@ -218,14 +218,14 @@ namespace EXAFMM_NAMESPACE {
       for (int i=0; i<numLeafs; i++) {
 	ivec3 iX = 0;
 	getIndex(iX,i);
-	int jXmin[3], jXmax[3];
+	ivec3 jXmin, jXmax;
 	for_3d jXmin[d] = std::max(nxmin[d],iX[d] - DP2P);
 	for_3d jXmax[d] = std::min(nxmax[d],iX[d] + DP2P);
 	int jX[3];
 	for (jX[2]=jXmin[2]; jX[2]<=jXmax[2]; jX[2]++) {
 	  for (jX[1]=jXmin[1]; jX[1]<=jXmax[1]; jX[1]++) {
 	    for (jX[0]=jXmin[0]; jX[0]<=jXmax[0]; jX[0]++) {
-	      int jXp[3];
+	      ivec3 jXp;
 	      for_3d jXp[d] = (jX[d] + nunit) % nunit;
 	      int j = getKey(jXp,maxLevel,false);
 	      for_3d jXp[d] = (jX[d] + nunit) / nunit;
@@ -274,11 +274,11 @@ namespace EXAFMM_NAMESPACE {
 	for (int i=0; i<(1 << 3 * lev); i++) {
 	  int c = i + childOffset;
 	  int p = (i >> 3) + parentOffset;
-	  int iX[3];
+	  ivec3 iX;
 	  iX[0] = 1 - (i & 1) * 2;
 	  iX[1] = 1 - ((i / 2) & 1) * 2;
 	  iX[2] = 1 - ((i / 4) & 1) * 2;
-	  real_t dX[3];
+	  vec3 dX;
 	  for_3d dX[d] = iX[d] * radius;
 	  real_t M[MTERM];
 	  real_t C[LTERM];
@@ -292,16 +292,16 @@ namespace EXAFMM_NAMESPACE {
     }
 
     void M2L() const {
-      int iXc[3];
+      ivec3 iXc;
       int DM2LC = DM2L;
       getGlobIndex(iXc,MPIRANK,maxGlobLevel);
       for (int lev=1; lev<=maxLevel; lev++) {
 	if (lev==maxLevel) DM2LC = DP2P;
 	int levelOffset = ((1 << 3 * lev) - 1) / 7;
 	int nunit = 1 << lev;
-	int nunitGlob[3];
+	ivec3 nunitGlob;
 	for_3d nunitGlob[d] = nunit * numPartition[maxGlobLevel][d];
-	int nxmin[3], nxmax[3];
+	ivec3 nxmin, nxmax;
 	for_3d nxmin[d] = -iXc[d] * (nunit >> 1);
 	for_3d nxmax[d] = (nunitGlob[d] >> 1) + nxmin[d] - 1;
 	if (numImages != 0) {
@@ -315,18 +315,18 @@ namespace EXAFMM_NAMESPACE {
 	  for_l L[l] = 0;
 	  ivec3 iX = 0;
 	  getIndex(iX,i);
-	  int jXmin[3];
+	  ivec3 jXmin;
 	  for_3d jXmin[d] = (std::max(nxmin[d],(iX[d] >> 1) - DM2L) << 1);
-	  int jXmax[3];
+	  ivec3 jXmax;
 	  for_3d jXmax[d] = (std::min(nxmax[d],(iX[d] >> 1) + DM2L) << 1) + 1;
-	  int jX[3];
+	  ivec3 jX;
 	  for (jX[2]=jXmin[2]; jX[2]<=jXmax[2]; jX[2]++) {
 	    for (jX[1]=jXmin[1]; jX[1]<=jXmax[1]; jX[1]++) {
 	      for (jX[0]=jXmin[0]; jX[0]<=jXmax[0]; jX[0]++) {
 		if(jX[0] < iX[0]-DM2LC || iX[0]+DM2LC < jX[0] ||
 		   jX[1] < iX[1]-DM2LC || iX[1]+DM2LC < jX[1] ||
 		   jX[2] < iX[2]-DM2LC || iX[2]+DM2LC < jX[2]) {
-		  int jXp[3];
+		  ivec3 jXp;
 		  for_3d jXp[d] = (jX[d] + nunit) % nunit;
 		  int j = getKey(jXp,lev);
 		  for_3d jXp[d] = (jX[d] + nunit) / nunit;
@@ -338,7 +338,7 @@ namespace EXAFMM_NAMESPACE {
 		  j += rankOffset;
 		  real_t M[MTERM];
 		  for_m M[m] = Multipole[j][m];
-		  real_t dX[3];
+		  vec3 dX;
 		  for_3d dX[d] = (iX[d] - jX[d]) * diameter;
 		  real_t invR2 = 1. / (dX[0] * dX[0] + dX[1] * dX[1] + dX[2] * dX[2]);
 		  real_t invR  = sqrt(invR2);
@@ -363,11 +363,11 @@ namespace EXAFMM_NAMESPACE {
 	for (int i=0; i<(1 << 3 * lev); i++) {
 	  int c = i + childOffset;
 	  int p = (i >> 3) + parentOffset;
-	  int iX[3];
+	  ivec3 iX;
 	  iX[0] = (i & 1) * 2 - 1;
 	  iX[1] = ((i / 2) & 1) * 2 - 1;
 	  iX[2] = ((i / 4) & 1) * 2 - 1;
-	  real_t dX[3];
+	  vec3 dX;
 	  for_3d dX[d] = iX[d] * radius;
 	  real_t C[LTERM];
 	  C[0] = 1;
@@ -389,7 +389,7 @@ namespace EXAFMM_NAMESPACE {
 	real_t L[LTERM];
 	for_l L[l] = Local[i+levelOffset][l];
 	for (int j=Leafs[i+rankOffset][0]; j<Leafs[i+rankOffset][1]; j++) {
-	  real_t dX[3];
+	  vec3 dX;
 	  for_3d dX[d] = Jbodies[j][d] - center[d];
 	  real_t C[LTERM];
 	  C[0] = 1;
