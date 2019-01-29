@@ -60,14 +60,14 @@ namespace EXAFMM_NAMESPACE {
       int bodiesType[3];
       for_3d bodiesType[d] = leafsType[d] * float(numBodies) / numLeafs * 4;
       int i = 0;
-      int ix[3];
+      int iX[3];
       bodiesDispl[0] = leafsDispl[0] = 0;
-      for( ix[2]=-1; ix[2]<=1; ix[2]++ ) {
-	for( ix[1]=-1; ix[1]<=1; ix[1]++ ) {
-	  for( ix[0]=-1; ix[0]<=1; ix[0]++ ) {
-	    if( ix[0] != 0 || ix[1] != 0 || ix[2] != 0 ) {
+      for( iX[2]=-1; iX[2]<=1; iX[2]++ ) {
+	for( iX[1]=-1; iX[1]<=1; iX[1]++ ) {
+	  for( iX[0]=-1; iX[0]<=1; iX[0]++ ) {
+	    if( iX[0] != 0 || iX[1] != 0 || iX[2] != 0 ) {
 	      int zeros = 0;
-	      for_3d zeros += ix[d] == 0;
+	      for_3d zeros += iX[d] == 0;
 	      bodiesCount[i] = bodiesType[zeros];
 	      leafsCount[i] = leafsType[zeros];
 	      if( i > 0 ) {
@@ -87,12 +87,12 @@ namespace EXAFMM_NAMESPACE {
 	int multipoleType[3] = {8, 4*(1<<lev), 2*(1<<(2*lev))};
 	multipoleDispl[lev][0] = 0;
 	i = 0;
-	for( ix[2]=-1; ix[2]<=1; ix[2]++ ) {
-	  for( ix[1]=-1; ix[1]<=1; ix[1]++ ) {
-	    for( ix[0]=-1; ix[0]<=1; ix[0]++ ) {
-	      if( ix[0] != 0 || ix[1] != 0 || ix[2] != 0 ) {
+	for( iX[2]=-1; iX[2]<=1; iX[2]++ ) {
+	  for( iX[1]=-1; iX[1]<=1; iX[1]++ ) {
+	    for( iX[0]=-1; iX[0]<=1; iX[0]++ ) {
+	      if( iX[0] != 0 || iX[1] != 0 || iX[2] != 0 ) {
 		int zeros = 0;
-		for_3d zeros += ix[d] == 0;
+		for_3d zeros += iX[d] == 0;
 		multipoleCount[lev][i] = multipoleType[zeros];
 		sumSendCells += multipoleCount[lev][i];
 		if( i > 0 ) {
@@ -108,19 +108,19 @@ namespace EXAFMM_NAMESPACE {
     }
 
   protected:
-    inline void getIndex(int i, int *ix, real_t diameter) const {
+    inline void getIndex(int i, int *iX, real_t diameter) const {
 #if NOWRAP
       i = (i / 3) * 3;
 #endif
-      for_3d ix[d] = int((Jbodies[i][d] + R0 - X0[d]) / diameter);
+      for_3d iX[d] = int((Jbodies[i][d] + R0 - X0[d]) / diameter);
     }
 
-    inline void setGlobIndex(int i, int *ix) const {
+    inline void setGlobIndex(int i, int *iX) const {
 #if NOWRAP
       i = (i / 3) * 3;
 #endif
-      for_3d ix[d] = int(Jbodies[i][d] / (2 * R0));
-      for_3d ix[d] = ix[d] % numPartition[maxGlobLevel][d];
+      for_3d iX[d] = int(Jbodies[i][d] / (2 * R0));
+      for_3d iX[d] = iX[d] % numPartition[maxGlobLevel][d];
     }
 
     void sort(vec4 *bodies, vec4 *buffer, int *index, int *ibuffer, int *key) const {
@@ -235,10 +235,10 @@ namespace EXAFMM_NAMESPACE {
       if(gatherLevel > maxGlobLevel) gatherLevel = maxGlobLevel;
 #if EXAFMM_SERIAL
 #else
-      int ix[3], numChild[3];
+      int iX[3], numChild[3];
       for_3d numChild[d] = numPartition[maxGlobLevel][d] / numPartition[gatherLevel][d];
-      for_3d ix[d] = IX[maxGlobLevel][d] % numChild[d];
-      int key = ix[0] + (ix[1] + ix[2] * numChild[1]) * numChild[0];
+      for_3d iX[d] = IX[maxGlobLevel][d] % numChild[d];
+      int key = iX[0] + (iX[1] + iX[2] * numChild[1]) * numChild[0];
       int color = getGlobKey(IX[gatherLevel],gatherLevel);
       MPI_Comm_split(MPI_COMM_WORLD, color, key, &MPI_COMM_LOCAL);
       MPI_Comm_split(MPI_COMM_WORLD, key, color, &MPI_COMM_GLOBAL);
@@ -248,10 +248,10 @@ namespace EXAFMM_NAMESPACE {
     void sortBodies() const {
       int *key = new int [numBodies];
       real_t diameter = 2 * R0 / (1 << maxLevel);
-      int ix[3] = {0, 0, 0};
+      int iX[3] = {0, 0, 0};
       for( int i=0; i<numBodies; i++ ) {
-	getIndex(i,ix,diameter);
-	key[i] = getKey(ix,maxLevel);
+	getIndex(i,iX,diameter);
+	key[i] = getKey(iX,maxLevel);
       }
       sort(Jbodies,sendJbodies,Index,sendIndex,key);
       for( int i=0; i<numBodies; i++ ) {
@@ -267,13 +267,13 @@ namespace EXAFMM_NAMESPACE {
 	Leafs[i][0] = Leafs[i][1] = 0;
       }
       real_t diameter = 2 * R0 / (1 << maxLevel);
-      int ix[3] = {0, 0, 0};
-      getIndex(0,ix,diameter);
-      int ileaf = getKey(ix,maxLevel,false) + rankOffset;
+      int iX[3] = {0, 0, 0};
+      getIndex(0,iX,diameter);
+      int ileaf = getKey(iX,maxLevel,false) + rankOffset;
       Leafs[ileaf][0] = 0;
       for( int i=0; i<numBodies; i++ ) {
-	getIndex(i,ix,diameter);
-	int inew = getKey(ix,maxLevel,false) + rankOffset;
+	getIndex(i,iX,diameter);
+	int inew = getKey(iX,maxLevel,false) + rankOffset;
 	if( ileaf != inew ) {
 	  Leafs[ileaf][1] = Leafs[inew][0] = i;
 	  ileaf = inew;
@@ -297,15 +297,15 @@ namespace EXAFMM_NAMESPACE {
       for( int lev=1; lev<numImages; lev++ ) {
 	real_t diameter[3];
 	for_3d diameter[d] = 2 * RGlob[d] * std::pow(3.,lev-1);
-	int jx[3];
-	for( jx[2]=-4; jx[2]<=4; jx[2]++ ) {
-	  for( jx[1]=-4; jx[1]<=4; jx[1]++ ) {
-	    for( jx[0]=-4; jx[0]<=4; jx[0]++ ) {
-	      if(jx[0] < -1 || 1 < jx[0] ||
-		 jx[1] < -1 || 1 < jx[1] ||
-		 jx[2] < -1 || 1 < jx[2]) {
+	int jX[3];
+	for( jX[2]=-4; jX[2]<=4; jX[2]++ ) {
+	  for( jX[1]=-4; jX[1]<=4; jX[1]++ ) {
+	    for( jX[0]=-4; jX[0]<=4; jX[0]++ ) {
+	      if(jX[0] < -1 || 1 < jX[0] ||
+		 jX[1] < -1 || 1 < jX[1] ||
+		 jX[2] < -1 || 1 < jX[2]) {
 		real_t dX[3];
-		for_3d dX[d] = jx[d] * diameter[d];
+		for_3d dX[d] = jX[d] * diameter[d];
 		real_t invR2 = 1. / (dX[0] * dX[0] + dX[1] * dX[1] + dX[2] * dX[2]);
 		real_t invR  = sqrt(invR2);
 		real_t C[LTERM];
@@ -317,12 +317,12 @@ namespace EXAFMM_NAMESPACE {
 	}
 	real_t M3[MTERM];
 	for_m M3[m] = 0;
-	int ix[3];
-	for( ix[2]=-1; ix[2]<=1; ix[2]++ ) {
-	  for( ix[1]=-1; ix[1]<=1; ix[1]++ ) {
-	    for( ix[0]=-1; ix[0]<=1; ix[0]++ ) {
+	int iX[3];
+	for( iX[2]=-1; iX[2]<=1; iX[2]++ ) {
+	  for( iX[1]=-1; iX[1]<=1; iX[1]++ ) {
+	    for( iX[0]=-1; iX[0]<=1; iX[0]++ ) {
 	      real_t dX[3];
-	      for_3d dX[d] = ix[d] * diameter[d];
+	      for_3d dX[d] = iX[d] * diameter[d];
 	      real_t C[LTERM];
 	      C[0] = 1;
 	      powerM(C,dX);

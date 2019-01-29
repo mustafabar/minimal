@@ -218,27 +218,27 @@ namespace EXAFMM_NAMESPACE {
       for (int i=0; i<numLeafs; i++) {
 	ivec3 iX = 0;
 	getIndex(iX,i);
-	int jxmin[3], jxmax[3];
-	for_3d jxmin[d] = std::max(nxmin[d],iX[d] - DP2P);
-	for_3d jxmax[d] = std::min(nxmax[d],iX[d] + DP2P);
-	int jx[3];
-	for (jx[2]=jxmin[2]; jx[2]<=jxmax[2]; jx[2]++) {
-	  for (jx[1]=jxmin[1]; jx[1]<=jxmax[1]; jx[1]++) {
-	    for (jx[0]=jxmin[0]; jx[0]<=jxmax[0]; jx[0]++) {
-	      int jxp[3];
-	      for_3d jxp[d] = (jx[d] + nunit) % nunit;
-	      int j = getKey(jxp,maxLevel,false);
-	      for_3d jxp[d] = (jx[d] + nunit) / nunit;
+	int jXmin[3], jXmax[3];
+	for_3d jXmin[d] = std::max(nxmin[d],iX[d] - DP2P);
+	for_3d jXmax[d] = std::min(nxmax[d],iX[d] + DP2P);
+	int jX[3];
+	for (jX[2]=jXmin[2]; jX[2]<=jXmax[2]; jX[2]++) {
+	  for (jX[1]=jXmin[1]; jX[1]<=jXmax[1]; jX[1]++) {
+	    for (jX[0]=jXmin[0]; jX[0]<=jXmax[0]; jX[0]++) {
+	      int jXp[3];
+	      for_3d jXp[d] = (jX[d] + nunit) % nunit;
+	      int j = getKey(jXp,maxLevel,false);
+	      for_3d jXp[d] = (jX[d] + nunit) / nunit;
 #if EXAFMM_SERIAL
 	      int rankOffset = 13 * numLeafs;
 #else
-	      int rankOffset = (jxp[0] + 3 * jxp[1] + 9 * jxp[2]) * numLeafs;
+	      int rankOffset = (jXp[0] + 3 * jXp[1] + 9 * jXp[2]) * numLeafs;
 #endif
 	      j += rankOffset;
 	      rankOffset = 13 * numLeafs;
 	      vec3 periodic = 0;
-	      for_3d jxp[d] = (jx[d] + iXc[d] * nunit + nunitGlob[d]) / nunitGlob[d];
-	      for_3d periodic[d] = (jxp[d] - 1) * 2 * RGlob[d];
+	      for_3d jXp[d] = (jX[d] + iXc[d] * nunit + nunitGlob[d]) / nunitGlob[d];
+	      for_3d periodic[d] = (jXp[d] - 1) * 2 * RGlob[d];
 	      P2P(Leafs[i+rankOffset][0],Leafs[i+rankOffset][1],Leafs[j][0],Leafs[j][1],periodic);
 	    }
 	  }
@@ -315,31 +315,31 @@ namespace EXAFMM_NAMESPACE {
 	  for_l L[l] = 0;
 	  int iX[3] = {0, 0, 0};
 	  getIndex(iX,i);
-	  int jxmin[3];
-	  for_3d jxmin[d] = (std::max(nxmin[d],(iX[d] >> 1) - DM2L) << 1);
-	  int jxmax[3];
-	  for_3d jxmax[d] = (std::min(nxmax[d],(iX[d] >> 1) + DM2L) << 1) + 1;
-	  int jx[3];
-	  for (jx[2]=jxmin[2]; jx[2]<=jxmax[2]; jx[2]++) {
-	    for (jx[1]=jxmin[1]; jx[1]<=jxmax[1]; jx[1]++) {
-	      for (jx[0]=jxmin[0]; jx[0]<=jxmax[0]; jx[0]++) {
-		if(jx[0] < iX[0]-DM2LC || iX[0]+DM2LC < jx[0] ||
-		   jx[1] < iX[1]-DM2LC || iX[1]+DM2LC < jx[1] ||
-		   jx[2] < iX[2]-DM2LC || iX[2]+DM2LC < jx[2]) {
-		  int jxp[3];
-		  for_3d jxp[d] = (jx[d] + nunit) % nunit;
-		  int j = getKey(jxp,lev);
-		  for_3d jxp[d] = (jx[d] + nunit) / nunit;
+	  int jXmin[3];
+	  for_3d jXmin[d] = (std::max(nxmin[d],(iX[d] >> 1) - DM2L) << 1);
+	  int jXmax[3];
+	  for_3d jXmax[d] = (std::min(nxmax[d],(iX[d] >> 1) + DM2L) << 1) + 1;
+	  int jX[3];
+	  for (jX[2]=jXmin[2]; jX[2]<=jXmax[2]; jX[2]++) {
+	    for (jX[1]=jXmin[1]; jX[1]<=jXmax[1]; jX[1]++) {
+	      for (jX[0]=jXmin[0]; jX[0]<=jXmax[0]; jX[0]++) {
+		if(jX[0] < iX[0]-DM2LC || iX[0]+DM2LC < jX[0] ||
+		   jX[1] < iX[1]-DM2LC || iX[1]+DM2LC < jX[1] ||
+		   jX[2] < iX[2]-DM2LC || iX[2]+DM2LC < jX[2]) {
+		  int jXp[3];
+		  for_3d jXp[d] = (jX[d] + nunit) % nunit;
+		  int j = getKey(jXp,lev);
+		  for_3d jXp[d] = (jX[d] + nunit) / nunit;
 #if EXAFMM_SERIAL
 		  int rankOffset = 13 * numCells;
 #else
-		  int rankOffset = (jxp[0] + 3 * jxp[1] + 9 * jxp[2]) * numCells;
+		  int rankOffset = (jXp[0] + 3 * jXp[1] + 9 * jXp[2]) * numCells;
 #endif
 		  j += rankOffset;
 		  real_t M[MTERM];
 		  for_m M[m] = Multipole[j][m];
 		  real_t dX[3];
-		  for_3d dX[d] = (iX[d] - jx[d]) * diameter;
+		  for_3d dX[d] = (iX[d] - jX[d]) * diameter;
 		  real_t invR2 = 1. / (dX[0] * dX[0] + dX[1] * dX[1] + dX[2] * dX[2]);
 		  real_t invR  = sqrt(invR2);
 		  real_t C[LTERM];
