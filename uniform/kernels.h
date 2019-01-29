@@ -7,6 +7,8 @@
 #include <omp.h>
 
 #define EXAFMM_PP 6
+const int P = 6;
+const int NTERM = P*(P+1)/2;
 const int DP2P = 1; // Use 1 for parallel
 const int DM2L = 1; // Use 1 for parallel
 const int MTERM = EXAFMM_PP*(EXAFMM_PP+1)*(EXAFMM_PP+2)/6;
@@ -28,8 +30,6 @@ namespace EXAFMM_NAMESPACE {
     std::vector<real_t> Anm;
     std::vector<complex_t> Cnm;
   public:
-    const int P;
-    const int NTERM;
     static vec3 Xperiodic;
     int maxLevel;
     int maxGlobLevel;
@@ -402,7 +402,7 @@ namespace EXAFMM_NAMESPACE {
     }
 
   public:
-    UniformKernel(int _P) : P(_P), NTERM(P*(P+1)/2), MPISIZE(1), MPIRANK(0) {}
+    UniformKernel() : MPISIZE(1), MPIRANK(0) {}
     ~UniformKernel() {}
 
     inline int getKey(int *iX, int level, bool levelOffset=true) const {

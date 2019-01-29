@@ -144,8 +144,6 @@ namespace EXAFMM_NAMESPACE {
     }
 
   public:
-    SerialFMM(int P) : Evaluator(P) {}
-    
     void allocate(int N, int L, int Im) {
       maxLevel = L;
       numBodies = N;

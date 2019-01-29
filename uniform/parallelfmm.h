@@ -38,7 +38,7 @@ namespace EXAFMM_NAMESPACE {
     }
 
   public:
-    ParallelFMM(int P) : SerialFMM(P) {
+    ParallelFMM() {
       int argc(0);
       char **argv;
       MPI_Initialized(&EXTERNAL);

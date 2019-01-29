@@ -8,7 +8,7 @@ namespace EXAFMM_NAMESPACE {
     bool printNow;
 
   public:
-    Evaluator(int P) : UniformKernel(P), printNow(true) {}
+    Evaluator() : printNow(true) {}
 
     double getTime() const {
       struct timeval tv;
