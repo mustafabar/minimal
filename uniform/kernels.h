@@ -68,7 +68,7 @@ namespace EXAFMM_NAMESPACE {
     float (*recvMultipole)[MTERM];
 
   private:
-    inline void getIndex(int *iX, int index) const {
+    inline void getIndex(ivec3 &iX, int index) const {
       for_3d iX[d] = 0;
       int d = 0, level = 0;
       while (index != 0) {
@@ -313,7 +313,7 @@ namespace EXAFMM_NAMESPACE {
 	for (int i=0; i<(1 << 3 * lev); i++) {
 	  real_t L[LTERM];
 	  for_l L[l] = 0;
-	  int iX[3] = {0, 0, 0};
+	  ivec3 iX = 0;
 	  getIndex(iX,i);
 	  int jXmin[3];
 	  for_3d jXmin[d] = (std::max(nxmin[d],(iX[d] >> 1) - DM2L) << 1);

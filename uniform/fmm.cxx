@@ -67,17 +67,17 @@ int main(int argc, char ** argv) {
   logger::stopTimer("Partition");
 
   for (int it=0; it<1; it++) {
-    int ix[3] = {0, 0, 0};
+    int iX[3] = {0, 0, 0};
     FMM.R0 = 0.5 * max(cycle) / FMM.numPartition[FMM.maxGlobLevel][0];
     for_3d FMM.RGlob[d] = FMM.R0 * FMM.numPartition[FMM.maxGlobLevel][d];
-    FMM.getGlobIndex(ix,FMM.MPIRANK,FMM.maxGlobLevel);
-    for_3d FMM.X0[d] = 2 * FMM.R0 * (ix[d] + .5);
+    FMM.getGlobIndex(iX,FMM.MPIRANK,FMM.maxGlobLevel);
+    for_3d FMM.X0[d] = 2 * FMM.R0 * (iX[d] + .5);
     srand48(FMM.MPIRANK);
     real_t average = 0;
     for (int i=0; i<FMM.numBodies; i++) {
-      FMM.Jbodies[i][0] = 2 * FMM.R0 * (drand48() + ix[0]);
-      FMM.Jbodies[i][1] = 2 * FMM.R0 * (drand48() + ix[1]);
-      FMM.Jbodies[i][2] = 2 * FMM.R0 * (drand48() + ix[2]);
+      FMM.Jbodies[i][0] = 2 * FMM.R0 * (drand48() + iX[0]);
+      FMM.Jbodies[i][1] = 2 * FMM.R0 * (drand48() + iX[1]);
+      FMM.Jbodies[i][2] = 2 * FMM.R0 * (drand48() + iX[2]);
       FMM.Jbodies[i][3] = (drand48() - .5) / FMM.numBodies;
       average += FMM.Jbodies[i][3];
     }
