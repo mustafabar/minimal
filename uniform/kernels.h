@@ -81,7 +81,7 @@ namespace EXAFMM_NAMESPACE {
 
     void getCenter(real_t *dX, int index, int level) const {
       real_t R = R0 / (1 << level);
-      int ix[3] = {0, 0, 0};
+      ivec3 ix = 0;
       getIndex(ix, index);
       for_3d dX[d] = X0[d] - R0 + (2 * ix[d] + 1) * R;
     }
@@ -178,13 +178,13 @@ namespace EXAFMM_NAMESPACE {
       return ix[0] + (ix[1] + ix[2] * numPartition[level][1]) * numPartition[level][0];
     }
 
-    void P2P(int ibegin, int iend, int jbegin, int jend, real_t *periodic) const {
+    void P2P(int ibegin, int iend, int jbegin, int jend, vec3 periodic) const {
       for (int i=ibegin; i<iend; i++) {
 	real_t Po = 0, Fx = 0, Fy = 0, Fz = 0;
 	for (int j=jbegin; j<jend; j++) {
-	  real_t dX[3];
+	  vec3 dX;
 	  for_3d dX[d] = Jbodies[i][d] - Jbodies[j][d] - periodic[d];
-	  real_t R2 = dX[0] * dX[0] + dX[1] * dX[1] + dX[2] * dX[2];
+	  real_t R2 = norm(dX);
 	  real_t invR2 = 1.0 / R2;
 	  if (R2 == 0) invR2 = 0;
 	  real_t invR = Jbodies[j][3] * sqrt(invR2);
@@ -219,8 +219,8 @@ namespace EXAFMM_NAMESPACE {
 	int ix[3] = {0, 0, 0};
 	getIndex(ix,i);
 	int jxmin[3], jxmax[3];
-	for_3d jxmin[d] = EXAFMM_MAX(nxmin[d],ix[d] - DP2P);
-	for_3d jxmax[d] = EXAFMM_MIN(nxmax[d],ix[d] + DP2P);
+	for_3d jxmin[d] = std::max(nxmin[d],ix[d] - DP2P);
+	for_3d jxmax[d] = std::min(nxmax[d],ix[d] + DP2P);
 	int jx[3];
 	for (jx[2]=jxmin[2]; jx[2]<=jxmax[2]; jx[2]++) {
 	  for (jx[1]=jxmin[1]; jx[1]<=jxmax[1]; jx[1]++) {
@@ -236,7 +236,7 @@ namespace EXAFMM_NAMESPACE {
 #endif
 	      j += rankOffset;
 	      rankOffset = 13 * numLeafs;
-	      real_t periodic[3] = {0, 0, 0};
+	      vec3 periodic = 0;
 	      for_3d jxp[d] = (jx[d] + ixc[d] * nunit + nunitGlob[d]) / nunitGlob[d];
 	      for_3d periodic[d] = (jxp[d] - 1) * 2 * RGlob[d];
 	      P2P(Leafs[i+rankOffset][0],Leafs[i+rankOffset][1],Leafs[j][0],Leafs[j][1],periodic);
@@ -316,9 +316,9 @@ namespace EXAFMM_NAMESPACE {
 	  int ix[3] = {0, 0, 0};
 	  getIndex(ix,i);
 	  int jxmin[3];
-	  for_3d jxmin[d] = (EXAFMM_MAX(nxmin[d],(ix[d] >> 1) - DM2L) << 1);
+	  for_3d jxmin[d] = (std::max(nxmin[d],(ix[d] >> 1) - DM2L) << 1);
 	  int jxmax[3];
-	  for_3d jxmax[d] = (EXAFMM_MIN(nxmax[d],(ix[d] >> 1) + DM2L) << 1) + 1;
+	  for_3d jxmax[d] = (std::min(nxmax[d],(ix[d] >> 1) + DM2L) << 1) + 1;
 	  int jx[3];
 	  for (jx[2]=jxmin[2]; jx[2]<=jxmax[2]; jx[2]++) {
 	    for (jx[1]=jxmin[1]; jx[1]<=jxmax[1]; jx[1]++) {

@@ -4,7 +4,7 @@
 #include "build_tree.h"
 #include "dataset.h"
 #include "ewald.h"
-#include "kernel.h"
+#include "laplace.h"
 #include "namespace.h"
 #include "traversal.h"
 #include "tree_mpi.h"

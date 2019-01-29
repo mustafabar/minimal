@@ -41,7 +41,7 @@ namespace EXAFMM_NAMESPACE {
 	}
 	checkLevel[d] = lev - 1;
       }
-      maxGlobLevel = EXAFMM_MAX(EXAFMM_MAX(checkLevel[0],checkLevel[1]),checkLevel[2]);
+      maxGlobLevel = std::max(std::max(checkLevel[0],checkLevel[1]),checkLevel[2]);
       for_3d numPartition[0][d] = 1;
       for_3d partition[d] = maxPartition[d];
       for( int lev=1; lev<=maxGlobLevel; lev++ ) {
@@ -127,8 +127,8 @@ namespace EXAFMM_NAMESPACE {
       int Imax = key[0];
       int Imin = key[0];
       for( int i=0; i<numBodies; i++ ) {
-	Imax = EXAFMM_MAX(Imax,key[i]);
-	Imin = EXAFMM_MIN(Imin,key[i]);
+	Imax = std::max(Imax,key[i]);
+	Imin = std::min(Imin,key[i]);
       }
       int numBucket = Imax - Imin + 1;
       std::vector<int> bucket(numBucket);

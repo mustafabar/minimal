@@ -555,9 +555,9 @@ namespace EXAFMM_NAMESPACE {
 	int ixp[3];
 	for_3d ixp[d] = IX[lev-1][d];
 	int jxmin[3];
-	for_3d jxmin[d] =  EXAFMM_MAX(nxmin[d], ixp[d] - 1)      * numPartition[lev][d] / numPartition[lev-1][d];
+	for_3d jxmin[d] =  std::max(nxmin[d], ixp[d] - 1)      * numPartition[lev][d] / numPartition[lev-1][d];
 	int jxmax[3];
-	for_3d jxmax[d] = (EXAFMM_MIN(nxmax[d], ixp[d] + 1) + 1) * numPartition[lev][d] / numPartition[lev-1][d];
+	for_3d jxmax[d] = (std::min(nxmax[d], ixp[d] + 1) + 1) * numPartition[lev][d] / numPartition[lev-1][d];
 	int jx[3];
 	for( jx[2]=jxmin[2]; jx[2]<jxmax[2]; jx[2]++ ) {
 	  for( jx[1]=jxmin[1]; jx[1]<jxmax[1]; jx[1]++ ) {
