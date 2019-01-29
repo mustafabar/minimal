@@ -46,9 +46,9 @@ namespace EXAFMM_NAMESPACE {
     int MPISIZE;
     int MPIRANK;
 
-    real_t X0[3];
+    vec3 X0;
     real_t R0;
-    real_t RGlob[3];
+    vec3 RGlob;
     int *Index;
     int *Rank;
     int *sendIndex;
@@ -62,8 +62,8 @@ namespace EXAFMM_NAMESPACE {
     real_t (*Local)[LTERM];
     real_t (*globMultipole)[MTERM];
     real_t (*globLocal)[LTERM];
-    float (*sendJbodies)[4];
-    float (*recvJbodies)[4];
+    vec4 *sendJbodies;
+    vec4 *recvJbodies;
     float (*sendMultipole)[MTERM];
     float (*recvMultipole)[MTERM];
 

@@ -220,6 +220,5 @@ int main(int argc, char ** argv) {
   logger::stopTimer("Set LET", 0);
   logger::startTimer("Set LET size");
   logger::stopTimer("Set LET size", 0);
-  logger::writeTime(FMM.MPIRANK);
 #endif
 }

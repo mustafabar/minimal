@@ -123,7 +123,7 @@ namespace EXAFMM_NAMESPACE {
       for_3d ix[d] = ix[d] % numPartition[maxGlobLevel][d];
     }
 
-    void sort(vec4 *bodies, float (*buffer)[4], int *index, int *ibuffer, int *key) const {
+    void sort(vec4 *bodies, vec4 *buffer, int *index, int *ibuffer, int *key) const {
       int Imax = key[0];
       int Imin = key[0];
       for( int i=0; i<numBodies; i++ ) {
@@ -178,13 +178,13 @@ namespace EXAFMM_NAMESPACE {
       sendLeafs = new int [numSendLeafs][2]();
       recvLeafs = new int [numSendLeafs][2]();
       Ibodies = new vec4 [2*numBodies]();
-      Jbodies = new vec4 [2*numBodies+numSendBodies]();
-      Multipole = new real_t [27*numCells][MTERM]();
+      Jbodies = new vec4 [2*numBodies+numSendBodies];
+      Multipole = new real_t [27*numCells][MTERM];
       Local = new real_t [numCells][LTERM]();
       globMultipole = new real_t [2*MPISIZE][MTERM]();
       globLocal = new real_t [10][LTERM]();
-      sendJbodies = new float [2*numBodies+numSendBodies][4]();
-      recvJbodies = new float [2*numBodies+numSendBodies][4]();
+      sendJbodies = new vec4 [2*numBodies+numSendBodies];
+      recvJbodies = new vec4 [2*numBodies+numSendBodies];
       sendMultipole = new float [numSendCells][MTERM]();
       recvMultipole = new float [numSendCells][MTERM]();
     }

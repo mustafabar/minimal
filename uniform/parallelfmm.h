@@ -79,16 +79,16 @@ namespace EXAFMM_NAMESPACE {
 	recvBodiesDispl[i] = recvBodiesDispl[i-1] + recvBodiesCount[i-1];
       }
       sort(Jbodies,sendJbodies,Index,sendIndex,Rank);
-      MPI_Alltoallv(sendJbodies[0], sendBodiesCount, sendBodiesDispl, MPI_FLOAT,
-		    recvJbodies[0], recvBodiesCount, recvBodiesDispl, MPI_FLOAT,
+      MPI_Alltoallv(&sendJbodies[0][0], sendBodiesCount, sendBodiesDispl, MPI_FLOAT,
+		    &recvJbodies[0][0], recvBodiesCount, recvBodiesDispl, MPI_FLOAT,
 		    MPI_COMM_WORLD);
       int newBodies = (recvBodiesDispl[MPISIZE-1] + recvBodiesCount[MPISIZE-1]) / 4;
       for( int i=0; i<newBodies; i++ ) {
 	for_4d Jbodies[i][d] = recvJbodies[i][d];
       }
       sort(Ibodies,sendJbodies,Index,sendIndex,Rank);
-      MPI_Alltoallv(sendJbodies[0], sendBodiesCount, sendBodiesDispl, MPI_FLOAT,
-		    recvJbodies[0], recvBodiesCount, recvBodiesDispl, MPI_FLOAT,
+      MPI_Alltoallv(&sendJbodies[0][0], sendBodiesCount, sendBodiesDispl, MPI_FLOAT,
+		    &recvJbodies[0][0], recvBodiesCount, recvBodiesDispl, MPI_FLOAT,
 		    MPI_COMM_WORLD);
       for( int i=0; i<MPISIZE; i++ ) {
 	sendBodiesCount[i] /= 4;
@@ -160,11 +160,11 @@ namespace EXAFMM_NAMESPACE {
 	      sendDispl = bodiesDispl[iforward];
 	      sendCount = bodiesCount[iforward];
 	      commBytes += sendCount * 4 * 4;
-	      MPI_Isend(sendJbodies[sendDispl],sendCount*4,MPI_FLOAT,
+	      MPI_Isend(&sendJbodies[sendDispl][0],sendCount*4,MPI_FLOAT,
 			sendRank,iforward+26,MPI_COMM_WORLD,&requests[iforward+26]);
 	      recvDispl = bodiesDispl[iforward];
 	      recvCount = bodiesCount[iforward];
-	      MPI_Irecv(recvJbodies[recvDispl],recvCount*4,MPI_FLOAT,
+	      MPI_Irecv(&recvJbodies[recvDispl][0],recvCount*4,MPI_FLOAT,
 			recvRank,iforward+26,MPI_COMM_WORLD,&requests[iforward+78]);
 	      iforward++;
 	    }
