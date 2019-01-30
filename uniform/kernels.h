@@ -31,6 +31,7 @@ namespace EXAFMM_NAMESPACE {
     std::vector<complex_t> Cnm;
   public:
     static vec3 Xperiodic;
+    ivec3 numPartition[10];
     int maxLevel;
     int maxGlobLevel;
     int numBodies;
@@ -38,7 +39,6 @@ namespace EXAFMM_NAMESPACE {
     int numCells;
     int numLeafs;
     int numGlobCells;
-    int numPartition[10][3];
     int globLevelOffset[10];
     int numSendBodies;
     int numSendCells;
@@ -205,9 +205,9 @@ namespace EXAFMM_NAMESPACE {
       ivec3 iXc;
       getGlobIndex(iXc,MPIRANK,maxGlobLevel);
       int nunit = 1 << maxLevel;
-      int nunitGlob[3];
+      ivec3 nunitGlob;
       for_3d nunitGlob[d] = nunit * numPartition[maxGlobLevel][d];
-      int nxmin[3], nxmax[3];
+      ivec3 nxmin, nxmax;
       for_3d nxmin[d] = -iXc[d] * nunit;
       for_3d nxmax[d] = nunitGlob[d] + nxmin[d] - 1;
       if (numImages != 0) {
@@ -221,7 +221,7 @@ namespace EXAFMM_NAMESPACE {
 	ivec3 jXmin, jXmax;
 	for_3d jXmin[d] = std::max(nxmin[d],iX[d] - DP2P);
 	for_3d jXmax[d] = std::min(nxmax[d],iX[d] + DP2P);
-	int jX[3];
+	ivec3 jX;
 	for (jX[2]=jXmin[2]; jX[2]<=jXmax[2]; jX[2]++) {
 	  for (jX[1]=jXmin[1]; jX[1]<=jXmax[1]; jX[1]++) {
 	    for (jX[0]=jXmin[0]; jX[0]<=jXmax[0]; jX[0]++) {
@@ -254,7 +254,7 @@ namespace EXAFMM_NAMESPACE {
 	vec3 center;
 	getCenter(center,i,maxLevel);
 	for (int j=Leafs[i+rankOffset][0]; j<Leafs[i+rankOffset][1]; j++) {
-	  real_t dX[3];
+	  vec3 dX;
 	  for_3d dX[d] = center[d] - Jbodies[j][d];
 	  real_t M[MTERM];
 	  M[0] = Jbodies[j][3];

@@ -307,27 +307,27 @@ namespace EXAFMM_NAMESPACE {
 
     void globM2MSend(int level) {
       MPI_Status stats[8];
-      int numChild[3];
+      ivec3 numChild;
       for_3d numChild[d] = numPartition[level][d] / numPartition[level-1][d];
-      int numStride[3];
+      ivec3 numStride;
       for_3d numStride[d] = numPartition[maxGlobLevel][d] / numPartition[level][d];
-      int iX[3];
+      ivec3 iX;
       for_3d iX[d] = IX[level][d];
-      int iXoff[3];
+      ivec3 iXoff;
       for_3d iXoff[d] = IX[maxGlobLevel][d] % numStride[d];
-      int jXoff[3];
+      ivec3 jXoff;
       for_3d jXoff[d] = (IX[level][d] / numChild[d]) * numChild[d];
       int i = getGlobKey(iX,level) + globLevelOffset[level];
       for_m sendMultipole[0][m] = globMultipole[i][m];
       int iforward = 0;
       int numComm = numChild[0] * numChild[1] * numChild[2] - 1;
       float commBytes = 0;
-      int jX[3];
+      ivec3 jX;
       for( jX[2]=jXoff[2]; jX[2]<jXoff[2]+numChild[2]; jX[2]++ ) {
 	for( jX[1]=jXoff[1]; jX[1]<jXoff[1]+numChild[1]; jX[1]++ ) {
 	  for( jX[0]=jXoff[0]; jX[0]<jXoff[0]+numChild[0]; jX[0]++ ) {
 	    if( iX[0] != jX[0] || iX[1] != jX[1] || iX[2] != jX[2] ) {
-	      int jXp[3];
+	      ivec3 jXp;
 	      for_3d jXp[d] = iXoff[d] + jX[d] * numStride[d];
 	      int commRank = getGlobKey(jXp,maxGlobLevel);
 	      commBytes += MTERM * 4;

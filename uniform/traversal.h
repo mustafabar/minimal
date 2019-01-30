@@ -125,7 +125,7 @@ namespace EXAFMM_NAMESPACE {
       } else if (Ci->NCHILD == 0 && Cj->NCHILD == 0) {          // Else if both cells are bodies
 #if EXAFMM_NO_P2P
 	int index = Ci->ICELL;
-	int iX[3] = {0, 0, 0};
+	ivec3 iX = 0;
 	int d = 0, level = 0;
 	while( index != 0 ) {
 	  iX[d] += (index % 2) * (1 << level);
@@ -134,7 +134,7 @@ namespace EXAFMM_NAMESPACE {
 	  if( d == 0 ) level++;
 	}
 	index = Cj->ICELL;
-	int jX[3] = {0, 0, 0};
+	ivec3 jX = 0;
 	d = 0; level = 0;
 	while( index != 0 ) {
 	  jX[d] += (index % 2) * (1 << level);
