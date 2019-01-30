@@ -109,7 +109,7 @@ namespace EXAFMM_NAMESPACE {
 
     //! Get Morton key
     uint64_t getKey(vec3 X, vec3 Xmin, real_t diameter, int level) const {
-      int iX[3] = {0, 0, 0};                                    // Initialize 3-D index
+      ivec3 iX = 0;                                             // Initialize 3-D index
       for (int d=0; d<3; d++) iX[d] = int((X[d] - Xmin[d]) / diameter);// 3-D index
       uint64_t index = ((1 << 3 * level) - 1) / 7;              // Levelwise offset
       for (int l=0; l<level; l++) {                             // Loop over levels

@@ -215,7 +215,7 @@ namespace EXAFMM_NAMESPACE {
 
     //! Allgather bounds from all ranks
     void allgatherBounds(Bounds bounds) {
-      float Xmin[3], Xmax[3];
+      fvec3 Xmin, Xmax;
       for (int d=0; d<3; d++) {                                 // Loop over dimensions
 	Xmin[d] = bounds.Xmin[d];                               //  Convert Xmin to float
 	Xmax[d] = bounds.Xmax[d];                               //  Convert Xmax to float

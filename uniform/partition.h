@@ -185,18 +185,18 @@ namespace EXAFMM_NAMESPACE {
     Bounds octsection(Bodies & bodies, Bounds global) {
       logger::startTimer("Partition");                          // Start timer
       int size = mpisize;                                       // Initialize MPI size counter
-      int Npartition[3] = {1, 1, 1};                            // Number of partitions in each direction
+      ivec3 Npartition = 1;                                     // Number of partitions in each direction
       int d = 0;                                                // Initialize dimension counter
       while (size != 1) {                                       // Divide domain while counter is not one
 	Npartition[d] <<= 1;                                    //  Divide this dimension
 	d = (d+1) % 3;                                          //  Increment dimension
 	size >>= 1;                                             //  Right shift the bits of counter
       }                                                         // End while loop for domain subdivision
-      real_t Xpartition[3];                                     // Size of partitions in each direction
+      vec3 Xpartition;                                          // Size of partitions in each direction
       for (d=0; d<3; d++) {                                     // Loop over dimensions
 	Xpartition[d] = (global.Xmax[d] - global.Xmin[d]) / Npartition[d];//  Size of partition in each direction
       }                                                         // End loop over dimensions
-      int iX[3];                                                // Index vector
+      ivec3 iX;                                                 // Index vector
       iX[0] = mpirank % Npartition[0];                          // x index of partition
       iX[1] = mpirank / Npartition[0] % Npartition[1];          // y index
       iX[2] = mpirank / Npartition[0] / Npartition[1];          // z index

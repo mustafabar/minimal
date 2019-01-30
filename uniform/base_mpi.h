@@ -44,7 +44,7 @@ namespace EXAFMM_NAMESPACE {
 
     //! Allreduce vec3 type from all ranks
     vec3 allreduceVec3(vec3 send) {
-      float fsend[3], frecv[3];                                 // Single precision buffers
+      fvec3 fsend, frecv;                                       // Single precision buffers
       for (int d=0; d<3; d++) fsend[d] = send[d];               // Copy to send buffer
       MPI_Allreduce(fsend, frecv, 3, MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD);// Communicate values
       vec3 recv;                                                // Receive buffer
@@ -54,7 +54,7 @@ namespace EXAFMM_NAMESPACE {
 
     //! Allreduce bounds type from all ranks
     Bounds allreduceBounds(Bounds local) {
-      float localXmin[3], localXmax[3], globalXmin[3], globalXmax[3];
+      fvec3 localXmin, localXmax, globalXmin, globalXmax;
       for (int d=0; d<3; d++) {                                 // Loop over dimensions
 	localXmin[d] = local.Xmin[d];                           //  Convert Xmin to float
 	localXmax[d] = local.Xmax[d];                           //  Convert Xmax to float

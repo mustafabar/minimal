@@ -56,8 +56,8 @@ namespace EXAFMM_NAMESPACE {
     }
 
     void setSendCounts() {
-      int leafsType[3] = {1, (1 << maxLevel), (1 << (2 * maxLevel))};
-      ivec3 bodiesType;
+      ivec3 leafsType, bodiesType;
+      for_3d leafsType[d] = 1 << (d * maxLevel);
       for_3d bodiesType[d] = leafsType[d] * float(numBodies) / numLeafs * 4;
       int i = 0;
       ivec3 iX;
@@ -209,7 +209,7 @@ namespace EXAFMM_NAMESPACE {
 
     void partitioner(int level) {
       int mpisize = MPISIZE;
-      int maxPartition[3] = {1, 1, 1};
+      ivec3 maxPartition = 1;
       int dim = 0;
       while( mpisize != 1 ) {
 	int ndiv = 2;
@@ -293,7 +293,7 @@ namespace EXAFMM_NAMESPACE {
       real_t L[LTERM];
       for_l L[l] = 0;
       for( int lev=1; lev<numImages; lev++ ) {
-	real_t diameter[3];
+	vec3 diameter;
 	for_3d diameter[d] = 2 * RGlob[d] * std::pow(3.,lev-1);
 	ivec3 jX;
 	for( jX[2]=-4; jX[2]<=4; jX[2]++ ) {
@@ -315,7 +315,7 @@ namespace EXAFMM_NAMESPACE {
 	}
 	real_t M3[MTERM];
 	for_m M3[m] = 0;
-	int iX[3];
+	ivec3 iX;
 	for( iX[2]=-1; iX[2]<=1; iX[2]++ ) {
 	  for( iX[1]=-1; iX[1]<=1; iX[1]++ ) {
 	    for( iX[0]=-1; iX[0]<=1; iX[0]++ ) {
