@@ -1,3 +1,8 @@
+remove LAPLACE
+remove unused files
+remove unnecessary functions
+remove unnecessary compiler options
+
 switch to spherical kernel
 1. Make M, L complex_t
 2. create interface and call it from parallelfmm
@@ -6,9 +11,6 @@ switch to spherical kernel
 fix FMM accuracy
 test periodic convergence
 test in parallel
-remove unused files
-remove unnecessary functions
-remove unnecessary compiler options
 use args,timer from exafmm-beta
 write Ewald using uniform FMM
 fuse all triple loops for periodic

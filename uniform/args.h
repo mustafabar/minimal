@@ -15,11 +15,6 @@ namespace EXAFMM_NAMESPACE {
   static struct option long_options[] = {
     {"accuracy",     no_argument,       0, 'a'},
     {"ncrit",        required_argument, 0, 'c'},
-    {"cutoff",       required_argument, 0, 'C'},
-    {"distribution", required_argument, 0, 'd'},
-    {"dual",         no_argument,       0, 'D'},
-    {"graft",        no_argument,       0, 'g'},
-    {"getMatrix",    no_argument,       0, 'G'},
     {"help",         no_argument,       0, 'h'},
     {"images",       required_argument, 0, 'i'},
     {"IneJ",         no_argument,       0, 'j'},
@@ -39,11 +34,6 @@ namespace EXAFMM_NAMESPACE {
   public:
     int accuracy;
     int ncrit;
-    double cutoff;
-    const char * distribution;
-    int dual;
-    int graft;
-    int getMatrix;
     int images;
     int IneJ;
     int numBodies;
@@ -63,11 +53,6 @@ namespace EXAFMM_NAMESPACE {
 	      "Long option (short option)       : Description (Default value)\n"
 	      " --accuracy (-a)                 : Regression for accuracy only (%d)\n"
 	      " --ncrit (-c)                    : Number of bodies per leaf cell (%d)\n"
-	      " --cutoff (-C)                   : Cutoff distance of interaction (%f)\n"
-	      " --distribution (-d) [c/l/o/p/s] : lattice, cube, sphere, octant, plummer (%s)\n"
-	      " --dual (-D)                     : Use dual tree traversal (%d)\n"
-	      " --graft (-g)                    : Graft remote trees to global tree (%d)\n"
-	      " --getMatrix (-G)                : Write G matrix to file (%d)\n"
 	      " --help (-h)                     : Show this help document\n"
 	      " --images (-i)                   : Number of periodic image levels (%d)\n"
 	      " --IneJ (-j)                     : Use different sources & targets (%d)\n"
@@ -83,11 +68,6 @@ namespace EXAFMM_NAMESPACE {
 	      name,
               accuracy,
 	      ncrit,
-	      cutoff,
-	      distribution,
-	      dual,
-	      graft,
-	      getMatrix,
 	      images,
 	      IneJ,
 	      numBodies,
@@ -124,11 +104,6 @@ namespace EXAFMM_NAMESPACE {
     Args(int argc=0, char ** argv=NULL) :
       accuracy(0),
       ncrit(64),
-      cutoff(.0),
-      distribution("cube"),
-      dual(0),
-      graft(0),
-      getMatrix(0),
       images(0),
       IneJ(0),
       numBodies(1000000),
@@ -150,21 +125,6 @@ namespace EXAFMM_NAMESPACE {
 	  break;
 	case 'c':
 	  ncrit = atoi(optarg);
-	  break;
-	case 'C':
-	  cutoff = atof(optarg);
-	  break;
-	case 'd':
-	  distribution = parseDistribution(optarg);
-	  break;
-	case 'D':
-	  dual = 1;
-	  break;
-	case 'g':
-	  graft = 1;
-	  break;
-	case 'G':
-	  getMatrix = 1;
 	  break;
 	case 'h':
 	  usage(argv[0]);
@@ -215,16 +175,6 @@ namespace EXAFMM_NAMESPACE {
 		  << "accuracy" << " : " << accuracy << std::endl
 		  << std::setw(stringLength)
 		  << "ncrit" << " : " << ncrit << std::endl
-		  << std::setw(stringLength)
-		  << "cutoff" << " : " << cutoff << std::endl
-		  << std::setw(stringLength)
-		  << "distribution" << " : " << distribution << std::endl
-		  << std::setw(stringLength)
-		  << "dual" << " : " << dual << std::endl
-		  << std::setw(stringLength)
-		  << "graft" << " : " << graft << std::endl
-		  << std::setw(stringLength)
-		  << "getMatrix" << " : " << getMatrix << std::endl
 		  << std::setw(stringLength)
 		  << "images" << " : " << images << std::endl
 		  << std::setw(stringLength)

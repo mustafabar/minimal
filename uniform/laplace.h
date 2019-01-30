@@ -155,10 +155,10 @@ namespace EXAFMM_NAMESPACE {
 #if EXAFMM_USE_SIMD
       for ( ; i<=ni-NSIMD; i+=NSIMD) {
         simdvec zero = 0.0;
-        ksimdvec pot = zero;
-        ksimdvec ax = zero;
-        ksimdvec ay = zero;
-        ksimdvec az = zero;
+        simdvec pot = zero;
+        simdvec ax = zero;
+        simdvec ay = zero;
+        simdvec az = zero;
 
         simdvec xi = SIMD<simdvec,B_iter,0,NSIMD>::setBody(Bi,i);
         simdvec yi = SIMD<simdvec,B_iter,1,NSIMD>::setBody(Bi,i);
@@ -209,10 +209,10 @@ namespace EXAFMM_NAMESPACE {
       }
 #endif
       for ( ; i<ni; i++) {
-        kreal_t pot = 0;
-        kreal_t ax = 0;
-        kreal_t ay = 0;
-        kreal_t az = 0;
+        real_t pot = 0;
+        real_t ax = 0;
+        real_t ay = 0;
+        real_t az = 0;
         for (int j=0; j<nj; j++) {
           vec3 dX = Bi[i].X - Bj[j].X - Xperiodic;
           real_t R2 = norm(dX) + eps2;

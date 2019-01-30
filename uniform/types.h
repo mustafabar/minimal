@@ -32,19 +32,6 @@ namespace EXAFMM_NAMESPACE {
   const int NSIMD = SIMD_BYTES / int(sizeof(real_t));           //!< SIMD vector length (SIMD_BYTES defined in macros.h)
   typedef vec<NSIMD,real_t> simdvec;                            //!< SIMD vector type
 
-  // Kahan summation types (Achieves quasi-double precision using single precision types)
-#if EXAFMM_USE_KAHAN
-  typedef kahan<real_t> kreal_t;                                //!< Real type with Kahan summation
-  typedef kahan<complex_t> kcomplex_t;                          //!< Complex type with Kahan summation
-  typedef kahan<simdvec> ksimdvec;                              //!< SIMD vector type with Kahan summation
-#else
-  typedef real_t kreal_t;                                       //!< Real type (dummy Kahan)
-  typedef complex_t kcomplex_t;                                 //!< Complex type (dummy Kahan)
-  typedef simdvec ksimdvec;                                     //!< SIMD vector type (dummy Kahan)
-#endif
-  typedef vec<4,kreal_t> kvec4;                                 //!< Vector of 4 real types with Kahan summaiton
-  typedef vec<4,kcomplex_t> kcvec4;                             //!< Vector of 4 complex types with Kahan summaiton
-
   //! Center and radius of bounding box
   struct Box {
     vec3   X;                                                   //!< Box center
@@ -60,13 +47,7 @@ namespace EXAFMM_NAMESPACE {
   //! Structure of aligned source for SIMD
   struct Source {                                               //!< Base components of source structure
     vec3      X;                                                //!< Position
-#if EXAFMM_LAPLACE
     real_t    SRC;                                              //!< Scalar real values
-#elif EXAFMM_HELMHOLTZ
-    complex_t SRC;                                              //!< Scalar complex values
-#elif EXAFMM_BIOTSAVART
-    vec4      SRC;                                              //!< Vector real values
-#endif
   };
 
   //! Structure of bodies
@@ -75,13 +56,7 @@ namespace EXAFMM_NAMESPACE {
     int     IRANK;                                              //!< Initial rank numbering for partitioning back
     int64_t ICELL;                                              //!< Cell index
     real_t  WEIGHT;                                             //!< Weight for partitioning
-#if EXAFMM_LAPLACE
-    kvec4   TRG;                                                //!< Scalar+vector3 real values
-#elif EXAFMM_HELMHOLTZ
-    kcvec4  TRG;                                                //!< Scalar+vector3 complex values
-#elif EXAFMM_BIOTSAVART
-    kvec4   TRG;                                                //!< Scalar+vector3 real values
-#endif
+    vec4   TRG;                                                //!< Scalar+vector3 real values
   };
   typedef std::vector<Body> Bodies;                             //!< Vector of bodies
   typedef typename Bodies::iterator B_iter;                     //!< Iterator of body vector

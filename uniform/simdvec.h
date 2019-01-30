@@ -174,27 +174,12 @@ namespace EXAFMM_NAMESPACE {
     }
   };
 
-  kreal_t transpose(ksimdvec v, int i) {
-#if EXAFMM_USE_KAHAN
-    kreal_t temp;
-    temp.s = v.s[i];
-    temp.c = v.c[i];
-    return temp;
-#else
+  real_t transpose(simdvec v, int i) {
     return v[i];
-#endif
   }
 
-  kcomplex_t transpose(ksimdvec v_r, ksimdvec v_i, int i) {
-#if EXAFMM_USE_KAHAN
-    kcomplex_t temp;
-    temp.s = complex_t(v_r.s[i], v_i.s[i]);
-    temp.c = complex_t(v_r.c[i], v_i.c[i]);
-    return temp;
-
-#else
-    return kcomplex_t(v_r[i], v_i[i]);
-#endif
+  complex_t transpose(simdvec v_r, simdvec v_i, int i) {
+    return complex_t(v_r[i], v_i[i]);
   }
 }
 #endif
