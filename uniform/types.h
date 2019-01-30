@@ -19,6 +19,7 @@ namespace EXAFMM_NAMESPACE {
   const real_t EPS = 1e-16;                                     //!< Double precision epsilon
 #endif
   typedef std::complex<real_t> complex_t;                       //!< Complex type
+  typedef std::complex<float> fcomplex_t;                       //!< Single precision complex type
   const complex_t I(0.,1.);                                     //!< Imaginary unit
 
   typedef vec<3,int> ivec3;                                     //!< Vector of 3 int types
