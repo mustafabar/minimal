@@ -246,7 +246,7 @@ namespace EXAFMM_NAMESPACE {
     void sortBodies() const {
       int *key = new int [numBodies];
       real_t diameter = 2 * R0 / (1 << maxLevel);
-      int iX[3] = {0, 0, 0};
+      ivec3 iX = 0;
       for( int i=0; i<numBodies; i++ ) {
 	getIndex(i,iX,diameter);
 	key[i] = getKey(iX,maxLevel);
@@ -265,7 +265,7 @@ namespace EXAFMM_NAMESPACE {
 	Leafs[i][0] = Leafs[i][1] = 0;
       }
       real_t diameter = 2 * R0 / (1 << maxLevel);
-      int iX[3] = {0, 0, 0};
+      ivec3 iX = 0;
       getIndex(0,iX,diameter);
       int ileaf = getKey(iX,maxLevel,false) + rankOffset;
       Leafs[ileaf][0] = 0;
@@ -295,14 +295,14 @@ namespace EXAFMM_NAMESPACE {
       for( int lev=1; lev<numImages; lev++ ) {
 	real_t diameter[3];
 	for_3d diameter[d] = 2 * RGlob[d] * std::pow(3.,lev-1);
-	int jX[3];
+	ivec3 jX;
 	for( jX[2]=-4; jX[2]<=4; jX[2]++ ) {
 	  for( jX[1]=-4; jX[1]<=4; jX[1]++ ) {
 	    for( jX[0]=-4; jX[0]<=4; jX[0]++ ) {
 	      if(jX[0] < -1 || 1 < jX[0] ||
 		 jX[1] < -1 || 1 < jX[1] ||
 		 jX[2] < -1 || 1 < jX[2]) {
-		real_t dX[3];
+		vec3 dX;
 		for_3d dX[d] = jX[d] * diameter[d];
 		real_t invR2 = 1. / (dX[0] * dX[0] + dX[1] * dX[1] + dX[2] * dX[2]);
 		real_t invR  = sqrt(invR2);
@@ -319,7 +319,7 @@ namespace EXAFMM_NAMESPACE {
 	for( iX[2]=-1; iX[2]<=1; iX[2]++ ) {
 	  for( iX[1]=-1; iX[1]<=1; iX[1]++ ) {
 	    for( iX[0]=-1; iX[0]<=1; iX[0]++ ) {
-	      real_t dX[3];
+	      vec3 dX;
 	      for_3d dX[d] = iX[d] * diameter[d];
 	      real_t C[LTERM];
 	      C[0] = 1;

@@ -62,7 +62,7 @@ namespace EXAFMM_NAMESPACE {
     }
 
     void partitionComm() {
-      int iX[3];
+      ivec3 iX;
       for( int i=0; i<MPISIZE; i++ ) sendBodiesCount[i] = 0;
       assert(numBodies % 3 == 0);
       for( int i=0; i<numBodies; i++ ) {
@@ -109,13 +109,13 @@ namespace EXAFMM_NAMESPACE {
     void P2PSend() {
       MPI_Status stats[52];
       int rankOffset = 13 * numLeafs;
-      int iXc[3];
+      ivec3 iXc;
       getGlobIndex(iXc,MPIRANK,maxGlobLevel);
-      int nunit[3];
+      ivec3 nunit;
       for_3d nunit[d] = numPartition[maxGlobLevel][d];
       int ileaf = 0;
       int iforward = 0;
-      int iX[3];
+      ivec3 iX;
       float commBytes = 0;
       for( iX[2]=-1; iX[2]<=1; iX[2]++ ) {
 	for( iX[1]=-1; iX[1]<=1; iX[1]++ ) {
@@ -124,11 +124,11 @@ namespace EXAFMM_NAMESPACE {
 	      int ibody = bodiesDispl[iforward];
 	      int nxmin[3] = {(1 << maxLevel) - 1, 0, 0};
 	      int nxmax[3] = {1 << maxLevel, 1 << maxLevel, 1};
-	      int jX[3];
+	      ivec3 jX;
 	      for( jX[2]=nxmin[iX[2]+1]; jX[2]<nxmax[iX[2]+1]; jX[2]++ ) {
 		for( jX[1]=nxmin[iX[1]+1]; jX[1]<nxmax[iX[1]+1]; jX[1]++ ) {
 		  for( jX[0]=nxmin[iX[0]+1]; jX[0]<nxmax[iX[0]+1]; jX[0]++, ileaf++ ) {
-		    int jXp[3] = {jX[0], jX[1], jX[2]};
+		    ivec3 jXp = jX;
 		    int j = getKey(jXp,maxLevel,false) + rankOffset;
 		    sendLeafs[ileaf][0] = ibody;
 		    for( int jbody=Leafs[j][0]; jbody<Leafs[j][1]; ibody++, jbody++ ) {
@@ -141,7 +141,7 @@ namespace EXAFMM_NAMESPACE {
 	      if(iforward != 25 ) {
 		if( ibody > bodiesDispl[iforward+1] ) std::cout << "ibody: " << ibody << " bodiesDispl: " << bodiesDispl[iforward+1] << " @rank: " << MPIRANK << std::endl;
 	      }
-	      int iXp[3];
+	      ivec3 iXp;
 	      for_3d iXp[d] = (iXc[d] - iX[d] + nunit[d]) % nunit[d];
 	      int sendRank = getGlobKey(iXp,maxGlobLevel);
 	      for_3d iXp[d] = (iXc[d] + iX[d] + nunit[d]) % nunit[d];
@@ -179,7 +179,7 @@ namespace EXAFMM_NAMESPACE {
       MPI_Waitall(52,&requests[52],stats);
       int ileaf = 0;
       int iforward = 0;
-      int iX[3];
+      ivec3 iX;
       for( iX[2]=-1; iX[2]<=1; iX[2]++ ) {
 	for( iX[1]=-1; iX[1]<=1; iX[1]++ ) {
 	  for( iX[0]=-1; iX[0]<=1; iX[0]++ ) {
@@ -190,11 +190,11 @@ namespace EXAFMM_NAMESPACE {
 	      int ibody = numBodies + bodiesDispl[iforward];
 	      int nxmin[3] = {(1 << maxLevel) - 1, 0, 0};
 	      int nxmax[3] = {1 << maxLevel, 1 << maxLevel, 1};
-	      int jX[3];
+	      ivec3 jX;
 	      for( jX[2]=nxmin[iX[2]+1]; jX[2]<nxmax[iX[2]+1]; jX[2]++ ) {
 		for( jX[1]=nxmin[iX[1]+1]; jX[1]<nxmax[iX[1]+1]; jX[1]++ ) {
 		  for( jX[0]=nxmin[iX[0]+1]; jX[0]<nxmax[iX[0]+1]; jX[0]++, ileaf++ ) {
-		    int jXp[3] = {jX[0], jX[1], jX[2]};
+		    ivec3 jXp = jX;
 		    int j = getKey(jXp,maxLevel,false) + rankOffset;
 		    Leafs[j][0] = ibody;
 		    for( int jbody=recvLeafs[ileaf][0]; jbody<recvLeafs[ileaf][1]; ibody++, jbody++ ) {
@@ -214,15 +214,15 @@ namespace EXAFMM_NAMESPACE {
     void M2LSend(int lev) {
       MPI_Status stats[26];
       int rankOffset = 13 * numCells;
-      int iXc[3];
+      ivec3 iXc;
       getGlobIndex(iXc,MPIRANK,maxGlobLevel);
-      int nunit[3];
+      ivec3 nunit;
       for_3d nunit[d] = numPartition[maxGlobLevel][d];
       int nxmin[3] = {(1 << lev) - 2, 0, 0};
       int nxmax[3] = {1 << lev, 1 << lev, 2};
       int i = 0;
       int iforward = 0;
-      int iX[3];
+      ivec3 iX;
       float commBytes = 0;
 #ifdef EXAFMM_IJHPCA
       MPI_Barrier(MPI_COMM_WORLD);
@@ -232,18 +232,18 @@ namespace EXAFMM_NAMESPACE {
 	for( iX[1]=-1; iX[1]<=1; iX[1]++ ) {
 	  for( iX[0]=-1; iX[0]<=1; iX[0]++ ) {
 	    if( iX[0] != 0 || iX[1] != 0 || iX[2] != 0 ) {
-	      int jX[3];
+	      ivec3 jX;
 	      for( jX[2]=nxmin[iX[2]+1]; jX[2]<nxmax[iX[2]+1]; jX[2]++ ) {
 		for( jX[1]=nxmin[iX[1]+1]; jX[1]<nxmax[iX[1]+1]; jX[1]++ ) {
 		  for( jX[0]=nxmin[iX[0]+1]; jX[0]<nxmax[iX[0]+1]; jX[0]++, i++ ) {
-		    int jXp[3] = {jX[0], jX[1], jX[2]};
+		    ivec3 jXp = jX;
 		    int j = getKey(jXp,lev) + rankOffset;
 		    for_m sendMultipole[i][m] = Multipole[j][m];
 		    commBytes += MTERM * 4;
 		  }
 		}
 	      }
-	      int iXp[3];
+	      ivec3 iXp;
 	      for_3d iXp[d] = (iXc[d] - iX[d] + nunit[d]) % nunit[d];
 	      int sendRank = getGlobKey(iXp,maxGlobLevel);
 	      for_3d iXp[d] = (iXc[d] + iX[d] + nunit[d]) % nunit[d];
@@ -276,11 +276,11 @@ namespace EXAFMM_NAMESPACE {
 	for_3d iX[d]--;
 	int i = multipoleDispl[lev][irequest];
 	int rankOffset = rankIndex * numCells;
-	int jX[3];
+	ivec3 jX;
 	for( jX[2]=nxmin[iX[2]+1]; jX[2]<nxmax[iX[2]+1]; jX[2]++ ) {
 	  for( jX[1]=nxmin[iX[1]+1]; jX[1]<nxmax[iX[1]+1]; jX[1]++ ) {
 	    for( jX[0]=nxmin[iX[0]+1]; jX[0]<nxmax[iX[0]+1]; jX[0]++, i++ ) {
-	      int jXp[3] = {jX[0], jX[1], jX[2]};
+	      ivec3 jXp = jX;
 	      int j = getKey(jXp,lev) + rankOffset;
 	      for_m Multipole[j][m] = recvMultipole[i][m];
 	    }
