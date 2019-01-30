@@ -7,7 +7,6 @@
 #include "laplace.h"
 #include "namespace.h"
 #include "tree_mpi.h"
-#include "up_down_pass.h"
 #include "verify.h"
 #if EXAFMM_SERIAL
 #include "../uniform/serialfmm.h"
@@ -31,7 +30,6 @@ int main(int argc, char ** argv) {
   Dataset data;
   Ewald ewald(ksize, alpha, sigma, cutoff, cycle);
   Kernel kernel(args.P, eps2);
-  UpDownPass upDownPass(kernel);
 #if EXAFMM_SERIAL
   SerialFMM FMM;
 #else
@@ -134,11 +132,11 @@ int main(int argc, char ** argv) {
       for_4d B->TRG[d] = FMM.Ibodies[b][d];
     }
     Bodies jbodies = bodies;
-    vec3 localDipole = upDownPass.getDipole(bodies, FMM.RGlob[0]);
+    vec3 localDipole = ewald.getDipole(bodies, FMM.RGlob[0]);
     vec3 globalDipole = baseMPI.allreduceVec3(localDipole);
     numBodies = baseMPI.allreduceInt(bodies.size());
 
-    upDownPass.dipoleCorrection(bodies, globalDipole, numBodies, cycle);
+    ewald.dipoleCorrection(bodies, globalDipole, numBodies, cycle);
     logger::startTimer("Total Ewald");
     Bounds bounds = boundBox.getBounds(bodies);
     Bodies buffer = bodies;
