@@ -12,3 +12,5 @@ remove unnecessary functions
 remove unnecessary compiler options
 use args,timer from exafmm-beta
 write Ewald using uniform FMM
+fuse all triple loops for periodic
+remove for_d

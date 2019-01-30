@@ -345,16 +345,16 @@ namespace EXAFMM_NAMESPACE {
 
     void globM2MRecv(int level) {
       MPI_Status stats[8];
-      int numChild[3];
+      ivec3 numChild;
       for_3d numChild[d] = numPartition[level][d] / numPartition[level-1][d];
-      int iX[3];
+      ivec3 iX;
       for_3d iX[d] = IX[level][d];
-      int jXoff[3];
+      ivec3 jXoff;
       for_3d jXoff[d] = (iX[d] / numChild[d]) * numChild[d];
       int iforward = 0;
       int numComm = numChild[0] * numChild[1] * numChild[2] - 1;
       MPI_Waitall(numComm,&requests[numComm],stats);
-      int jX[3];
+      ivec3 jX;
       for( jX[2]=jXoff[2]; jX[2]<jXoff[2]+numChild[2]; jX[2]++ ) {
 	for( jX[1]=jXoff[1]; jX[1]<jXoff[1]+numChild[1]; jX[1]++ ) {
 	  for( jX[0]=jXoff[0]; jX[0]<jXoff[0]+numChild[0]; jX[0]++ ) {
@@ -378,23 +378,23 @@ namespace EXAFMM_NAMESPACE {
 	globM2MRecv(lev);
 	logger::stopTimer("Comm LET cells", 0);
 	logger::startTimer("Upward pass");
-	int numChild[3];
+	ivec3 numChild;
 	for_3d numChild[d] = numPartition[lev][d] / numPartition[lev-1][d];
-	int jXoff[3];
+	ivec3 jXoff;
 	for_3d jXoff[d] = (IX[lev][d] / numChild[d]) * numChild[d];
 	int childOffset = globLevelOffset[lev];
 	int parentOffset = globLevelOffset[lev-1];
-	real_t diameter[3];
+	vec3 diameter;
 	for_3d diameter[d] = 2 * RGlob[d] / numPartition[lev][d];
-	int jX[3];
+	ivec3 jX;
 	for( jX[2]=jXoff[2]; jX[2]<jXoff[2]+numChild[2]; jX[2]++ ) {
 	  for( jX[1]=jXoff[1]; jX[1]<jXoff[1]+numChild[1]; jX[1]++ ) {
 	    for( jX[0]=jXoff[0]; jX[0]<jXoff[0]+numChild[0]; jX[0]++ ) {
-	      int iX[3];
+	      ivec3 iX;
 	      for_3d iX[d] = jX[d] / numChild[d];
 	      int c = getGlobKey(jX,lev) + childOffset;
 	      int p = getGlobKey(iX,lev-1) + parentOffset;
-	      real_t dX[3];
+	      vec3 dX;
 	      for_3d dX[d] = (iX[d] + .5) * numChild[d] * diameter[d] - (jX[d] + .5) * diameter[d];
 	      real_t M[MTERM];
 	      real_t C[LTERM];
@@ -413,21 +413,21 @@ namespace EXAFMM_NAMESPACE {
       logger::stopTimer("Comm LET cells", 0);
       logger::startTimer("Upward pass");
       for( int lev=gatherLevel; lev>0; lev-- ) {
-	int numChild[3];
+	ivec3 numChild;
 	for_3d numChild[d] = numPartition[lev][d] / numPartition[lev-1][d];
 	int childOffset = globLevelOffset[lev];
 	int parentOffset = globLevelOffset[lev-1];
-	real_t diameter[3];
+	vec3 diameter;
 	for_3d diameter[d] = 2 * RGlob[d] / numPartition[lev][d];
-	int jX[3];
+	ivec3 jX;
 	for( jX[2]=0; jX[2]<numPartition[lev][2]; jX[2]++ ) {
 	  for( jX[1]=0; jX[1]<numPartition[lev][1]; jX[1]++ ) {
 	    for( jX[0]=0; jX[0]<numPartition[lev][0]; jX[0]++ ) {
-	      int iX[3];
+	      ivec3 iX;
 	      for_3d iX[d] = jX[d] / numChild[d];
 	      int c = getGlobKey(jX,lev) + childOffset;
 	      int p = getGlobKey(iX,lev-1) + parentOffset;
-	      real_t dX[3];
+	      vec3 dX;
 	      for_3d dX[d] = (iX[d] + .5) * numChild[d] * diameter[d] - (jX[d] + .5) * diameter[d];
 	      real_t M[MTERM];
 	      real_t C[LTERM];
@@ -445,24 +445,24 @@ namespace EXAFMM_NAMESPACE {
 
     void globM2LSend(int level) {
       MPI_Status stats[26];
-      int numChild[3];
+      ivec3 numChild;
       for_3d numChild[d] = numPartition[level][d] / numPartition[level-1][d];
-      int numStride[3];
+      ivec3 numStride;
       for_3d numStride[d] = numPartition[maxGlobLevel][d] / numPartition[level-1][d];
-      int iXc[3];
+      ivec3 iXc;
       for_3d iXc[d] = IX[level-1][d];
-      int iXoff[3];
+      ivec3 iXoff;
       for_3d iXoff[d] = IX[maxGlobLevel][d] % numStride[d];
       int numGroup = numChild[0] * numChild[1] * numChild[2];
       float commBytes = 0;
       int i = 0;
       int iforward = 0;
-      int iX[3];
+      ivec3 iX;
       for( iX[2]=-1; iX[2]<=1; iX[2]++ ) {
 	for( iX[1]=-1; iX[1]<=1; iX[1]++ ) {
 	  for( iX[0]=-1; iX[0]<=1; iX[0]++ ) {
 	    if( iX[0] != 0 || iX[1] != 0 || iX[2] != 0 ) {
-	      int jX[3];
+	      ivec3 jX;
 	      for( jX[2]=iXc[2]*numChild[2]; jX[2]<(iXc[2]+1)*numChild[2]; jX[2]++ ) {
 		for( jX[1]=iXc[1]*numChild[1]; jX[1]<(iXc[1]+1)*numChild[1]; jX[1]++ ) {
 		  for( jX[0]=iXc[0]*numChild[0]; jX[0]<(iXc[0]+1)*numChild[0]; jX[0]++, i++ ) {
@@ -471,7 +471,7 @@ namespace EXAFMM_NAMESPACE {
 		  }
 		}
 	      }
-	      int iXp[3];
+	      ivec3 iXp;
 	      for_3d iXp[d] = (iXc[d] + iX[d] + numPartition[level-1][d]) % numPartition[level-1][d];
 	      for_3d iXp[d] = iXoff[d] + iXp[d] * numStride[d];
 	      int sendRank = getGlobKey(iXp,maxGlobLevel);
@@ -494,20 +494,20 @@ namespace EXAFMM_NAMESPACE {
     void globM2LRecv(int level) {
       MPI_Status stats[26];
       MPI_Waitall(26,&requests[26],stats);
-      int numChild[3];
+      ivec3 numChild;
       for_3d numChild[d] = numPartition[level][d] / numPartition[level-1][d];
-      int iXc[3];
+      ivec3 iXc;
       for_3d iXc[d] = IX[level-1][d];
       int i = 0;
       int iforward = 0;
-      int iX[3];
+      ivec3 iX;
       for( iX[2]=-1; iX[2]<=1; iX[2]++ ) {
 	for( iX[1]=-1; iX[1]<=1; iX[1]++ ) {
 	  for( iX[0]=-1; iX[0]<=1; iX[0]++ ) {
 	    if( iX[0] != 0 || iX[1] != 0 || iX[2] != 0 ) {
-	      int iXp[3];
+	      ivec3 iXp;
 	      for_3d iXp[d] = (iXc[d] - iX[d] + numPartition[level-1][d]) % numPartition[level-1][d];
-	      int jX[3];
+	      ivec3 jX;
 	      for( jX[2]=iXp[2]*numChild[2]; jX[2]<(iXp[2]+1)*numChild[2]; jX[2]++ ) {
 		for( jX[1]=iXp[1]*numChild[1]; jX[1]<(iXp[1]+1)*numChild[1]; jX[1]++ ) {
 		  for( jX[0]=iXp[0]*numChild[0]; jX[0]<(iXp[0]+1)*numChild[0]; jX[0]++, i++ ) {
@@ -539,10 +539,10 @@ namespace EXAFMM_NAMESPACE {
 	}
 	logger::stopTimer("Comm LET cells");
 	logger::startTimer("Traverse");
-	int nxmin[3] = {0, 0, 0};
-	int nxmax[3] = {numPartition[lev-1][0]-1,numPartition[lev-1][1]-1,numPartition[lev-1][2]-1};
-	int nunit[3] = {numPartition[lev][0],numPartition[lev][1],numPartition[lev][2]};
-	real_t diameter[3];
+	ivec3 nxmin = 0, nxmax, nunit;
+	for_3d nxmax[d] = numPartition[lev-1][d]-1;
+	for_3d nunit[d] = numPartition[lev][d];
+	vec3 diameter;
 	for_3d diameter[d] = 2 * RGlob[d] / numPartition[lev][d];
 	if( numImages != 0 ) {
 	  for_3d nxmin[d] = -nxmax[d] - 1;
@@ -550,27 +550,27 @@ namespace EXAFMM_NAMESPACE {
 	}
 	real_t L[LTERM];
 	for_l L[l] = 0;
-	int iX[3];
+	ivec3 iX;
 	for_3d iX[d] = IX[lev][d];
-	int iXp[3];
+	ivec3 iXp;
 	for_3d iXp[d] = IX[lev-1][d];
-	int jXmin[3];
+	ivec3 jXmin;
 	for_3d jXmin[d] =  std::max(nxmin[d], iXp[d] - 1)      * numPartition[lev][d] / numPartition[lev-1][d];
-	int jXmax[3];
+	ivec3 jXmax;
 	for_3d jXmax[d] = (std::min(nxmax[d], iXp[d] + 1) + 1) * numPartition[lev][d] / numPartition[lev-1][d];
-	int jX[3];
+	ivec3 jX;
 	for( jX[2]=jXmin[2]; jX[2]<jXmax[2]; jX[2]++ ) {
 	  for( jX[1]=jXmin[1]; jX[1]<jXmax[1]; jX[1]++ ) {
 	    for( jX[0]=jXmin[0]; jX[0]<jXmax[0]; jX[0]++ ) {
 	      if(jX[0] < iX[0]-1 || iX[0]+1 < jX[0] ||
 		 jX[1] < iX[1]-1 || iX[1]+1 < jX[1] ||
 		 jX[2] < iX[2]-1 || iX[2]+1 < jX[2]) {
-		int jXp[3];
+		ivec3 jXp;
 		for_3d jXp[d] = (jX[d] + nunit[d]) % nunit[d];
 		int j = getGlobKey(jXp,lev) + globLevelOffset[lev];
 		real_t M[MTERM];
 		for_m M[m] = globMultipole[j][m];
-		real_t dX[3];
+		vec3 dX;
 		for_3d dX[d] = (iX[d] - jX[d]) * diameter[d];
 		real_t invR2 = 1. / (dX[0] * dX[0] + dX[1] * dX[1] + dX[2] * dX[2]);
 		real_t invR  = sqrt(invR2);
@@ -588,9 +588,9 @@ namespace EXAFMM_NAMESPACE {
 
     void globL2L() {
       for( int lev=1; lev<=maxGlobLevel; lev++ ) {
-	real_t diameter[3];
+	vec3 diameter;
 	for_3d diameter[d] = 2 * RGlob[d] / numPartition[lev][d];
-	real_t dX[3];
+	vec3 dX;
 	for_3d dX[d] = (IX[lev][d] + .5) * diameter[d] - (IX[lev-1][d] + .5) * 2 * diameter[d];
 	real_t C[LTERM];
 	C[0] = 1;
