@@ -145,7 +145,6 @@ namespace EXAFMM_NAMESPACE {
 	int end = bodies.size();                                //  End index of bodies
 	splitRange(begin, end, i, numSplit);                    //  Split range of bodies
 	srand48(seed);                                          //  Set seed for random number generator
-#if EXAFMM_LAPLACE
 	real_t average = 0;                                     //  Initialize average charge
 	for (B_iter B=bodies.begin()+begin; B!=bodies.begin()+end; B++) {// Loop over bodies
 	  B->SRC = drand48() - .5;                              //   Initialize charge
@@ -155,18 +154,6 @@ namespace EXAFMM_NAMESPACE {
 	for (B_iter B=bodies.begin()+begin; B!=bodies.begin()+end; B++) {// Loop over bodies
 	  B->SRC -= average;                                    //   Subtract average charge
 	}                                                       //  End loop over bodies
-#elif EXAFMM_HELMHOLTZ
-	for (B_iter B=bodies.begin()+begin; B!=bodies.begin()+end; B++) {// Loop over bodies
-	  B->SRC = B->X[0] + I * B->X[1];                       //   Initialize source
-	}                                                       //  End loop over bodies
-#elif EXAFMM_BIOTSAVART
-        for (B_iter B=bodies.begin()+begin; B!=bodies.begin()+end; B++) {// Loop over bodies
-	  for (int d=0; d<3; d++) {                             //   Loop over dimensions
-	    B->SRC[d] = drand48() / bodies.size();              //    Initialize source
-	  }                                                     //   End loop over dimensions
-	  B->SRC[3] = powf(bodies.size() * numSplit, -1./3) * 2 * M_PI * 0.01; // Initialize core radius
-        }                                                       //  End loop over bodies
-#endif
       }                                                         // End loop over partitions
     }
 

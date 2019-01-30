@@ -3,7 +3,7 @@
 #include "logger.h"
 #include "types.h"
 
-namespace exafmm_laplace {
+namespace exafmm {
   class Ewald {
     //! Wave structure for Ewald summation
     struct Wave {

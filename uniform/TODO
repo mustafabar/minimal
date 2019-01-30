@@ -1,4 +1,4 @@
-remove LAPLACE, IJHPCA, WEIGHT, NAMESPACE
+remove WEIGHT, NAMESPACE
 remove unused files
 remove unnecessary functions
 remove unnecessary compiler options
