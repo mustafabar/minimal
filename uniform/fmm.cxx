@@ -6,7 +6,6 @@
 #include "ewald.h"
 #include "laplace.h"
 #include "namespace.h"
-#include "traversal.h"
 #include "tree_mpi.h"
 #include "up_down_pass.h"
 #include "verify.h"
@@ -32,7 +31,6 @@ int main(int argc, char ** argv) {
   Dataset data;
   Ewald ewald(ksize, alpha, sigma, cutoff, cycle);
   Kernel kernel(args.P, eps2);
-  Traversal traversal(kernel, args.theta, args.nspawn, args.images, args.path);
   UpDownPass upDownPass(kernel);
 #if EXAFMM_SERIAL
   SerialFMM FMM;
