@@ -2,11 +2,10 @@
 #define base_mpi_h
 #include <mpi.h>
 #include <iostream>
-#include "namespace.h"
 #include "types.h"
 #include <unistd.h>
 
-namespace EXAFMM_NAMESPACE {
+namespace exafmm {
   //! Custom MPI utilities
   class BaseMPI {
   private:

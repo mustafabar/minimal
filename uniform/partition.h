@@ -2,10 +2,9 @@
 #define partition_h
 #include "base_mpi.h"
 #include "logger.h"
-#include "namespace.h"
 #include "sort.h"
 
-namespace EXAFMM_NAMESPACE {
+namespace exafmm {
   //! Handles all the partitioning of domains
   class Partition {
   private:

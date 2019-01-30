@@ -4,14 +4,13 @@
 #include "build_tree.h"
 #include "dataset.h"
 #include "ewald.h"
-#include "namespace.h"
 #include "verify.h"
 #if EXAFMM_SERIAL
-#include "../uniform/serialfmm.h"
+#include "serialfmm.h"
 #else
-#include "../uniform/parallelfmm.h"
+#include "parallelfmm.h"
 #endif
-using namespace EXAFMM_NAMESPACE;
+using namespace exafmm;
 
 int main(int argc, char ** argv) {
   const int ksize = 11;

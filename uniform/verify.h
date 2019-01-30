@@ -1,10 +1,9 @@
 #ifndef verify_h
 #define verify_h
 #include "logger.h"
-#include "namespace.h"
 #include "types.h"
 
-namespace EXAFMM_NAMESPACE {
+namespace exafmm {
   //! Verify results
   class Verify {
     typedef std::map<uint64_t,double> Record;                   //!< Map of regression key value pair

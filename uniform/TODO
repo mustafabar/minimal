@@ -1,3 +1,5 @@
+remove namespace
+remove config.h
 remove WEIGHT, NAMESPACE
 remove unused files
 remove unnecessary functions

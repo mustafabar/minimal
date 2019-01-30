@@ -1,8 +1,7 @@
 #include "kernels.h"
 #include "logger.h"
-#include "namespace.h"
 
-namespace EXAFMM_NAMESPACE {
+namespace exafmm {
   class Evaluator : public UniformKernel {
   public:
     bool printNow;

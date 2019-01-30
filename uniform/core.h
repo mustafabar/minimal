@@ -1,4 +1,4 @@
-namespace EXAFMM_NAMESPACE {
+namespace exafmm {
   void getCoef(real_t *C, const real_t *dX, real_t &invR2, const real_t &invR) {
     C[0] = invR;
     invR2 = -invR2;

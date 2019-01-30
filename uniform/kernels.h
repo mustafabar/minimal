@@ -3,7 +3,6 @@
 #include <cstdio>
 #include <fstream>
 #include <iostream>
-#include "namespace.h"
 #include <omp.h>
 
 #define EXAFMM_PP 6
@@ -23,7 +22,7 @@ const int LTERM = (EXAFMM_PP+1)*(EXAFMM_PP+2)*(EXAFMM_PP+3)/6;
 #define EXAFMM_MAX(a,b) (((a) > (b)) ? (a) : (b))
 #define EXAFMM_MIN(a,b) (((a) < (b)) ? (a) : (b))
 
-namespace EXAFMM_NAMESPACE {
+namespace exafmm {
   class UniformKernel {
   private:
     std::vector<real_t> prefactor;

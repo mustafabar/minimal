@@ -1,7 +1,6 @@
-#include "namespace.h"
 #include "serialfmm.h"
 
-namespace EXAFMM_NAMESPACE {
+namespace exafmm {
   class ParallelFMM : public SerialFMM {
   private:
     int EXTERNAL;

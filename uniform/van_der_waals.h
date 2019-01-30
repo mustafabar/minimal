@@ -1,10 +1,9 @@
 #ifndef van_der_waals_h
 #define van_der_waals_h
 #include "logger.h"
-#include "namespace.h"
 #include "types.h"
 
-namespace EXAFMM_NAMESPACE {
+namespace exafmm {
   class VanDerWaals {
   private:
     const real_t cuton;                                         //!< Cuton distance

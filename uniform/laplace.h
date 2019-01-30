@@ -1,11 +1,7 @@
 #ifndef laplace_h
 #define laplace_h
-#include "namespace.h"
-#if EXAFMM_USE_SIMD
-#include "simdvec.h"
-#endif
 
-namespace EXAFMM_NAMESPACE {
+namespace exafmm {
   class Kernel {
   private:
     std::vector<real_t> prefactor;
