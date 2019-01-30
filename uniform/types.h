@@ -2,7 +2,6 @@
 #define types_h
 #include <assert.h>                                             // Some compilers don't have cassert
 #include <complex>
-#include "kahan.h"
 #include "macros.h"
 #include "namespace.h"
 #include <stdint.h>
