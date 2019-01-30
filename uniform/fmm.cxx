@@ -4,9 +4,7 @@
 #include "build_tree.h"
 #include "dataset.h"
 #include "ewald.h"
-#include "laplace.h"
 #include "namespace.h"
-#include "tree_mpi.h"
 #include "verify.h"
 #if EXAFMM_SERIAL
 #include "../uniform/serialfmm.h"
@@ -29,13 +27,11 @@ int main(int argc, char ** argv) {
   BuildTree buildTree(args.ncrit);
   Dataset data;
   Ewald ewald(ksize, alpha, sigma, cutoff, cycle);
-  Kernel kernel(args.P, eps2);
 #if EXAFMM_SERIAL
   SerialFMM FMM;
 #else
   ParallelFMM FMM;
 #endif
-  TreeMPI treeMPI(kernel, baseMPI, args.theta, args.images);
   Verify verify(args.path);
   verify.verbose = args.verbose;
 
@@ -145,7 +141,7 @@ int main(int argc, char ** argv) {
     data.initTarget(bodies);
     for (int i=0; i<FMM.MPISIZE; i++) {
       if (args.verbose) std::cout << "Ewald loop           : " << i+1 << "/" << FMM.MPISIZE << std::endl;
-      if (FMM.MPISIZE > 1) treeMPI.shiftBodies(jbodies);
+      if (FMM.MPISIZE > 1) baseMPI.shiftBodies(jbodies);
       bounds = boundBox.getBounds(jbodies);
       buffer = jbodies;
       Cells jcells = buildTree.buildTree(jbodies, buffer, bounds);

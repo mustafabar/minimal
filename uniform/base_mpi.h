@@ -70,6 +70,30 @@ namespace EXAFMM_NAMESPACE {
       return global;                                            // Return global bounds
     }
 
+    //! Send bodies to next rank (round robin)
+    void shiftBodies(Bodies & bodies) {
+      int newSize;                                              // New number of bodies
+      int oldSize = bodies.size();                              // Current number of bodies
+      const int word = sizeof(bodies[0]) / 4;                   // Word size of body structure
+      const int isend = (mpirank + 1          ) % mpisize;      // Send to next rank (wrap around)
+      const int irecv = (mpirank - 1 + mpisize) % mpisize;      // Receive from previous rank (wrap around)
+      MPI_Request sreq,rreq;                                    // Send, receive request handles
+
+      MPI_Isend(&oldSize, 1, MPI_INT, irecv, 0, MPI_COMM_WORLD, &sreq);// Send current number of bodies
+      MPI_Irecv(&newSize, 1, MPI_INT, isend, 0, MPI_COMM_WORLD, &rreq);// Receive new number of bodies
+      MPI_Wait(&sreq, MPI_STATUS_IGNORE);                       // Wait for send to complete
+      MPI_Wait(&rreq, MPI_STATUS_IGNORE);                       // Wait for receive to complete
+
+      Bodies recvBodies(newSize);                               // Resize buffer to new number of bodies
+      MPI_Isend((int*)&bodies[0], oldSize*word, MPI_INT, irecv, // Send bodies to next rank
+		1, MPI_COMM_WORLD, &sreq);
+      MPI_Irecv((int*)&recvBodies[0], newSize*word, MPI_INT, isend,// Receive bodies from previous rank
+		1, MPI_COMM_WORLD, &rreq);
+      MPI_Wait(&sreq, MPI_STATUS_IGNORE);                       // Wait for send to complete
+      MPI_Wait(&rreq, MPI_STATUS_IGNORE);                       // Wait for receive to complete
+      bodies = recvBodies;                                      // Copy bodies from buffer
+    }
+
     //! Print a scalar value on all ranks
     template<typename T>
     void print(T data) {
