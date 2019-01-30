@@ -6,8 +6,6 @@
 #include <iostream>
 #include <map>
 #include "namespace.h"
-#include <pthread.h>
-#include <queue>
 #include <stdint.h>
 #include <string>
 #include <sstream>
