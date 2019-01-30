@@ -47,18 +47,10 @@ namespace EXAFMM_NAMESPACE {
       MPI_Comm_rank(MPI_COMM_WORLD,&MPIRANK);
       printNow = MPIRANK == 0;
       requests = new MPI_Request [104];
-#ifdef EXAFMM_IJHPCA
-      char fname[256];
-      sprintf(fname,"time%5.5d.dat",MPIRANK);
-      fid.open(fname);
-#endif
     }
     ~ParallelFMM() {
       delete[] requests;
       if(!EXTERNAL) MPI_Finalize();
-#ifdef EXAFMM_IJHPCA
-      fid.close();
-#endif
     }
 
     void partitionComm() {
@@ -224,10 +216,6 @@ namespace EXAFMM_NAMESPACE {
       int iforward = 0;
       ivec3 iX;
       float commBytes = 0;
-#ifdef EXAFMM_IJHPCA
-      MPI_Barrier(MPI_COMM_WORLD);
-      logger::startTimer("M2L Comm");
-#endif
       for( iX[2]=-1; iX[2]<=1; iX[2]++ ) {
 	for( iX[1]=-1; iX[1]<=1; iX[1]++ ) {
 	  for( iX[0]=-1; iX[0]<=1; iX[0]++ ) {
@@ -287,11 +275,6 @@ namespace EXAFMM_NAMESPACE {
 	  }
 	}
       }
-#ifdef EXAFMM_IJHPCA
-      double time = logger::stopTimer("M2L Comm", 0);
-      fid << time << std::endl;
-      logger::resetTimer("M2L Comm");
-#endif
     }
 
     void rootGather() {
@@ -527,16 +510,6 @@ namespace EXAFMM_NAMESPACE {
       for( int lev=maxGlobLevel; lev>0; lev-- ) {
 	MPI_Barrier(MPI_COMM_WORLD);
 	logger::startTimer("Comm LET cells");
-	if( lev > gatherLevel ) {
-#ifdef EXAFMM_IJHPCA
-	  logger::startTimer("M2L Comm");
-	  globM2LSend(lev);
-	  globM2LRecv(lev);
-	  double time = logger::stopTimer("M2L Comm", 0);
-	  fid << time << std::endl;
-	  logger::resetTimer("M2L Comm");
-#endif
-	}
 	logger::stopTimer("Comm LET cells");
 	logger::startTimer("Traverse");
 	ivec3 nxmin = 0, nxmax, nunit;
