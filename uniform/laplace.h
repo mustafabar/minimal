@@ -146,7 +146,6 @@ namespace EXAFMM_NAMESPACE {
       }
     }
 
-    /*
     void P2P(C_iter Ci, C_iter Cj) {
       B_iter Bi = Ci->BODY;
       B_iter Bj = Cj->BODY;
@@ -233,7 +232,6 @@ namespace EXAFMM_NAMESPACE {
         Bi[i].TRG[3] -= az;
       }
     }
-    */
 
     void P2M(C_iter C) {
       complex_t Ynm[P*P], YnmTheta[P*P];

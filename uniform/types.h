@@ -27,10 +27,6 @@ namespace EXAFMM_NAMESPACE {
   typedef vec<3,float> fvec3;                                   //!< Vector of 3 float types
   typedef vec<3,complex_t> cvec3;                               //!< Vector of 3 complex_t types
 
-  // SIMD vector types for AVX512, AVX, and SSE
-  const int NSIMD = SIMD_BYTES / int(sizeof(real_t));           //!< SIMD vector length (SIMD_BYTES defined in macros.h)
-  typedef vec<NSIMD,real_t> simdvec;                            //!< SIMD vector type
-
   //! Center and radius of bounding box
   struct Box {
     vec3   X;                                                   //!< Box center
