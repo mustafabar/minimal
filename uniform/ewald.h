@@ -141,14 +141,12 @@ namespace exafmm_laplace {
     void realPart(Cells & cells, Cells & jcells) {
       logger::startTimer("Ewald real part");                    // Start timer
       C_iter Cj = jcells.begin();                               // Set begin iterator of source cells
-      mk_task_group;                                            // Intitialize tasks
       for (C_iter Ci=cells.begin(); Ci!=cells.end(); Ci++) {    // Loop over target cells
 	if (Ci->NCHILD == 0) {                                  //  If target cell is leaf
 	  Neighbor neighbor(this, Ci, Cj, Cj);                  //   Instantiate recursive functor
-	  create_taskc(neighbor);                               //   Create task for recursive call
+	  neighbor();                                           //   Create task for recursive call
 	}                                                       //  End if for leaf target cell
       }                                                         // End loop over target cells
-      wait_tasks;                                               // Synchronize tasks
       logger::stopTimer("Ewald real part");                     // Stop timer
     }
 
