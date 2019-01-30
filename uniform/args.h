@@ -120,70 +120,6 @@ namespace EXAFMM_NAMESPACE {
       return "";
     }
 
-    uint64_t getBasisNum(const char * _basis) {
-      switch (_basis[0]) {
-      case 'C':
-        return 0;
-      case 'S':
-        return 1;
-      case 'P':
-        return 2;
-      case 'E':
-        return 3;
-      default:
-        fprintf(stderr, "invalid basis %s\n", _basis);
-        abort();
-      }
-      return 0;
-    }
-
-    uint64_t getDistNum(const char * _distribution) {
-      switch (_distribution[0]) {
-      case 'c':
-        return 0;
-      case 'l':
-        return 1;
-      case 'o':
-        return 2;
-      case 'p':
-        return 3;
-      case 's':
-        return 4;
-      case 'e':
-        return 7;
-      default:
-        fprintf(stderr, "invalid distribution %s\n", _distribution);
-        abort();
-      }
-      return 0;
-    }
-
-    uint64_t getEqNum() {
-#if EXAFMM_LAPLACE
-      return 0;
-#elif EXAFMM_HELMHOLTZ
-      return 1;
-#elif EXAFMM_STOKES
-      return 2;
-#elif EXAFMM_BIOTSAVART
-      return 3;
-#endif
-    }
-
-    uint64_t getConfigNum() {
-      uint64_t key = 0;
-#if EXAFMM_SINGLE
-      key |= 1;
-#endif
-#if EXAFMM_USE_SIMD
-      key |= 2;
-#endif
-#if EXAFMM_USE_KAHAN
-      key |= 4;
-#endif
-      return key;
-    }
-
   public:
     Args(int argc=0, char ** argv=NULL) :
       accuracy(0),
@@ -271,26 +207,6 @@ namespace EXAFMM_NAMESPACE {
 	  abort();
 	}
       }
-    }
-
-    uint64_t getKey(int mpisize=1) {
-      uint64_t key = 0;
-      key |= uint64_t(round(log(ncrit)/log(2)));
-      key |= getDistNum(distribution) << 4;
-      key |= dual << 7;
-      key |= getEqNum() << 8;
-      key |= graft << 11;
-      key |= images << 12;
-      key |= IneJ << 14;
-      key |= uint64_t(round(log(numBodies)/log(10))) << 15;
-      key |= P << 19;
-      key |= uint64_t(round(log(nspawn)/log(10))) << 25;
-      key |= uint64_t(theta*14) << 28;
-      key |= uint64_t(round(log(threads)/log(2))) << 31;
-      key |= getConfigNum() << 34;
-      key |= uint64_t(round(log(mpisize)/log(2))) << 37;
-      assert( uint64_t(round(log(mpisize)/log(2))) < 26 );
-      return key;
     }
 
     void print(int stringLength) {
