@@ -139,9 +139,8 @@ int main(int argc, char ** argv) {
     vec3 localDipole = upDownPass.getDipole(bodies, FMM.RGlob[0]);
     vec3 globalDipole = baseMPI.allreduceVec3(localDipole);
     numBodies = baseMPI.allreduceInt(bodies.size());
+
     upDownPass.dipoleCorrection(bodies, globalDipole, numBodies, cycle);
-#ifndef EXAFMM_IJHPCA
-#if 1
     logger::startTimer("Total Ewald");
     Bounds bounds = boundBox.getBounds(bodies);
     Bodies buffer = bodies;
@@ -158,23 +157,6 @@ int main(int argc, char ** argv) {
       ewald.realPart(cells, jcells);
     }
     ewald.selfTerm(bodies);
-#else
-    logger::startTimer("Total Direct");
-    const int numTargets = 100;
-    data.sampleBodies(bodies, numTargets);
-    Bodies bodies2 = bodies;
-    data.initTarget(bodies);
-    for (int i=0; i<FMM.MPISIZE; i++) {
-      if (args.verbose) std::cout << "Direct loop          : " << i+1 << "/" << FMM.MPISIZE << std::endl;
-      if (FMM.MPISIZE > 1) treeMPI.shiftBodies(jbodies);
-      traversal.direct(bodies, jbodies, cycle);
-    }
-    upDownPass.dipoleCorrection(bodies, globalDipole, numBodies, cycle);
-    logger::printTitle("Total runtime");
-    logger::printTime("Total FMM");
-    logger::stopTimer("Total Direct");
-    logger::resetTimer("Total Direct");
-#endif
     double potSum = verify.getSumScalar(bodies);
     double potSum2 = verify.getSumScalar(bodies2);
     double accDif = verify.getDifVector(bodies, bodies2);
@@ -197,7 +179,6 @@ int main(int argc, char ** argv) {
     double accRel = std::sqrt(accDifGlob/accNrmGlob);
     verify.print("Rel. L2 Error (pot)",potRel);
     verify.print("Rel. L2 Error (acc)",accRel);
-#endif
 #endif
   }
   FMM.deallocate();
