@@ -197,6 +197,16 @@ namespace exafmm {
       }                                                         // End loop over bodies
     }
 
+    //! Initialize target values
+    void initTarget(Bodies & bodies) {
+      for (B_iter B=bodies.begin(); B!=bodies.end(); B++) {     // Loop over bodies
+	B->TRG = 0;                                             //  Clear target values
+	B->IBODY = B-bodies.begin();                            //  Initial body numbering
+	B->ICELL = 0;                                           //  Initial cell index
+	B->WEIGHT = 1;                                          //  Initial weight
+      }                                                         // End loop over bodies
+    }
+
     void print(int stringLength) {
       if (logger::verbose) {                                    // If verbose flag is true
 	std::cout << std::setw(stringLength) << std::fixed << std::left// Set format

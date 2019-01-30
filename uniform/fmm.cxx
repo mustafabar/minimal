@@ -2,7 +2,6 @@
 #include "args.h"
 #include "bound_box.h"
 #include "build_tree.h"
-#include "dataset.h"
 #include "ewald.h"
 #include "verify.h"
 #if EXAFMM_SERIAL
@@ -24,7 +23,6 @@ int main(int argc, char ** argv) {
   BaseMPI baseMPI;
   BoundBox boundBox;
   BuildTree buildTree(args.ncrit);
-  Dataset data;
   Ewald ewald(ksize, alpha, sigma, cutoff, cycle);
 #if EXAFMM_SERIAL
   SerialFMM FMM;
@@ -137,7 +135,7 @@ int main(int argc, char ** argv) {
     Bodies buffer = bodies;
     Cells cells = buildTree.buildTree(bodies, buffer, bounds);
     Bodies bodies2 = bodies;
-    data.initTarget(bodies);
+    ewald.initTarget(bodies);
     for (int i=0; i<FMM.MPISIZE; i++) {
       if (args.verbose) std::cout << "Ewald loop           : " << i+1 << "/" << FMM.MPISIZE << std::endl;
       if (FMM.MPISIZE > 1) baseMPI.shiftBodies(jbodies);
