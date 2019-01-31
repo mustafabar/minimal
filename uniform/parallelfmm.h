@@ -527,15 +527,9 @@ namespace exafmm {
 		ivec3 jXp;
 		for_3d jXp[d] = (jX[d] + nunit[d]) % nunit[d];
 		int j = getGlobKey(jXp,lev) + globLevelOffset[lev];
-		real_t M[MTERM];
-		for_m M[m] = globMultipole[j][m];
 		vec3 dX;
 		for_3d dX[d] = (iX[d] - jX[d]) * diameter[d];
-		real_t invR2 = 1. / (dX[0] * dX[0] + dX[1] * dX[1] + dX[2] * dX[2]);
-		real_t invR  = sqrt(invR2);
-		real_t C[LTERM];
-		getCoef(C,dX,invR2,invR);
-		M2LSum(L,C,M);
+                M2L(dX,globMultipole[j],L);
 	      }
 	    }
 	  }

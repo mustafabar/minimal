@@ -360,15 +360,6 @@ namespace exafmm {
 		  vec3 dX;
 		  for_3d dX[d] = (iX[d] - jX[d]) * diameter;
                   M2L(dX,Multipole[j],L);
-                  /*
-		  real_t M[MTERM];
-		  for_m M[m] = Multipole[j][m];
-		  real_t invR2 = 1. / (dX[0] * dX[0] + dX[1] * dX[1] + dX[2] * dX[2]);
-		  real_t invR  = sqrt(invR2);
-		  real_t C[LTERM];
-		  getCoef(C,dX,invR2,invR);
-		  M2LSum(L,C,M);
-                  */
 		}
 	      }
 	    }
@@ -491,11 +482,14 @@ namespace exafmm {
 		 jX[2] < -1 || 1 < jX[2]) {
 		vec3 dX;
 		for_3d dX[d] = jX[d] * diameter[d];
+                M2L(dX,M,L);
+                /*
 		real_t invR2 = 1. / (dX[0] * dX[0] + dX[1] * dX[1] + dX[2] * dX[2]);
 		real_t invR  = sqrt(invR2);
 		real_t C[LTERM];
 		getCoef(C,dX,invR2,invR);
 		M2LSum(L,C,M);
+                */
 	      }
 	    }
 	  }
