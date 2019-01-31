@@ -1,8 +1,8 @@
 #include <mpi.h>
-#include "evaluator.h"
+#include "kernels.h"
 
 namespace exafmm {
-  class SerialFMM : public Evaluator {
+  class SerialFMM : public Kernel {
   protected:
     int bodiesDispl[26];
     int bodiesCount[26];
@@ -152,21 +152,6 @@ namespace exafmm {
       numSendCells = 64 * L + 48 * ((1 << (L + 1)) - 2) + 12 * (((1 << (2 * L + 2)) - 1) / 3 - 1);
       numSendLeafs = 8 + 12 * (1 << L) + 6 * (1 << (2 * L));
       numSendBodies = numSendLeafs * float(numBodies) / numLeafs * 4;
-      float memory = 0;
-      memory += numBodies * 4 * sizeof(real_t);
-      memory += (numBodies + numSendBodies) * 4 * sizeof(real_t);
-      memory += 27 * numCells * MTERM * sizeof(real_t);
-      memory += numCells * LTERM * sizeof(real_t);
-      memory += 27 * numLeafs * 2 * sizeof(int);
-      memory += 2 * MPISIZE * MTERM * sizeof(real_t);
-      memory += 10 * LTERM * sizeof(real_t);
-      memory += numSendBodies * 4 * sizeof(float);
-      memory += numSendBodies * 4 * sizeof(float);
-      memory += numSendCells * MTERM * sizeof(float);
-      memory += numSendCells * MTERM * sizeof(float);
-      memory += numSendLeafs * 2 * sizeof(int);
-      memory += numSendLeafs * 2 * sizeof(int);
-      //std::cout << "Memory: " << memory/1e6 << " MB" << std::endl;
       Index = new int [2*numBodies];
       Rank = new int [2*numBodies];
       sendIndex = new int [2*numBodies];
@@ -280,6 +265,31 @@ namespace exafmm {
       for( int i=rankOffset; i<numLeafs+rankOffset; i++ ) {
 	//assert( Leafs[i][1] != Leafs[i][0] );
       }
+    }
+
+    void upwardPass() const {
+      int rankOffset = 13 * numCells;
+      for( int i=0; i<numCells; i++ ) {
+	for_m Multipole[i+rankOffset][m] = 0;
+	for_l Local[i][l] = 0;
+      }
+      P2M();
+      M2M();
+    }
+
+    void downwardPass() {
+      logger::startTimer("Traverse");
+      M2L();
+      logger::stopTimer("Traverse", 0);
+
+      logger::startTimer("Downward pass");
+      L2L();
+      L2P();
+      logger::stopTimer("Downward pass");
+
+      logger::startTimer("Traverse");
+      P2P();
+      logger::stopTimer("Traverse");
     }
 
     void periodicM2L() {

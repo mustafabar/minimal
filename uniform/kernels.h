@@ -23,7 +23,7 @@ const int LTERM = (EXAFMM_PP+1)*(EXAFMM_PP+2)*(EXAFMM_PP+3)/6;
 #define EXAFMM_MIN(a,b) (((a) < (b)) ? (a) : (b))
 
 namespace exafmm {
-  class UniformKernel {
+  class Kernel {
   private:
     std::vector<real_t> prefactor;
     std::vector<real_t> Anm;
@@ -401,8 +401,8 @@ namespace exafmm {
     }
 
   public:
-    UniformKernel() : MPISIZE(1), MPIRANK(0) {}
-    ~UniformKernel() {}
+    Kernel() : MPISIZE(1), MPIRANK(0) {}
+    ~Kernel() {}
 
     inline int getKey(int *iX, int level, bool levelOffset=true) const {
       int id = 0;

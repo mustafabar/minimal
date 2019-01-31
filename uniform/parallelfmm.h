@@ -44,7 +44,6 @@ namespace exafmm {
       if(!EXTERNAL) MPI_Init(&argc,&argv);
       MPI_Comm_size(MPI_COMM_WORLD,&MPISIZE);
       MPI_Comm_rank(MPI_COMM_WORLD,&MPIRANK);
-      printNow = MPIRANK == 0;
       requests = new MPI_Request [104];
     }
     ~ParallelFMM() {
