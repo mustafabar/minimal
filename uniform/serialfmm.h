@@ -284,10 +284,7 @@ namespace exafmm {
 	for (int j=Leafs[i+rankOffset][0]; j<Leafs[i+rankOffset][1]; j++) {
 	  vec3 dX;
 	  for_3d dX[d] = center[d] - Jbodies[j][d];
-	  real_t M[MTERM];
-	  M[0] = Jbodies[j][3];
-	  powerM(M,dX);
-	  for_m Multipole[i+levelOffset][m] += M[m];
+          P2M(dX, Jbodies[j][3], Multipole[i+levelOffset]);
 	}
       }
       logger::stopTimer("P2M");

@@ -200,10 +200,11 @@ namespace exafmm {
       }
     }
 
-    void P2P() const {
-    }
-
-    void P2M() const {
+    void P2M(vec3 dX, real_t SRC, real_t *Mj) const {
+      real_t M[MTERM];
+      M[0] = SRC;
+      powerM(M,dX);
+      for_m Mj[m] += M[m];
     }
 
     void M2M() const {
@@ -216,6 +217,9 @@ namespace exafmm {
     }
 
     void L2P() const {
+    }
+
+    void P2P() const {
     }
 
   public:
