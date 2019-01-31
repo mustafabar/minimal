@@ -1,6 +1,4 @@
-switch to spherical kernel
-for_l,m > for_n
-make vecP
+remove for_l,for_m
 check with non-periodic
 fix FMM accuracy
 test periodic convergence

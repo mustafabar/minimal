@@ -18,12 +18,17 @@ namespace exafmm {
   typedef std::complex<real_t> complex_t;                       //!< Complex type
   typedef std::complex<float> fcomplex_t;                       //!< Single precision complex type
   const complex_t I(0.,1.);                                     //!< Imaginary unit
-
+ 
+  const int P = 6;                                              //!< Order of expansion
+  const int NTERM = P*(P+1)/2;                                  //!< Number of expansion terms
+  
   typedef vec<3,int> ivec3;                                     //!< Vector of 3 int types
   typedef vec<3,real_t> vec3;                                   //!< Vector of 3 real_t types
   typedef vec<4,real_t> vec4;                                   //!< Vector of 4 real_t types
   typedef vec<3,float> fvec3;                                   //!< Vector of 3 float types
   typedef vec<3,complex_t> cvec3;                               //!< Vector of 3 complex_t types
+  typedef vec<NTERM,complex_t> cvecP;                           //!< Vector of NTERM complex_t types
+  typedef vec<NTERM,fcomplex_t> fcvecP;                         //!< Vector of NTERM fcomplex_t types
 
   //! Center and radius of bounding box
   struct Box {

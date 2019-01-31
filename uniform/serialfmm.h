@@ -193,14 +193,14 @@ namespace exafmm {
       recvLeafs = new int [numSendLeafs][2]();
       Ibodies = new vec4 [2*numBodies]();
       Jbodies = new vec4 [2*numBodies+numSendBodies];
-      Multipole = new complex_t [27*numCells][NTERM];
-      Local = new complex_t [numCells][NTERM]();
-      globMultipole = new complex_t [2*MPISIZE][NTERM]();
-      globLocal = new complex_t [10][NTERM]();
+      Multipole = new cvecP [27*numCells];
+      Local = new cvecP [numCells];
+      globMultipole = new cvecP [2*MPISIZE];
+      globLocal = new cvecP [10];
       sendJbodies = new vec4 [2*numBodies+numSendBodies];
       recvJbodies = new vec4 [2*numBodies+numSendBodies];
-      sendMultipole = new fcomplex_t [numSendCells][NTERM]();
-      recvMultipole = new fcomplex_t [numSendCells][NTERM]();
+      sendMultipole = new fcvecP [numSendCells];
+      recvMultipole = new fcvecP [numSendCells];
     }
 
     void deallocate() {

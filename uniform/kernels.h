@@ -5,9 +5,6 @@
 #include <iostream>
 #include <omp.h>
 
-#define EXAFMM_PP 6
-const int P = 6;
-const int NTERM = P*(P+1)/2;
 const int DP2P = 1; // Use 1 for parallel
 const int DM2L = 1; // Use 1 for parallel
 
@@ -24,6 +21,7 @@ namespace exafmm {
     std::vector<real_t> prefactor;
     std::vector<real_t> Anm;
     std::vector<complex_t> Cnm;
+
   public:
     static vec3 Xperiodic;
     ivec3 numPartition[10];
@@ -53,14 +51,14 @@ namespace exafmm {
     int (*recvLeafs)[2];
     vec4 *Ibodies;
     vec4 *Jbodies;
-    complex_t (*Multipole)[NTERM];
-    complex_t (*Local)[NTERM];
-    complex_t (*globMultipole)[NTERM];
-    complex_t (*globLocal)[NTERM];
+    cvecP (*Multipole);
+    cvecP (*Local);
+    cvecP (*globMultipole);
+    cvecP (*globLocal);
     vec4 *sendJbodies;
     vec4 *recvJbodies;
-    fcomplex_t (*sendMultipole)[NTERM];
-    fcomplex_t (*recvMultipole)[NTERM];
+    fcvecP (*sendMultipole);
+    fcvecP (*recvMultipole);
 
   private:
     inline int oddOrEven(int n) const {
