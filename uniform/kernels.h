@@ -211,7 +211,13 @@ namespace exafmm {
       L2LSum(Lc,C,Lp);
     }
 
-    void L2P() const {
+    void L2P(vec3 dX, real_t *L, vec4 &TRG) const {
+      real_t C[LTERM];
+      C[0] = 1;
+      powerL(C,dX);
+      for_4d TRG[d] += L[d];
+      for (int l=1; l<LTERM; l++) TRG[0] += C[l] * L[l];
+      L2PSum(TRG,C,L);
     }
 
     void P2P(int ibegin, int iend, int jbegin, int jend, vec3 periodic) const {

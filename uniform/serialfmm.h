@@ -401,12 +401,7 @@ namespace exafmm {
 	for (int j=Leafs[i+rankOffset][0]; j<Leafs[i+rankOffset][1]; j++) {
 	  vec3 dX;
 	  for_3d dX[d] = Jbodies[j][d] - center[d];
-	  real_t C[LTERM];
-	  C[0] = 1;
-	  powerL(C,dX);
-	  for_4d Ibodies[j][d] += L[d];
-	  for (int l=1; l<LTERM; l++) Ibodies[j][0] += C[l] * L[l];
-	  L2PSum(Ibodies[j],C,L);
+          L2P(dX,L,Ibodies[j]);
 	}
       }
       logger::stopTimer("L2P");
