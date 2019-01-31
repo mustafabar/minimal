@@ -27,10 +27,10 @@ namespace exafmm {
       int rank;
       MPI_Comm_rank(MPI_COMM_LOCAL,&rank);
       if( rank == 0 ) {
-	MPI_Allgather(sendMultipole[0],MTERM,MPI_FLOAT,
-		      recvMultipole[0],MTERM,MPI_FLOAT,MPI_COMM_GLOBAL);
+	MPI_Allgather(sendMultipole[0],MTERM,MPI_COMPLEX,
+		      recvMultipole[0],MTERM,MPI_COMPLEX,MPI_COMM_GLOBAL);
       }
-      MPI_Bcast(recvMultipole[0],numGather*MTERM,MPI_FLOAT,0,MPI_COMM_LOCAL);
+      MPI_Bcast(recvMultipole[0],numGather*MTERM,MPI_COMPLEX,0,MPI_COMM_LOCAL);
       for( int c=0; c<numGather; c++ ) {
 	for_m globMultipole[c+globLevelOffset[gatherLevel]][m] = recvMultipole[c][m];
       }
@@ -236,11 +236,11 @@ namespace exafmm {
 	      int recvRank = getGlobKey(iXp,maxGlobLevel);
 	      int sendDispl = multipoleDispl[lev][iforward];
 	      int sendCount = multipoleCount[lev][iforward];
-	      MPI_Isend(sendMultipole[sendDispl],sendCount*MTERM,MPI_FLOAT,
+	      MPI_Isend(sendMultipole[sendDispl],sendCount*MTERM,MPI_COMPLEX,
 			sendRank,iforward,MPI_COMM_WORLD,&requests[iforward]);
 	      int recvDispl = multipoleDispl[lev][iforward];
 	      int recvCount = multipoleCount[lev][iforward];
-	      MPI_Irecv(recvMultipole[recvDispl],recvCount*MTERM,MPI_FLOAT,
+	      MPI_Irecv(recvMultipole[recvDispl],recvCount*MTERM,MPI_COMPLEX,
 			recvRank,iforward,MPI_COMM_WORLD,&requests[iforward+26]);
 	      iforward++;
 	    }
@@ -312,9 +312,9 @@ namespace exafmm {
 	      for_3d jXp[d] = iXoff[d] + jX[d] * numStride[d];
 	      int commRank = getGlobKey(jXp,maxGlobLevel);
 	      commBytes += MTERM * 4;
-	      MPI_Isend(sendMultipole[0],MTERM,MPI_FLOAT,
+	      MPI_Isend(sendMultipole[0],MTERM,MPI_COMPLEX,
 			commRank,0,MPI_COMM_WORLD,&requests[iforward]);
-	      MPI_Irecv(recvMultipole[iforward],MTERM,MPI_FLOAT,
+	      MPI_Irecv(recvMultipole[iforward],MTERM,MPI_COMPLEX,
 			commRank,0,MPI_COMM_WORLD,&requests[iforward+numComm]);
 	      iforward++;
 	    }
@@ -445,12 +445,12 @@ namespace exafmm {
 	      for_3d iXp[d] = iXoff[d] + iXp[d] * numStride[d];
 	      int sendRank = getGlobKey(iXp,maxGlobLevel);
 	      commBytes += numGroup * MTERM * 4;
-	      MPI_Isend(sendMultipole[iforward*numGroup],numGroup*MTERM,MPI_FLOAT,
+	      MPI_Isend(sendMultipole[iforward*numGroup],numGroup*MTERM,MPI_COMPLEX,
 			sendRank,iforward,MPI_COMM_WORLD,&requests[iforward]);
 	      for_3d iXp[d] = (iXc[d] - iX[d] + numPartition[level-1][d]) % numPartition[level-1][d];
 	      for_3d iXp[d] = iXoff[d] + iXp[d] * numStride[d];
 	      int recvRank = getGlobKey(iXp,maxGlobLevel);
-	      MPI_Irecv(recvMultipole[iforward*numGroup],numGroup*MTERM,MPI_FLOAT,
+	      MPI_Irecv(recvMultipole[iforward*numGroup],numGroup*MTERM,MPI_COMPLEX,
 			recvRank,iforward,MPI_COMM_WORLD,&requests[iforward+26]);
 	      iforward++;
 	    }
@@ -507,7 +507,7 @@ namespace exafmm {
 	  for_3d nxmin[d] = -nxmax[d] - 1;
 	  for_3d nxmax[d] = 2 * nxmax[d] + 1;
 	}
-	real_t L[LTERM];
+	complex_t L[LTERM];
 	for_l L[l] = 0;
 	ivec3 iX;
 	for_3d iX[d] = IX[lev][d];

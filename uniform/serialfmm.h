@@ -161,14 +161,14 @@ namespace exafmm {
       recvLeafs = new int [numSendLeafs][2]();
       Ibodies = new vec4 [2*numBodies]();
       Jbodies = new vec4 [2*numBodies+numSendBodies];
-      Multipole = new real_t [27*numCells][MTERM];
-      Local = new real_t [numCells][LTERM]();
-      globMultipole = new real_t [2*MPISIZE][MTERM]();
-      globLocal = new real_t [10][LTERM]();
+      Multipole = new complex_t [27*numCells][MTERM];
+      Local = new complex_t [numCells][LTERM]();
+      globMultipole = new complex_t [2*MPISIZE][MTERM]();
+      globLocal = new complex_t [10][LTERM]();
       sendJbodies = new vec4 [2*numBodies+numSendBodies];
       recvJbodies = new vec4 [2*numBodies+numSendBodies];
-      sendMultipole = new float [numSendCells][MTERM]();
-      recvMultipole = new float [numSendCells][MTERM]();
+      sendMultipole = new fcomplex_t [numSendCells][MTERM]();
+      recvMultipole = new fcomplex_t [numSendCells][MTERM]();
     }
 
     void deallocate() {
@@ -332,7 +332,7 @@ namespace exafmm {
 	real_t diameter = 2 * R0 / (1 << lev);
 #pragma omp parallel for
 	for (int i=0; i<(1 << 3 * lev); i++) {
-	  real_t L[LTERM];
+	  complex_t L[LTERM];
 	  for_l L[l] = 0;
 	  ivec3 iX = 0;
 	  getIndex2(iX,i);
@@ -396,7 +396,7 @@ namespace exafmm {
       for (int i=0; i<numLeafs; i++) {
 	vec3 center;
 	getCenter(center,i,maxLevel);
-	real_t L[LTERM];
+	complex_t L[LTERM];
 	for_l L[l] = Local[i+levelOffset][l];
 	for (int j=Leafs[i+rankOffset][0]; j<Leafs[i+rankOffset][1]; j++) {
 	  vec3 dX;
@@ -452,13 +452,13 @@ namespace exafmm {
     }
 
     void periodicM2L() {
-      real_t M[MTERM];
+      complex_t M[MTERM];
 #if EXAFMM_SERIAL
       for_m M[m] = Multipole[13*numCells][m];
 #else
       for_m M[m] = globMultipole[0][m];
 #endif
-      real_t L[LTERM];
+      complex_t L[LTERM];
       for_l L[l] = 0;
       for( int lev=1; lev<numImages; lev++ ) {
 	vec3 diameter;
@@ -477,7 +477,7 @@ namespace exafmm {
 	    }
 	  }
 	}
-	real_t M3[MTERM];
+	complex_t M3[MTERM];
 	for_m M3[m] = 0;
 	ivec3 iX;
 	for( iX[2]=-1; iX[2]<=1; iX[2]++ ) {

@@ -57,14 +57,14 @@ namespace exafmm {
     int (*recvLeafs)[2];
     vec4 *Ibodies;
     vec4 *Jbodies;
-    real_t (*Multipole)[MTERM];
-    real_t (*Local)[LTERM];
-    real_t (*globMultipole)[MTERM];
-    real_t (*globLocal)[LTERM];
+    complex_t (*Multipole)[MTERM];
+    complex_t (*Local)[LTERM];
+    complex_t (*globMultipole)[MTERM];
+    complex_t (*globLocal)[LTERM];
     vec4 *sendJbodies;
     vec4 *recvJbodies;
-    float (*sendMultipole)[MTERM];
-    float (*recvMultipole)[MTERM];
+    fcomplex_t (*sendMultipole)[MTERM];
+    fcomplex_t (*recvMultipole)[MTERM];
 
   private:
     inline int oddOrEven(int n) {
@@ -177,16 +177,16 @@ namespace exafmm {
       for_3d dX[d] = X0[d] - R0 + (2 * iX[d] + 1) * R;
     }
 
-    void P2M(vec3 dX, real_t SRC, real_t *Mj) const {
-      real_t M[MTERM];
+    void P2M(vec3 dX, real_t SRC, complex_t *Mj) const {
+      complex_t M[MTERM];
       M[0] = SRC;
       powerM(M,dX);
       for_m Mj[m] += M[m];
     }
 
-    void M2M(vec3 dX, real_t *Mc, real_t *Mp) const {
-      real_t M[MTERM];
-      real_t C[LTERM];
+    void M2M(vec3 dX, complex_t *Mc, complex_t *Mp) const {
+      complex_t M[MTERM];
+      complex_t C[LTERM];
       C[0] = 1;
       powerM(C,dX);
       for_m M[m] = Mc[m];
@@ -194,16 +194,16 @@ namespace exafmm {
       M2MSum(Mp,C,M);
     }
 
-    void M2L(vec3 dX, real_t *M, real_t *L) const {
+    void M2L(vec3 dX, complex_t *M, complex_t *L) const {
       real_t invR2 = 1. / (dX[0] * dX[0] + dX[1] * dX[1] + dX[2] * dX[2]);
       real_t invR  = sqrt(invR2);
-      real_t C[LTERM];
+      complex_t C[LTERM];
       getCoef(C,dX,invR2,invR);
       M2LSum(L,C,M);
     }
 
-    void L2L(vec3 dX, real_t *Lp, real_t *Lc) const {
-      real_t C[LTERM];
+    void L2L(vec3 dX, complex_t *Lp, complex_t *Lc) const {
+      complex_t C[LTERM];
       C[0] = 1;
       powerL(C,dX);
       for_l Lc[l] += Lp[l];
@@ -211,12 +211,12 @@ namespace exafmm {
       L2LSum(Lc,C,Lp);
     }
 
-    void L2P(vec3 dX, real_t *L, vec4 &TRG) const {
-      real_t C[LTERM];
+    void L2P(vec3 dX, complex_t *L, vec4 &TRG) const {
+      complex_t C[LTERM];
       C[0] = 1;
       powerL(C,dX);
-      for_4d TRG[d] += L[d];
-      for (int l=1; l<LTERM; l++) TRG[0] += C[l] * L[l];
+      for_4d TRG[d] += L[d].real();
+      for (int l=1; l<LTERM; l++) TRG[0] += (C[l] * L[l]).real();
       L2PSum(TRG,C,L);
     }
 

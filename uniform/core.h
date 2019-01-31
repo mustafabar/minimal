@@ -1,5 +1,5 @@
 namespace exafmm {
-  void getCoef(real_t *C, const real_t *dX, real_t &invR2, const real_t &invR) {
+  void getCoef(complex_t *C, const real_t *dX, real_t &invR2, const real_t &invR) {
     C[0] = invR;
     invR2 = -invR2;
     real_t x = dX[0], y = dX[1], z = dX[2];
@@ -118,7 +118,7 @@ namespace exafmm {
 #endif
   }
 
-  void M2LSum(real_t *L, const real_t *C, const real_t*M) {
+  void M2LSum(complex_t *L, const complex_t *C, const complex_t*M) {
     for (int l=0; l<LTERM; l++) L[l] += M[0] * C[l];
 #if EXAFMM_PP > 1
     L[0] += M[1]*C[1]+M[2]*C[2]+M[3]*C[3];
@@ -257,7 +257,7 @@ namespace exafmm {
 #endif
   }
 
-  void powerM(real_t *C, const real_t *dX) {
+  void powerM(complex_t *C, const real_t *dX) {
 #if EXAFMM_PP > 1
     C[1] = C[0] * dX[0];
     C[2] = C[0] * dX[1];
@@ -325,7 +325,7 @@ namespace exafmm {
 #endif
   }
 
-  void powerL(real_t *C, const real_t *dX) {
+  void powerL(complex_t *C, const real_t *dX) {
     C[1] = C[0] * dX[0];
     C[2] = C[0] * dX[1];
     C[3] = C[0] * dX[2];
@@ -421,7 +421,7 @@ namespace exafmm {
 #endif
   }
 
-  void M2MSum(real_t *MI, const real_t *C, const real_t *MJ) {
+  void M2MSum(complex_t *MI, const complex_t *C, const complex_t *MJ) {
     for (int i=1; i<MTERM; i++) MI[i] += MJ[i];
 #if EXAFMM_PP > 2
     MI[4] += C[1]*MJ[1];
@@ -485,7 +485,7 @@ namespace exafmm {
 #endif
   }
 
-  void L2LSum(real_t *LI, const real_t *C, const real_t *LJ) {
+  void L2LSum(complex_t *LI, const complex_t *C, const complex_t *LJ) {
 #if EXAFMM_PP > 1
     LI[1] += C[1]*LJ[4]+C[2]*LJ[5]+C[3]*LJ[6];
     LI[2] += C[1]*LJ[5]+C[2]*LJ[7]+C[3]*LJ[8];
@@ -618,31 +618,31 @@ namespace exafmm {
 #endif
   }
 
-  void L2PSum(vec4 &TRG, const real_t *C, const real_t *L) {
+  void L2PSum(vec4 &TRG, const complex_t *C, const complex_t *L) {
 #if EXAFMM_PP > 1
-    TRG[1] += C[1]*L[4]+C[2]*L[5]+C[3]*L[6];
-    TRG[2] += C[1]*L[5]+C[2]*L[7]+C[3]*L[8];
-    TRG[3] += C[1]*L[6]+C[2]*L[8]+C[3]*L[9];
+    TRG[1] += (C[1]*L[4]+C[2]*L[5]+C[3]*L[6]).real();
+    TRG[2] += (C[1]*L[5]+C[2]*L[7]+C[3]*L[8]).real();
+    TRG[3] += (C[1]*L[6]+C[2]*L[8]+C[3]*L[9]).real();
 #endif
 #if EXAFMM_PP > 2
-    TRG[1] += C[4]*L[10]+C[5]*L[11]+C[6]*L[12]+C[7]*L[13]+C[8]*L[14]+C[9]*L[15];
-    TRG[2] += C[4]*L[11]+C[5]*L[13]+C[6]*L[14]+C[7]*L[16]+C[8]*L[17]+C[9]*L[18];
-    TRG[3] += C[4]*L[12]+C[5]*L[14]+C[6]*L[15]+C[7]*L[17]+C[8]*L[18]+C[9]*L[19];
+    TRG[1] += (C[4]*L[10]+C[5]*L[11]+C[6]*L[12]+C[7]*L[13]+C[8]*L[14]+C[9]*L[15]).real();
+    TRG[2] += (C[4]*L[11]+C[5]*L[13]+C[6]*L[14]+C[7]*L[16]+C[8]*L[17]+C[9]*L[18]).real();
+    TRG[3] += (C[4]*L[12]+C[5]*L[14]+C[6]*L[15]+C[7]*L[17]+C[8]*L[18]+C[9]*L[19]).real();
 #endif
 #if EXAFMM_PP > 3
-    TRG[1] += C[10]*L[20]+C[11]*L[21]+C[12]*L[22]+C[13]*L[23]+C[14]*L[24]+C[15]*L[25]+C[16]*L[26]+C[17]*L[27]+C[18]*L[28]+C[19]*L[29];
-    TRG[2] += C[10]*L[21]+C[11]*L[23]+C[12]*L[24]+C[13]*L[26]+C[14]*L[27]+C[15]*L[28]+C[16]*L[30]+C[17]*L[31]+C[18]*L[32]+C[19]*L[33];
-    TRG[3] += C[10]*L[22]+C[11]*L[24]+C[12]*L[25]+C[13]*L[27]+C[14]*L[28]+C[15]*L[29]+C[16]*L[31]+C[17]*L[32]+C[18]*L[33]+C[19]*L[34];
+    TRG[1] += (C[10]*L[20]+C[11]*L[21]+C[12]*L[22]+C[13]*L[23]+C[14]*L[24]+C[15]*L[25]+C[16]*L[26]+C[17]*L[27]+C[18]*L[28]+C[19]*L[29]).real();
+    TRG[2] += (C[10]*L[21]+C[11]*L[23]+C[12]*L[24]+C[13]*L[26]+C[14]*L[27]+C[15]*L[28]+C[16]*L[30]+C[17]*L[31]+C[18]*L[32]+C[19]*L[33]).real();
+    TRG[3] += (C[10]*L[22]+C[11]*L[24]+C[12]*L[25]+C[13]*L[27]+C[14]*L[28]+C[15]*L[29]+C[16]*L[31]+C[17]*L[32]+C[18]*L[33]+C[19]*L[34]).real();
 #endif
 #if EXAFMM_PP > 4
-    TRG[1] += C[20]*L[35]+C[21]*L[36]+C[22]*L[37]+C[23]*L[38]+C[24]*L[39]+C[25]*L[40]+C[26]*L[41]+C[27]*L[42]+C[28]*L[43]+C[29]*L[44]+C[30]*L[45]+C[31]*L[46]+C[32]*L[47]+C[33]*L[48]+C[34]*L[49];
-    TRG[2] += C[20]*L[36]+C[21]*L[38]+C[22]*L[39]+C[23]*L[41]+C[24]*L[42]+C[25]*L[43]+C[26]*L[45]+C[27]*L[46]+C[28]*L[47]+C[29]*L[48]+C[30]*L[50]+C[31]*L[51]+C[32]*L[52]+C[33]*L[53]+C[34]*L[54];
-    TRG[3] += C[20]*L[37]+C[21]*L[39]+C[22]*L[40]+C[23]*L[42]+C[24]*L[43]+C[25]*L[44]+C[26]*L[46]+C[27]*L[47]+C[28]*L[48]+C[29]*L[49]+C[30]*L[51]+C[31]*L[52]+C[32]*L[53]+C[33]*L[54]+C[34]*L[55];
+    TRG[1] += (C[20]*L[35]+C[21]*L[36]+C[22]*L[37]+C[23]*L[38]+C[24]*L[39]+C[25]*L[40]+C[26]*L[41]+C[27]*L[42]+C[28]*L[43]+C[29]*L[44]+C[30]*L[45]+C[31]*L[46]+C[32]*L[47]+C[33]*L[48]+C[34]*L[49]).real();
+    TRG[2] += (C[20]*L[36]+C[21]*L[38]+C[22]*L[39]+C[23]*L[41]+C[24]*L[42]+C[25]*L[43]+C[26]*L[45]+C[27]*L[46]+C[28]*L[47]+C[29]*L[48]+C[30]*L[50]+C[31]*L[51]+C[32]*L[52]+C[33]*L[53]+C[34]*L[54]).real();
+    TRG[3] += (C[20]*L[37]+C[21]*L[39]+C[22]*L[40]+C[23]*L[42]+C[24]*L[43]+C[25]*L[44]+C[26]*L[46]+C[27]*L[47]+C[28]*L[48]+C[29]*L[49]+C[30]*L[51]+C[31]*L[52]+C[32]*L[53]+C[33]*L[54]+C[34]*L[55]).real();
 #endif
 #if EXAFMM_PP > 5
-    TRG[1] += C[35]*L[56]+C[36]*L[57]+C[37]*L[58]+C[38]*L[59]+C[39]*L[60]+C[40]*L[61]+C[41]*L[62]+C[42]*L[63]+C[43]*L[64]+C[44]*L[65]+C[45]*L[66]+C[46]*L[67]+C[47]*L[68]+C[48]*L[69]+C[49]*L[70]+C[50]*L[71]+C[51]*L[72]+C[52]*L[73]+C[53]*L[74]+C[54]*L[75]+C[55]*L[76];
-    TRG[2] += C[35]*L[57]+C[36]*L[59]+C[37]*L[60]+C[38]*L[62]+C[39]*L[63]+C[40]*L[64]+C[41]*L[66]+C[42]*L[67]+C[43]*L[68]+C[44]*L[69]+C[45]*L[71]+C[46]*L[72]+C[47]*L[73]+C[48]*L[74]+C[49]*L[75]+C[50]*L[77]+C[51]*L[78]+C[52]*L[79]+C[53]*L[80]+C[54]*L[81]+C[55]*L[82];
-    TRG[3] += C[35]*L[58]+C[36]*L[60]+C[37]*L[61]+C[38]*L[63]+C[39]*L[64]+C[40]*L[65]+C[41]*L[67]+C[42]*L[68]+C[43]*L[69]+C[44]*L[70]+C[45]*L[72]+C[46]*L[73]+C[47]*L[74]+C[48]*L[75]+C[49]*L[76]+C[50]*L[78]+C[51]*L[79]+C[52]*L[80]+C[53]*L[81]+C[54]*L[82]+C[55]*L[83];
+    TRG[1] += (C[35]*L[56]+C[36]*L[57]+C[37]*L[58]+C[38]*L[59]+C[39]*L[60]+C[40]*L[61]+C[41]*L[62]+C[42]*L[63]+C[43]*L[64]+C[44]*L[65]+C[45]*L[66]+C[46]*L[67]+C[47]*L[68]+C[48]*L[69]+C[49]*L[70]+C[50]*L[71]+C[51]*L[72]+C[52]*L[73]+C[53]*L[74]+C[54]*L[75]+C[55]*L[76]).real();
+    TRG[2] += (C[35]*L[57]+C[36]*L[59]+C[37]*L[60]+C[38]*L[62]+C[39]*L[63]+C[40]*L[64]+C[41]*L[66]+C[42]*L[67]+C[43]*L[68]+C[44]*L[69]+C[45]*L[71]+C[46]*L[72]+C[47]*L[73]+C[48]*L[74]+C[49]*L[75]+C[50]*L[77]+C[51]*L[78]+C[52]*L[79]+C[53]*L[80]+C[54]*L[81]+C[55]*L[82]).real();
+    TRG[3] += (C[35]*L[58]+C[36]*L[60]+C[37]*L[61]+C[38]*L[63]+C[39]*L[64]+C[40]*L[65]+C[41]*L[67]+C[42]*L[68]+C[43]*L[69]+C[44]*L[70]+C[45]*L[72]+C[46]*L[73]+C[47]*L[74]+C[48]*L[75]+C[49]*L[76]+C[50]*L[78]+C[51]*L[79]+C[52]*L[80]+C[53]*L[81]+C[54]*L[82]+C[55]*L[83]).real();
 #endif
   }
 }
