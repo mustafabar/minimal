@@ -61,10 +61,6 @@ namespace exafmm {
     int NCHILD;                                                 //!< Number of child cells
     int IBODY;                                                  //!< Index of first body
     int NBODY;                                                  //!< Number of descendant bodies
-#if EXAFMM_COUNT_LIST
-    int numP2P;                                                 //!< Size of P2P interaction list per cell
-    int numM2L;                                                 //!< Size of M2L interaction list per cell
-#endif
     uint64_t ICELL;                                             //!< Cell index
     real_t   WEIGHT;                                            //!< Weight for partitioning
     vec3     X;                                                 //!< Cell center
@@ -78,8 +74,6 @@ namespace exafmm {
     using CellBase::operator=;
   };
   typedef std::vector<Cell> Cells;                              //!< Vector of cells
-  typedef std::vector<CellBase> CellBases;                      //!< Vector of cell bases
   typedef typename Cells::iterator C_iter;                      //!< Iterator of cell vector
-  typedef typename CellBases::iterator CB_iter;                 //!< Iterator of cell vector
 }
 #endif
