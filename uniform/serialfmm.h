@@ -283,8 +283,8 @@ namespace exafmm {
 	getCenter(center,i,maxLevel);
 	for (int j=Leafs[i+rankOffset][0]; j<Leafs[i+rankOffset][1]; j++) {
 	  vec3 dX;
-	  for_3d dX[d] = center[d] - Jbodies[j][d];
-          P2M(dX, Jbodies[j][3], Multipole[i+levelOffset]);
+          for_3d dX[d] = center[d] - Jbodies[j][d];
+          P2M(dX,Jbodies[j][3],Multipole[i+levelOffset]);
 	}
       }
       logger::stopTimer("P2M");
@@ -305,13 +305,7 @@ namespace exafmm {
 	  iX[2] = 1 - ((i / 4) & 1) * 2;
 	  vec3 dX;
 	  for_3d dX[d] = iX[d] * radius;
-	  real_t M[MTERM];
-	  real_t C[LTERM];
-	  C[0] = 1;
-	  powerM(C,dX);
-	  for_m M[m] = Multipole[c][m];
-	  for_m Multipole[p][m] += C[m] * M[0];
-	  M2MSum(Multipole[p],C,M);
+          M2M(dX,Multipole[c],Multipole[p]);
 	}
       }
       logger::stopTimer("M2M");
@@ -363,15 +357,18 @@ namespace exafmm {
 		  int rankOffset = (jXp[0] + 3 * jXp[1] + 9 * jXp[2]) * numCells;
 #endif
 		  j += rankOffset;
-		  real_t M[MTERM];
-		  for_m M[m] = Multipole[j][m];
 		  vec3 dX;
 		  for_3d dX[d] = (iX[d] - jX[d]) * diameter;
+                  M2L(dX,Multipole[j],L);
+                  /*
+		  real_t M[MTERM];
+		  for_m M[m] = Multipole[j][m];
 		  real_t invR2 = 1. / (dX[0] * dX[0] + dX[1] * dX[1] + dX[2] * dX[2]);
 		  real_t invR  = sqrt(invR2);
 		  real_t C[LTERM];
 		  getCoef(C,dX,invR2,invR);
 		  M2LSum(L,C,M);
+                  */
 		}
 	      }
 	    }
@@ -511,11 +508,7 @@ namespace exafmm {
 	    for( iX[0]=-1; iX[0]<=1; iX[0]++ ) {
 	      vec3 dX;
 	      for_3d dX[d] = iX[d] * diameter[d];
-	      real_t C[LTERM];
-	      C[0] = 1;
-	      powerM(C,dX);
-	      for_m M3[m] += C[m] * M[0];
-	      M2MSum(M3,C,M);
+              M2M(dX,M,M3);
 	    }
 	  }
 	}

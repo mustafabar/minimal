@@ -377,13 +377,7 @@ namespace exafmm {
 	      int p = getGlobKey(iX,lev-1) + parentOffset;
 	      vec3 dX;
 	      for_3d dX[d] = (iX[d] + .5) * numChild[d] * diameter[d] - (jX[d] + .5) * diameter[d];
-	      real_t M[MTERM];
-	      real_t C[LTERM];
-	      C[0] = 1;
-	      powerM(C,dX);
-	      for_m M[m] = globMultipole[c][m];
-	      for_m globMultipole[p][m] += C[m] * M[0];
-	      M2MSum(globMultipole[p],C,M);
+              M2M(dX,globMultipole[c],globMultipole[p]);
 	    }
 	  }
 	}
@@ -410,13 +404,7 @@ namespace exafmm {
 	      int p = getGlobKey(iX,lev-1) + parentOffset;
 	      vec3 dX;
 	      for_3d dX[d] = (iX[d] + .5) * numChild[d] * diameter[d] - (jX[d] + .5) * diameter[d];
-	      real_t M[MTERM];
-	      real_t C[LTERM];
-	      C[0] = 1;
-	      powerM(C,dX);
-	      for_m M[m] = globMultipole[c][m];
-	      for_m globMultipole[p][m] += C[m] * M[0];
-	      M2MSum(globMultipole[p],C,M);
+              M2M(dX,globMultipole[c],globMultipole[p]);
 	    }
 	  }
 	}

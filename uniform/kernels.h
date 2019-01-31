@@ -207,10 +207,22 @@ namespace exafmm {
       for_m Mj[m] += M[m];
     }
 
-    void M2M() const {
+    void M2M(vec3 dX, real_t *Mc, real_t *Mp) const {
+      real_t M[MTERM];
+      real_t C[LTERM];
+      C[0] = 1;
+      powerM(C,dX);
+      for_m M[m] = Mc[m];
+      for_m Mp[m] += C[m] * M[0];
+      M2MSum(Mp,C,M);
     }
 
-    void M2L() const {
+    void M2L(vec3 dX, real_t *M, real_t *L) const {
+      real_t invR2 = 1. / (dX[0] * dX[0] + dX[1] * dX[1] + dX[2] * dX[2]);
+      real_t invR  = sqrt(invR2);
+      real_t C[LTERM];
+      getCoef(C,dX,invR2,invR);
+      M2LSum(L,C,M);
     }
 
     void L2L() const {
