@@ -114,6 +114,17 @@ namespace exafmm {
       for_3d iX[d] = int((Jbodies[i][d] + R0 - X0[d]) / diameter);
     }
 
+    inline void getIndex(ivec3 &iX, int index) const {
+      iX = 0;
+      int d = 0, level = 0;
+      while (index != 0) {
+        iX[d] += (index % 2) * (1 << level);
+        index >>= 1;
+        d = (d+1) % 3;
+        if (d == 0) level++;
+      }
+    }
+    
     inline void setGlobIndex(int i, int *iX) const {
 #if NOWRAP
       i = (i / 3) * 3;
@@ -122,6 +133,27 @@ namespace exafmm {
       for_3d iX[d] = iX[d] % numPartition[maxGlobLevel][d];
     }
 
+    inline int getKey(int *iX, int level, bool levelOffset=true) const {
+      int id = 0;
+      if (levelOffset) id = ((1 << 3 * level) - 1) / 7;
+      for(int lev=0; lev<level; ++lev ) {
+        for_3d id += iX[d] % 2 << (3 * lev + d);
+        for_3d iX[d] >>= 1;
+      }
+      return id;
+    }
+    
+    inline int getGlobKey(int *iX, int level) const {
+      return iX[0] + (iX[1] + iX[2] * numPartition[level][1]) * numPartition[level][0];
+    }
+
+    void getCenter(vec3 &dX, int index, int level) const {
+      real_t R = R0 / (1 << level);
+      ivec3 iX = 0;
+      getIndex(iX, index);
+      for_3d dX[d] = X0[d] - R0 + (2 * iX[d] + 1) * R;
+    }
+    
     void sort(vec4 *bodies, vec4 *buffer, int *index, int *ibuffer, int *key) const {
       int Imax = key[0];
       int Imin = key[0];
@@ -191,6 +223,12 @@ namespace exafmm {
       delete[] recvMultipole;
     }
 
+    inline void getGlobIndex(int *iX, int index, int level) const {
+      iX[0] = index % numPartition[level][0];
+      iX[1] = index / numPartition[level][0] % numPartition[level][1];
+      iX[2] = index / numPartition[level][0] / numPartition[level][1];
+    }
+    
     void partitioner(int level) {
       int mpisize = MPISIZE;
       ivec3 maxPartition = 1;
@@ -335,7 +373,7 @@ namespace exafmm {
 	  complex_t L[LTERM];
 	  for_l L[l] = 0;
 	  ivec3 iX = 0;
-	  getIndex2(iX,i);
+	  getIndex(iX,i);
 	  ivec3 jXmin;
 	  for_3d jXmin[d] = (std::max(nxmin[d],(iX[d] >> 1) - DM2L) << 1);
 	  ivec3 jXmax;
@@ -421,7 +459,7 @@ namespace exafmm {
 #pragma omp parallel for
       for (int i=0; i<numLeafs; i++) {
 	ivec3 iX = 0;
-	getIndex2(iX,i);
+	getIndex(iX,i);
 	ivec3 jXmin, jXmax;
 	for_3d jXmin[d] = std::max(nxmin[d],iX[d] - DP2P);
 	for_3d jXmax[d] = std::min(nxmax[d],iX[d] + DP2P);

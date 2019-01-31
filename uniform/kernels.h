@@ -155,28 +155,6 @@ namespace exafmm {
     }
     
   protected:
-    inline int getGlobKey(int *iX, int level) const {
-      return iX[0] + (iX[1] + iX[2] * numPartition[level][1]) * numPartition[level][0];
-    }
- 
-    inline void getIndex2(ivec3 &iX, int index) const {
-      iX = 0;
-      int d = 0, level = 0;
-      while (index != 0) {
-	iX[d] += (index % 2) * (1 << level);
-	index >>= 1;
-	d = (d+1) % 3;
-	if (d == 0) level++;
-      }
-    }
-
-    void getCenter(vec3 &dX, int index, int level) const {
-      real_t R = R0 / (1 << level);
-      ivec3 iX = 0;
-      getIndex2(iX, index);
-      for_3d dX[d] = X0[d] - R0 + (2 * iX[d] + 1) * R;
-    }
-
     void P2M(vec3 dX, real_t SRC, complex_t *Mj) const {
       complex_t M[MTERM];
       M[0] = SRC;
@@ -247,20 +225,5 @@ namespace exafmm {
     Kernel() : MPISIZE(1), MPIRANK(0) {}
     ~Kernel() {}
 
-    inline int getKey(int *iX, int level, bool levelOffset=true) const {
-      int id = 0;
-      if (levelOffset) id = ((1 << 3 * level) - 1) / 7;
-      for(int lev=0; lev<level; ++lev ) {
-	for_3d id += iX[d] % 2 << (3 * lev + d);
-	for_3d iX[d] >>= 1;
-      }
-      return id;
-    }
-
-    inline void getGlobIndex(int *iX, int index, int level) const {
-      iX[0] = index % numPartition[level][0];
-      iX[1] = index / numPartition[level][0] % numPartition[level][1];
-      iX[2] = index / numPartition[level][0] / numPartition[level][1];
-    }
   };
 }
