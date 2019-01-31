@@ -1,12 +1,9 @@
 switch to spherical kernel
-0. kernel interface
-1. Make M, L complex_t
-2. create interface and call it from parallelfmm
-3. check with non-periodic
-
+for_l,m > for_n
+make vecP
+check with non-periodic
 fix FMM accuracy
 test periodic convergence
-test in parallel
 use args,timer from exafmm-beta
 write Ewald using uniform FMM
 fuse all triple loops for periodic

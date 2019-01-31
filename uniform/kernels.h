@@ -10,15 +10,11 @@ const int P = 6;
 const int NTERM = P*(P+1)/2;
 const int DP2P = 1; // Use 1 for parallel
 const int DM2L = 1; // Use 1 for parallel
-const int MTERM = EXAFMM_PP*(EXAFMM_PP+1)*(EXAFMM_PP+2)/6;
-const int LTERM = (EXAFMM_PP+1)*(EXAFMM_PP+2)*(EXAFMM_PP+3)/6;
-
-#include "core.h"
 
 #define for_3d for (int d=0; d<3; d++)
 #define for_4d for (int d=0; d<4; d++)
-#define for_m for (int m=0; m<MTERM; m++)
-#define for_l for (int l=0; l<LTERM; l++)
+#define for_m for (int m=0; m<NTERM; m++)
+#define for_l for (int l=0; l<NTERM; l++)
 #define EXAFMM_MAX(a,b) (((a) > (b)) ? (a) : (b))
 #define EXAFMM_MIN(a,b) (((a) < (b)) ? (a) : (b))
 
@@ -57,27 +53,27 @@ namespace exafmm {
     int (*recvLeafs)[2];
     vec4 *Ibodies;
     vec4 *Jbodies;
-    complex_t (*Multipole)[MTERM];
-    complex_t (*Local)[LTERM];
-    complex_t (*globMultipole)[MTERM];
-    complex_t (*globLocal)[LTERM];
+    complex_t (*Multipole)[NTERM];
+    complex_t (*Local)[NTERM];
+    complex_t (*globMultipole)[NTERM];
+    complex_t (*globLocal)[NTERM];
     vec4 *sendJbodies;
     vec4 *recvJbodies;
-    fcomplex_t (*sendMultipole)[MTERM];
-    fcomplex_t (*recvMultipole)[MTERM];
+    fcomplex_t (*sendMultipole)[NTERM];
+    fcomplex_t (*recvMultipole)[NTERM];
 
   private:
-    inline int oddOrEven(int n) {
+    inline int oddOrEven(int n) const {
       return (((n) & 1) == 1) ? -1 : 1;
     }
 
-    void cart2sph(vec3 dX, real_t & r, real_t & theta, real_t & phi) {
+    void cart2sph(vec3 dX, real_t & r, real_t & theta, real_t & phi) const {
       r = sqrt(norm(dX));
       theta = r == 0 ? 0 : acos(dX[2] / r);
       phi = atan2(dX[1], dX[0]);
     }
 
-    void sph2cart(real_t r, real_t theta, real_t phi, vec3 spherical, vec3 & cartesian) {
+    void sph2cart(real_t r, real_t theta, real_t phi, vec3 spherical, vec3 & cartesian) const {
       cartesian[0] = std::sin(theta) * std::cos(phi) * spherical[0]
         + std::cos(theta) * std::cos(phi) / r * spherical[1]
         - std::sin(phi) / r / std::sin(theta) * spherical[2];
@@ -88,7 +84,7 @@ namespace exafmm {
         - std::sin(theta) / r * spherical[1];
     }
 
-    void evalMultipole(real_t rho, real_t alpha, real_t beta, complex_t * Ynm, complex_t * YnmTheta) {
+    void evalMultipole(real_t rho, real_t alpha, real_t beta, complex_t * Ynm, complex_t * YnmTheta) const {
       real_t x = std::cos(alpha);
       real_t y = std::sin(alpha);
       real_t fact = 1;
@@ -122,7 +118,7 @@ namespace exafmm {
       }
     }
 
-    void evalLocal(real_t rho, real_t alpha, real_t beta, complex_t * Ynm2) {
+    void evalLocal(real_t rho, real_t alpha, real_t beta, complex_t * Ynm2) const {
       real_t x = std::cos(alpha);
       real_t y = std::sin(alpha);
       real_t fact = 1;
@@ -156,46 +152,144 @@ namespace exafmm {
     
   protected:
     void P2M(vec3 dX, real_t SRC, complex_t *Mj) const {
-      complex_t M[MTERM];
-      M[0] = SRC;
-      powerM(M,dX);
-      for_m Mj[m] += M[m];
+      complex_t Ynm[P*P], YnmTheta[P*P];
+      real_t rho, alpha, beta;
+      cart2sph(dX, rho, alpha, beta);
+      evalMultipole(rho, alpha, -beta, Ynm, YnmTheta);
+      for (int n=0; n<P; n++) {
+        for (int m=0; m<=n; m++) {
+          int nm  = n * n + n + m;
+          int nms = n * (n + 1) / 2 + m;
+          Mj[nms] += SRC * Ynm[nm];
+        }
+      }
     }
 
     void M2M(vec3 dX, complex_t *Mc, complex_t *Mp) const {
-      complex_t M[MTERM];
-      complex_t C[LTERM];
-      C[0] = 1;
-      powerM(C,dX);
-      for_m M[m] = Mc[m];
-      for_m Mp[m] += C[m] * M[0];
-      M2MSum(Mp,C,M);
+      complex_t Ynm[P*P], YnmTheta[P*P];
+      real_t rho, alpha, beta;
+      cart2sph(dX, rho, alpha, beta);
+      evalMultipole(rho, alpha, -beta, Ynm, YnmTheta);
+      for (int j=0; j<P; j++) {
+        for (int k=0; k<=j; k++) {
+          int jk = j * j + j + k;
+          int jks = j * (j + 1) / 2 + k;
+          complex_t M = 0;
+          for (int n=0; n<=j; n++) {
+            for (int m=-n; m<=std::min(k-1,n); m++) {
+              if (j-n >= k-m) {
+                int jnkm  = (j - n) * (j - n) + j - n + k - m;
+                int jnkms = (j - n) * (j - n + 1) / 2 + k - m;
+                int nm    = n * n + n + m;
+                M += Mc[jnkms] * std::pow(I,real_t(m-abs(m))) * Ynm[nm]
+                  * real_t(oddOrEven(n) * Anm[nm] * Anm[jnkm] / Anm[jk]);
+              }
+            }
+            for (int m=k; m<=n; m++) {
+              if (j-n >= m-k) {
+                int jnkm  = (j - n) * (j - n) + j - n + k - m;
+                int jnkms = (j - n) * (j - n + 1) / 2 - k + m;
+                int nm    = n * n + n + m;
+                M += std::conj(Mc[jnkms]) * Ynm[nm]
+                  * real_t(oddOrEven(k+n+m) * Anm[nm] * Anm[jnkm] / Anm[jk]);
+              }
+            } 
+          }
+          Mp[jks] += M * EPS;
+        }
+      }
     }
 
     void M2L(vec3 dX, complex_t *M, complex_t *L) const {
-      real_t invR2 = 1. / (dX[0] * dX[0] + dX[1] * dX[1] + dX[2] * dX[2]);
-      real_t invR  = sqrt(invR2);
-      complex_t C[LTERM];
-      getCoef(C,dX,invR2,invR);
-      M2LSum(L,C,M);
+      complex_t Ynm2[4*P*P];
+      real_t rho, alpha, beta;
+      cart2sph(dX, rho, alpha, beta);
+      evalLocal(rho, alpha, beta, Ynm2);
+      for (int j=0; j<P; j++) {
+        for (int k=0; k<=j; k++) {
+          int jk = j * j + j + k;
+          int jks = j * (j + 1) / 2 + k;
+          complex_t Ljk = 0;
+          for (int n=0; n<P; n++) {
+            for (int m=-n; m<0; m++) {
+              int nm   = n * n + n + m;
+              int nms  = n * (n + 1) / 2 - m;
+              int jknm = jk * P * P + nm;
+              int jnkm = (j + n) * (j + n) + j + n + m - k;
+              Ljk += std::conj(M[nms]) * Cnm[jknm] * Ynm2[jnkm];
+            }
+            for (int m=0; m<=n; m++) {
+              int nm   = n * n + n + m;
+              int nms  = n * (n + 1) / 2 + m;
+              int jknm = jk * P * P + nm;
+              int jnkm = (j + n) * (j + n) + j + n + m - k;
+              Ljk += M[nms] * Cnm[jknm] * Ynm2[jnkm];
+            }
+          }
+          L[jks] += Ljk;
+        }
+      }
     }
 
     void L2L(vec3 dX, complex_t *Lp, complex_t *Lc) const {
-      complex_t C[LTERM];
-      C[0] = 1;
-      powerL(C,dX);
-      for_l Lc[l] += Lp[l];
-      for (int l=1; l<LTERM; l++) Lc[0] += C[l] * Lp[l];
-      L2LSum(Lc,C,Lp);
+      complex_t Ynm[P*P], YnmTheta[P*P];
+      real_t rho, alpha, beta;
+      cart2sph(dX, rho, alpha, beta);
+      evalMultipole(rho, alpha, beta, Ynm, YnmTheta);
+      for (int j=0; j<P; j++) {
+    	for (int k=0; k<=j; k++) {
+          int jk = j * j + j + k;
+          int jks = j * (j + 1) / 2 + k;
+          complex_t L = 0;
+          for (int n=j; n<P; n++) {
+            for (int m=j+k-n; m<0; m++) {
+              int jnkm = (n - j) * (n - j) + n - j + m - k;
+              int nm   = n * n + n - m;
+              int nms  = n * (n + 1) / 2 - m;
+              L += std::conj(Lp[nms]) * Ynm[jnkm]
+                * real_t(oddOrEven(k) * Anm[jnkm] * Anm[jk] / Anm[nm]);
+            }
+            for (int m=0; m<=n; m++) {
+              if (n-j >= abs(m-k)) {
+                int jnkm = (n - j) * (n - j) + n - j + m - k;
+                int nm   = n * n + n + m;
+                int nms  = n * (n + 1) / 2 + m;
+                L += Lp[nms] * std::pow(I,real_t(m-k-abs(m-k)))
+                  * Ynm[jnkm] * Anm[jnkm] * Anm[jk] / Anm[nm];
+              }
+            }
+          }
+          Lc[jks] += L * EPS;
+        }
+      }
     }
 
     void L2P(vec3 dX, complex_t *L, vec4 &TRG) const {
-      complex_t C[LTERM];
-      C[0] = 1;
-      powerL(C,dX);
-      for_4d TRG[d] += L[d].real();
-      for (int l=1; l<LTERM; l++) TRG[0] += (C[l] * L[l]).real();
-      L2PSum(TRG,C,L);
+      complex_t Ynm[P*P], YnmTheta[P*P];
+      vec3 spherical = 0;
+      vec3 cartesian = 0;
+      real_t r, theta, phi;
+      cart2sph(dX, r, theta, phi);
+      evalMultipole(r, theta, phi, Ynm, YnmTheta);
+      for (int n=0; n<P; n++) {
+        int nm  = n * n + n;
+        int nms = n * (n + 1) / 2;
+        TRG[0] += std::real(L[nms] * Ynm[nm]);
+        spherical[0] += std::real(L[nms] * Ynm[nm]) / r * n;
+        spherical[1] += std::real(L[nms] * YnmTheta[nm]);
+        for (int m=1; m<=n; m++) {
+          nm  = n * n + n + m;
+          nms = n * (n + 1) / 2 + m;
+          TRG[0] += 2 * std::real(L[nms] * Ynm[nm]);
+          spherical[0] += 2 * std::real(L[nms] * Ynm[nm]) / r * n;
+          spherical[1] += 2 * std::real(L[nms] * YnmTheta[nm]);
+          spherical[2] += 2 * std::real(L[nms] * Ynm[nm] * I) * m;
+        }
+      }
+      sph2cart(r, theta, phi, spherical, cartesian);
+      TRG[1] += cartesian[0];
+      TRG[2] += cartesian[1];
+      TRG[3] += cartesian[2];
     }
 
     void P2P(int ibegin, int iend, int jbegin, int jend, vec3 periodic) const {
@@ -222,7 +316,38 @@ namespace exafmm {
     }
 
   public:
-    Kernel() : MPISIZE(1), MPIRANK(0) {}
+    Kernel() : MPISIZE(1), MPIRANK(0) {
+      prefactor.resize(4*P*P);
+      Anm.resize(4*P*P);
+      Cnm.resize(P*P*P*P);
+      for (int n=0; n<2*P; n++) {
+        for (int m=-n; m<=n; m++) {
+          int nm = n*n+n+m;
+          int nabsm = abs(m);
+          real_t fnmm = EPS;
+          for (int i=1; i<=n-m; i++) fnmm *= i;
+          real_t fnpm = EPS;
+          for (int i=1; i<=n+m; i++) fnpm *= i;
+          real_t fnma = 1.0;
+          for (int i=1; i<=n-nabsm; i++) fnma *= i;
+          real_t fnpa = 1.0;
+          for (int i=1; i<=n+nabsm; i++) fnpa *= i;
+          prefactor[nm] = std::sqrt(fnma/fnpa);
+          Anm[nm] = oddOrEven(n)/std::sqrt(fnmm*fnpm);
+        }
+      }
+      for (int j=0, jk=0, jknm=0; j<P; j++) {
+        for (int k=-j; k<=j; k++, jk++) {
+          for (int n=0, nm=0; n<P; n++) {
+            for (int m=-n; m<=n; m++, nm++, jknm++) {
+              const int jnkm = (j+n)*(j+n)+j+n+m-k;
+              Cnm[jknm] = std::pow(I,real_t(abs(k-m)-abs(k)-abs(m)))
+                * real_t(oddOrEven(j)*Anm[nm]*Anm[jk]/Anm[jnkm]) * EPS;
+            }
+          }
+        }
+      }
+    }
     ~Kernel() {}
 
   };
