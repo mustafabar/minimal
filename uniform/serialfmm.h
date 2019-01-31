@@ -308,8 +308,8 @@ namespace exafmm {
     void upwardPass() const {
       int rankOffset = 13 * numCells;
       for( int i=0; i<numCells; i++ ) {
-	for_m Multipole[i+rankOffset][m] = 0;
-	for_l Local[i][l] = 0;
+	Multipole[i+rankOffset] = 0;
+	Local[i] = 0;
       }
 
       logger::startTimer("P2M");
@@ -370,7 +370,7 @@ namespace exafmm {
 	real_t diameter = 2 * R0 / (1 << lev);
 #pragma omp parallel for
 	for (int i=0; i<(1 << 3 * lev); i++) {
-	  complex_t L[NTERM];
+	  cvecP L;
 	  for_l L[l] = 0;
 	  ivec3 iX = 0;
 	  getIndex(iX,i);
@@ -434,7 +434,7 @@ namespace exafmm {
       for (int i=0; i<numLeafs; i++) {
 	vec3 center;
 	getCenter(center,i,maxLevel);
-	complex_t L[NTERM];
+	cvecP L;
 	for_l L[l] = Local[i+levelOffset][l];
 	for (int j=Leafs[i+rankOffset][0]; j<Leafs[i+rankOffset][1]; j++) {
 	  vec3 dX;
@@ -490,13 +490,13 @@ namespace exafmm {
     }
 
     void periodicM2L() {
-      complex_t M[NTERM];
+      cvecP M;
 #if EXAFMM_SERIAL
-      for_m M[m] = Multipole[13*numCells][m];
+      M = Multipole[13*numCells];
 #else
-      for_m M[m] = globMultipole[0][m];
+      M = globMultipole[0];
 #endif
-      complex_t L[NTERM];
+      cvecP L;
       for_l L[l] = 0;
       for( int lev=1; lev<numImages; lev++ ) {
 	vec3 diameter;
@@ -515,7 +515,7 @@ namespace exafmm {
 	    }
 	  }
 	}
-	complex_t M3[NTERM];
+	cvecP M3;
 	for_m M3[m] = 0;
 	ivec3 iX;
 	for( iX[2]=-1; iX[2]<=1; iX[2]++ ) {

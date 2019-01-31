@@ -507,7 +507,7 @@ namespace exafmm {
 	  for_3d nxmin[d] = -nxmax[d] - 1;
 	  for_3d nxmax[d] = 2 * nxmax[d] + 1;
 	}
-	complex_t L[NTERM];
+	cvecP L;
 	for_l L[l] = 0;
 	ivec3 iX;
 	for_3d iX[d] = IX[lev][d];

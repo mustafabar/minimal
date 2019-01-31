@@ -19,7 +19,7 @@ namespace exafmm {
   typedef std::complex<float> fcomplex_t;                       //!< Single precision complex type
   const complex_t I(0.,1.);                                     //!< Imaginary unit
  
-  const int P = 6;                                              //!< Order of expansion
+  const int P = 12;                                             //!< Order of expansion
   const int NTERM = P*(P+1)/2;                                  //!< Number of expansion terms
   
   typedef vec<3,int> ivec3;                                     //!< Vector of 3 int types
