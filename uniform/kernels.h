@@ -177,29 +177,6 @@ namespace exafmm {
       for_3d dX[d] = X0[d] - R0 + (2 * iX[d] + 1) * R;
     }
 
-    void P2P(int ibegin, int iend, int jbegin, int jend, vec3 periodic) const {
-      for (int i=ibegin; i<iend; i++) {
-	real_t Po = 0, Fx = 0, Fy = 0, Fz = 0;
-	for (int j=jbegin; j<jend; j++) {
-	  vec3 dX;
-	  for_3d dX[d] = Jbodies[i][d] - Jbodies[j][d] - periodic[d];
-	  real_t R2 = norm(dX);
-	  real_t invR2 = 1.0 / R2;
-	  if (R2 == 0) invR2 = 0;
-	  real_t invR = Jbodies[j][3] * sqrt(invR2);
-	  real_t invR3 = invR2 * invR;
-	  Po += invR;
-	  Fx += dX[0] * invR3;
-	  Fy += dX[1] * invR3;
-	  Fz += dX[2] * invR3;
-	}
-	Ibodies[i][0] += Po;
-	Ibodies[i][1] -= Fx;
-	Ibodies[i][2] -= Fy;
-	Ibodies[i][3] -= Fz;
-      }
-    }
-
     void P2M(vec3 dX, real_t SRC, real_t *Mj) const {
       real_t M[MTERM];
       M[0] = SRC;
@@ -225,13 +202,39 @@ namespace exafmm {
       M2LSum(L,C,M);
     }
 
-    void L2L() const {
+    void L2L(vec3 dX, real_t *Lp, real_t *Lc) const {
+      real_t C[LTERM];
+      C[0] = 1;
+      powerL(C,dX);
+      for_l Lc[l] += Lp[l];
+      for (int l=1; l<LTERM; l++) Lc[0] += C[l] * Lp[l];
+      L2LSum(Lc,C,Lp);
     }
 
     void L2P() const {
     }
 
-    void P2P() const {
+    void P2P(int ibegin, int iend, int jbegin, int jend, vec3 periodic) const {
+      for (int i=ibegin; i<iend; i++) {
+	real_t Po = 0, Fx = 0, Fy = 0, Fz = 0;
+	for (int j=jbegin; j<jend; j++) {
+	  vec3 dX;
+	  for_3d dX[d] = Jbodies[i][d] - Jbodies[j][d] - periodic[d];
+	  real_t R2 = norm(dX);
+	  real_t invR2 = 1.0 / R2;
+	  if (R2 == 0) invR2 = 0;
+	  real_t invR = Jbodies[j][3] * sqrt(invR2);
+	  real_t invR3 = invR2 * invR;
+	  Po += invR;
+	  Fx += dX[0] * invR3;
+	  Fy += dX[1] * invR3;
+	  Fz += dX[2] * invR3;
+	}
+	Ibodies[i][0] += Po;
+	Ibodies[i][1] -= Fx;
+	Ibodies[i][2] -= Fy;
+	Ibodies[i][3] -= Fz;
+      }
     }
 
   public:

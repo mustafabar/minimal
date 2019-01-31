@@ -545,12 +545,7 @@ namespace exafmm {
 	for_3d diameter[d] = 2 * RGlob[d] / numPartition[lev][d];
 	vec3 dX;
 	for_3d dX[d] = (IX[lev][d] + .5) * diameter[d] - (IX[lev-1][d] + .5) * 2 * diameter[d];
-	real_t C[LTERM];
-	C[0] = 1;
-	powerL(C,dX);
-	for_l globLocal[lev][l] += globLocal[lev-1][l];
-	for( int l=1; l<LTERM; l++ ) globLocal[lev][0] += C[l] * globLocal[lev-1][l];
-	L2LSum(globLocal[lev],C,globLocal[lev-1]);
+        L2L(dX,globLocal[lev-1],globLocal[lev]);
       }
       for_l Local[0][l] += globLocal[maxGlobLevel][l];
     }
