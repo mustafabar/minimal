@@ -201,48 +201,6 @@ namespace exafmm {
     }
 
     void P2P() const {
-      ivec3 iXc;
-      getGlobIndex(iXc,MPIRANK,maxGlobLevel);
-      int nunit = 1 << maxLevel;
-      ivec3 nunitGlob;
-      for_3d nunitGlob[d] = nunit * numPartition[maxGlobLevel][d];
-      ivec3 nxmin, nxmax;
-      for_3d nxmin[d] = -iXc[d] * nunit;
-      for_3d nxmax[d] = nunitGlob[d] + nxmin[d] - 1;
-      if (numImages != 0) {
-	for_3d nxmin[d] -= nunitGlob[d];
-	for_3d nxmax[d] += nunitGlob[d];
-      }
-#pragma omp parallel for
-      for (int i=0; i<numLeafs; i++) {
-	ivec3 iX = 0;
-	getIndex2(iX,i);
-	ivec3 jXmin, jXmax;
-	for_3d jXmin[d] = std::max(nxmin[d],iX[d] - DP2P);
-	for_3d jXmax[d] = std::min(nxmax[d],iX[d] + DP2P);
-	ivec3 jX;
-	for (jX[2]=jXmin[2]; jX[2]<=jXmax[2]; jX[2]++) {
-	  for (jX[1]=jXmin[1]; jX[1]<=jXmax[1]; jX[1]++) {
-	    for (jX[0]=jXmin[0]; jX[0]<=jXmax[0]; jX[0]++) {
-	      ivec3 jXp;
-	      for_3d jXp[d] = (jX[d] + nunit) % nunit;
-	      int j = getKey(jXp,maxLevel,false);
-	      for_3d jXp[d] = (jX[d] + nunit) / nunit;
-#if EXAFMM_SERIAL
-	      int rankOffset = 13 * numLeafs;
-#else
-	      int rankOffset = (jXp[0] + 3 * jXp[1] + 9 * jXp[2]) * numLeafs;
-#endif
-	      j += rankOffset;
-	      rankOffset = 13 * numLeafs;
-	      vec3 periodic = 0;
-	      for_3d jXp[d] = (jX[d] + iXc[d] * nunit + nunitGlob[d]) / nunitGlob[d];
-	      for_3d periodic[d] = (jXp[d] - 1) * 2 * RGlob[d];
-	      P2P(Leafs[i+rankOffset][0],Leafs[i+rankOffset][1],Leafs[j][0],Leafs[j][1],periodic);
-	    }
-	  }
-	}
-      }
     }
 
     void P2M() const {
@@ -255,50 +213,9 @@ namespace exafmm {
     }
 
     void L2L() const {
-      for (int lev=1; lev<=maxLevel; lev++) {
-	int childOffset = ((1 << 3 * lev) - 1) / 7;
-	int parentOffset = ((1 << 3 * (lev - 1)) - 1) / 7;
-	real_t radius = R0 / (1 << lev);
-#pragma omp parallel for
-	for (int i=0; i<(1 << 3 * lev); i++) {
-	  int c = i + childOffset;
-	  int p = (i >> 3) + parentOffset;
-	  ivec3 iX;
-	  iX[0] = (i & 1) * 2 - 1;
-	  iX[1] = ((i / 2) & 1) * 2 - 1;
-	  iX[2] = ((i / 4) & 1) * 2 - 1;
-	  vec3 dX;
-	  for_3d dX[d] = iX[d] * radius;
-	  real_t C[LTERM];
-	  C[0] = 1;
-	  powerL(C,dX);
-	  for_l Local[c][l] += Local[p][l];
-	  for (int l=1; l<LTERM; l++) Local[c][0] += C[l] * Local[p][l];
-	  L2LSum(Local[c],C,Local[p]);
-	}
-      }
     }
 
     void L2P() const {
-      int rankOffset = 13 * numLeafs;
-      int levelOffset = ((1 << 3 * maxLevel) - 1) / 7;
-#pragma omp parallel for
-      for (int i=0; i<numLeafs; i++) {
-	vec3 center;
-	getCenter(center,i,maxLevel);
-	real_t L[LTERM];
-	for_l L[l] = Local[i+levelOffset][l];
-	for (int j=Leafs[i+rankOffset][0]; j<Leafs[i+rankOffset][1]; j++) {
-	  vec3 dX;
-	  for_3d dX[d] = Jbodies[j][d] - center[d];
-	  real_t C[LTERM];
-	  C[0] = 1;
-	  powerL(C,dX);
-	  for_4d Ibodies[j][d] += L[d];
-	  for (int l=1; l<LTERM; l++) Ibodies[j][0] += C[l] * L[l];
-	  L2PSum(Ibodies[j],C,L);
-	}
-      }
     }
 
   public:
