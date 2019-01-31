@@ -44,12 +44,24 @@ namespace exafmm {
       for (int i=0; i<N; i++) data[i] <= v;
       return *this;
     }
+    const vec &operator>>=(const T v) {                          // Scalar compound assignment (right bit shift)
+      for (int i=0; i<N; i++) data[i] >>= v;
+      return *this;
+    }
+    const vec &operator<<=(const T v) {                          // Scalar compound assignment (left bit shift)
+      for (int i=0; i<N; i++) data[i] <<= v;
+      return *this;
+    }
     const vec &operator&=(const T v) {                          // Scalar compound assignment (bitwise and)
       for (int i=0; i<N; i++) data[i] &= v;
       return *this;
     }
     const vec &operator|=(const T v) {                          // Scalar compound assignment (bitwise or)
       for (int i=0; i<N; i++) data[i] |= v;
+      return *this;
+    }
+    const vec &operator%=(const T v) {                          // Scalar compound assignment (modulus)
+      for (int i=0; i<N; i++) data[i] %= v;
       return *this;
     }
     const vec &operator=(const vec & v) {                       // Vector assignment
@@ -80,12 +92,24 @@ namespace exafmm {
       for (int i=0; i<N; i++) data[i] <= v[i];
       return *this;
     }
+    const vec &operator>>=(const vec & v) {                     // Vector compound assignment (right bit shift)
+      for (int i=0; i<N; i++) data[i] >>= v[i];
+      return *this;
+    }
+    const vec &operator<<=(const vec & v) {                     // Vector compound assignment (left bit shift)
+      for (int i=0; i<N; i++) data[i] <<= v[i];
+      return *this;
+    }
     const vec &operator&=(const vec & v) {                      // Vector compound assignment (bitwise and)
       for (int i=0; i<N; i++) data[i] &= v[i];
       return *this;
     }
     const vec &operator|=(const vec & v) {                      // Vector compound assignment (bitwise or)
       for (int i=0; i<N; i++) data[i] |= v[i];
+      return *this;
+    }
+    const vec &operator%=(const vec & v) {                      // Vector compound assignment (modulus)
+      for (int i=0; i<N; i++) data[i] %= v[i];
       return *this;
     }
     vec operator+(const T v) const {                            // Scalar arithmetic (add)
@@ -106,11 +130,20 @@ namespace exafmm {
     vec operator<(const T v) const {                            // Scalar arithmetic (less than)
       return vec(*this) <= v;
     }
+    vec operator>>(const T v) const {                           // Scalar arithmetic (right bit shift)
+      return vec(*this) >>= v;
+    }
+    vec operator<<(const T v) const {                           // Scalar arithmetic (left bit shift)
+      return vec(*this) <<= v;
+    }
     vec operator&(const T v) const {                            // Scalar arithmetic (bitwise and)
       return vec(*this) &= v;
     }
     vec operator|(const T v) const {                            // Scalar arithmetic (bitwise or)
       return vec(*this) |= v;
+    }
+    vec operator%(const T v) const {                            // Scalar arithmetic (modulus)
+      return vec(*this) %= v;
     }
     vec operator+(const vec & v) const {                        // Vector arithmetic (add)
       return vec(*this) += v;
@@ -130,11 +163,20 @@ namespace exafmm {
     vec operator<(const vec & v) const {                        // Vector arithmetic (less than)
       return vec(*this) <= v;
     }
+    vec operator>>(const vec & v) const {                       // Vector arithmetic (right bit shift)
+      return vec(*this) >>= v;
+    }
+    vec operator<<(const vec & v) const {                       // Vector arithmetic (left bit shift)
+      return vec(*this) <<= v;
+    }
     vec operator&(const vec & v) const {                        // Vector arithmetic (bitwise and)
       return vec(*this) &= v;
     }
     vec operator|(const vec & v) const {                        // Vector arithmetic (bitwise or)
       return vec(*this) |= v;
+    }
+    vec operator%(const vec & v) const {                        // Vector arithmetic (modulus)
+      return vec(*this) %= v;
     }
     vec operator-() const {                                     // Vector arithmetic (negation)
       vec temp;

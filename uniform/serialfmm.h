@@ -19,7 +19,7 @@ namespace exafmm {
     MPI_Comm MPI_COMM_LOCAL, MPI_COMM_GLOBAL;
 
   private:
-    void checkPartition(int *maxPartition) {
+    void checkPartition(ivec3 &maxPartition) {
       int partitionSize = 1;
       for_3d partitionSize *= maxPartition[d];
       assert( MPISIZE == partitionSize );
@@ -29,7 +29,7 @@ namespace exafmm {
 	mpisize /= 8;
       }
       ivec3 checkLevel, partition;
-      for_3d partition[d] = maxPartition[d];
+      partition = maxPartition;
       for( int d=0; d<3; d++ ) {
 	int lev = 1;
 	while( partition[d] != 1 ) {
@@ -41,8 +41,8 @@ namespace exafmm {
 	checkLevel[d] = lev - 1;
       }
       maxGlobLevel = std::max(std::max(checkLevel[0],checkLevel[1]),checkLevel[2]);
-      for_3d numPartition[0][d] = 1;
-      for_3d partition[d] = maxPartition[d];
+      numPartition[0] = 1;
+      partition = maxPartition;
       for( int lev=1; lev<=maxGlobLevel; lev++ ) {
 	for( int d=0; d<3; d++ ) {
 	  int ndiv = 2;
@@ -57,7 +57,7 @@ namespace exafmm {
     void setSendCounts() {
       ivec3 leafsType, bodiesType;
       for_3d leafsType[d] = 1 << (d * maxLevel);
-      for_3d bodiesType[d] = leafsType[d] * float(numBodies) / numLeafs * 4;
+      bodiesType = leafsType * float(numBodies) / numLeafs * 4;
       int i = 0;
       ivec3 iX;
       bodiesDispl[0] = leafsDispl[0] = 0;
@@ -125,25 +125,25 @@ namespace exafmm {
       }
     }
     
-    inline void setGlobIndex(int i, int *iX) const {
+    inline void setGlobIndex(int i, ivec3 &iX) const {
 #if NOWRAP
       i = (i / 3) * 3;
 #endif
       for_3d iX[d] = int(Jbodies[i][d] / (2 * R0));
-      for_3d iX[d] = iX[d] % numPartition[maxGlobLevel][d];
+      iX %= numPartition[maxGlobLevel];
     }
 
-    inline int getKey(int *iX, int level, bool levelOffset=true) const {
+    inline int getKey(ivec3 &iX, int level, bool levelOffset=true) const {
       int id = 0;
       if (levelOffset) id = ((1 << 3 * level) - 1) / 7;
       for(int lev=0; lev<level; ++lev ) {
         for_3d id += iX[d] % 2 << (3 * lev + d);
-        for_3d iX[d] >>= 1;
+        iX >>= 1;
       }
       return id;
     }
     
-    inline int getGlobKey(int *iX, int level) const {
+    inline int getGlobKey(ivec3 &iX, int level) const {
       return iX[0] + (iX[1] + iX[2] * numPartition[level][1]) * numPartition[level][0];
     }
 
@@ -248,16 +248,15 @@ namespace exafmm {
       }
       getGlobIndex(IX[maxGlobLevel],MPIRANK,maxGlobLevel);
       for( int lev=maxGlobLevel; lev>0; lev-- ) {
-	for_3d IX[lev-1][d] = IX[lev][d] * numPartition[lev-1][d] / numPartition[lev][d];
+	IX[lev-1] = IX[lev] * numPartition[lev-1] / numPartition[lev];
       }
       setSendCounts();
       gatherLevel = level;
       if(gatherLevel > maxGlobLevel) gatherLevel = maxGlobLevel;
 #if EXAFMM_SERIAL
 #else
-      ivec3 iX, numChild;
-      for_3d numChild[d] = numPartition[maxGlobLevel][d] / numPartition[gatherLevel][d];
-      for_3d iX[d] = IX[maxGlobLevel][d] % numChild[d];
+      ivec3 numChild = numPartition[maxGlobLevel] / numPartition[gatherLevel];
+      ivec3 iX = IX[maxGlobLevel] % numChild;
       int key = iX[0] + (iX[1] + iX[2] * numChild[1]) * numChild[0];
       int color = getGlobKey(IX[gatherLevel],gatherLevel);
       MPI_Comm_split(MPI_COMM_WORLD, color, key, &MPI_COMM_LOCAL);
