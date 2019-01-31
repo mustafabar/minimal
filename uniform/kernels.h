@@ -11,7 +11,6 @@ const int DM2L = 1; // Use 1 for parallel
 #define for_3d for (int d=0; d<3; d++)
 #define for_4d for (int d=0; d<4; d++)
 #define for_m for (int m=0; m<NTERM; m++)
-#define for_l for (int l=0; l<NTERM; l++)
 #define EXAFMM_MAX(a,b) (((a) > (b)) ? (a) : (b))
 #define EXAFMM_MIN(a,b) (((a) < (b)) ? (a) : (b))
 

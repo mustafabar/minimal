@@ -370,8 +370,7 @@ namespace exafmm {
 	real_t diameter = 2 * R0 / (1 << lev);
 #pragma omp parallel for
 	for (int i=0; i<(1 << 3 * lev); i++) {
-	  cvecP L;
-	  for_l L[l] = 0;
+	  cvecP L = complex_t(0);
 	  ivec3 iX = 0;
 	  getIndex(iX,i);
 	  ivec3 jXmin;
@@ -402,7 +401,7 @@ namespace exafmm {
 	      }
 	    }
 	  }
-	  for_l Local[i+levelOffset][l] += L[l];
+	  Local[i+levelOffset] += L;
 	}
       }
       logger::stopTimer("M2L");
@@ -434,8 +433,7 @@ namespace exafmm {
       for (int i=0; i<numLeafs; i++) {
 	vec3 center;
 	getCenter(center,i,maxLevel);
-	cvecP L;
-	for_l L[l] = Local[i+levelOffset][l];
+	cvecP L = Local[i+levelOffset];
 	for (int j=Leafs[i+rankOffset][0]; j<Leafs[i+rankOffset][1]; j++) {
 	  vec3 dX;
 	  for_3d dX[d] = Jbodies[j][d] - center[d];
@@ -496,8 +494,7 @@ namespace exafmm {
 #else
       M = globMultipole[0];
 #endif
-      cvecP L;
-      for_l L[l] = 0;
+      cvecP L = complex_t(0);
       for( int lev=1; lev<numImages; lev++ ) {
 	vec3 diameter;
 	for_3d diameter[d] = 2 * RGlob[d] * std::pow(3.,lev-1);
@@ -515,8 +512,7 @@ namespace exafmm {
 	    }
 	  }
 	}
-	cvecP M3;
-	for_m M3[m] = 0;
+	cvecP M3 = complex_t(0);
 	ivec3 iX;
 	for( iX[2]=-1; iX[2]<=1; iX[2]++ ) {
 	  for( iX[1]=-1; iX[1]<=1; iX[1]++ ) {
@@ -527,12 +523,12 @@ namespace exafmm {
 	    }
 	  }
 	}
-	for_m M[m] = M3[m];
+	M = M3;
       }
 #if EXAFMM_SERIAL
-      for_l Local[0][l] += L[l];
+      Local[0] += L;
 #else
-      for_l globLocal[0][l] += L[l];
+      globLocal[0] += L;
 #endif
     }
   };

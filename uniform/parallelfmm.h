@@ -278,11 +278,11 @@ namespace exafmm {
     void rootGather() {
 #pragma omp parallel for
       for(int i=0;i<numGlobCells;i++){
-	for_m globMultipole[i][m] = 0;
+	globMultipole[i] = complex_t(0);
       }
 #pragma omp parallel for
       for( int lev=0; lev<=maxGlobLevel; lev++ ) {
-	for_l globLocal[lev][l] = 0;
+	globLocal[lev] = complex_t(0);
       }
     }
 
@@ -352,7 +352,7 @@ namespace exafmm {
     void globM2M() {
       int rankOffset = 13 * numCells;
       int i = MPIRANK + globLevelOffset[maxGlobLevel];
-      for_m globMultipole[i][m] = Multipole[rankOffset][m];
+      globMultipole[i] = Multipole[rankOffset];
       for( int lev=maxGlobLevel; lev>gatherLevel; lev-- ) {
 	logger::startTimer("Comm LET cells");
 	globM2MSend(lev);
@@ -507,8 +507,7 @@ namespace exafmm {
 	  for_3d nxmin[d] = -nxmax[d] - 1;
 	  for_3d nxmax[d] = 2 * nxmax[d] + 1;
 	}
-	cvecP L;
-	for_l L[l] = 0;
+	cvecP L = complex_t(0);
 	ivec3 iX;
 	for_3d iX[d] = IX[lev][d];
 	ivec3 iXp;
@@ -534,7 +533,7 @@ namespace exafmm {
 	    }
 	  }
 	}
-	for_l globLocal[lev][l] += L[l];
+	globLocal[lev] += L;
 	logger::stopTimer("Traverse", 0);
       }
     }
@@ -547,7 +546,7 @@ namespace exafmm {
 	for_3d dX[d] = (IX[lev][d] + .5) * diameter[d] - (IX[lev-1][d] + .5) * 2 * diameter[d];
         L2L(dX,globLocal[lev-1],globLocal[lev]);
       }
-      for_l Local[0][l] += globLocal[maxGlobLevel][l];
+      Local[0] += globLocal[maxGlobLevel];
     }
   };
 }

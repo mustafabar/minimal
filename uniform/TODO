@@ -1,9 +1,6 @@
-remove for_l,for_m
-check with non-periodic
-fix FMM accuracy
+remove for_3d,4d
 test periodic convergence
 use args,timer from exafmm-beta
 write Ewald using uniform FMM
 proper parallel Ewald without shiftBodies
 fuse all triple loops for periodic
-remove for_3d,4d
