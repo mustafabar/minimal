@@ -1,8 +1,5 @@
-remove unused files
-remove unnecessary functions
-remove unnecessary compiler options
-
 switch to spherical kernel
+0. kernel interface
 1. Make M, L complex_t
 2. create interface and call it from parallelfmm
 3. check with non-periodic

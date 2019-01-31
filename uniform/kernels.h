@@ -67,24 +67,6 @@ namespace exafmm {
     float (*recvMultipole)[MTERM];
 
   private:
-    inline void getIndex(ivec3 &iX, int index) const {
-      iX = 0;
-      int d = 0, level = 0;
-      while (index != 0) {
-	iX[d] += (index % 2) * (1 << level);
-	index >>= 1;
-	d = (d+1) % 3;
-	if (d == 0) level++;
-      }
-    }
-
-    void getCenter(vec3 &dX, int index, int level) const {
-      real_t R = R0 / (1 << level);
-      ivec3 iX = 0;
-      getIndex(iX, index);
-      for_3d dX[d] = X0[d] - R0 + (2 * iX[d] + 1) * R;
-    }
-
     inline int oddOrEven(int n) {
       return (((n) & 1) == 1) ? -1 : 1;
     }
@@ -176,6 +158,24 @@ namespace exafmm {
     inline int getGlobKey(int *iX, int level) const {
       return iX[0] + (iX[1] + iX[2] * numPartition[level][1]) * numPartition[level][0];
     }
+ 
+    inline void getIndex2(ivec3 &iX, int index) const {
+      iX = 0;
+      int d = 0, level = 0;
+      while (index != 0) {
+	iX[d] += (index % 2) * (1 << level);
+	index >>= 1;
+	d = (d+1) % 3;
+	if (d == 0) level++;
+      }
+    }
+
+    void getCenter(vec3 &dX, int index, int level) const {
+      real_t R = R0 / (1 << level);
+      ivec3 iX = 0;
+      getIndex2(iX, index);
+      for_3d dX[d] = X0[d] - R0 + (2 * iX[d] + 1) * R;
+    }
 
     void P2P(int ibegin, int iend, int jbegin, int jend, vec3 periodic) const {
       for (int i=ibegin; i<iend; i++) {
@@ -216,7 +216,7 @@ namespace exafmm {
 #pragma omp parallel for
       for (int i=0; i<numLeafs; i++) {
 	ivec3 iX = 0;
-	getIndex(iX,i);
+	getIndex2(iX,i);
 	ivec3 jXmin, jXmax;
 	for_3d jXmin[d] = std::max(nxmin[d],iX[d] - DP2P);
 	for_3d jXmax[d] = std::min(nxmax[d],iX[d] + DP2P);
@@ -246,111 +246,12 @@ namespace exafmm {
     }
 
     void P2M() const {
-      int rankOffset = 13 * numLeafs;
-      int levelOffset = ((1 << 3 * maxLevel) - 1) / 7 + 13 * numCells;
-#pragma omp parallel for
-      for (int i=0; i<numLeafs; i++) {
-	vec3 center;
-	getCenter(center,i,maxLevel);
-	for (int j=Leafs[i+rankOffset][0]; j<Leafs[i+rankOffset][1]; j++) {
-	  vec3 dX;
-	  for_3d dX[d] = center[d] - Jbodies[j][d];
-	  real_t M[MTERM];
-	  M[0] = Jbodies[j][3];
-	  powerM(M,dX);
-	  for_m Multipole[i+levelOffset][m] += M[m];
-	}
-      }
     }
 
     void M2M() const {
-      int rankOffset = 13 * numCells;
-      for (int lev=maxLevel; lev>0; lev--) {
-	int childOffset = ((1 << 3 * lev) - 1) / 7 + rankOffset;
-	int parentOffset = ((1 << 3 * (lev - 1)) - 1) / 7 + rankOffset;
-	real_t radius = R0 / (1 << lev);
-#pragma omp parallel for schedule(static, 8)
-	for (int i=0; i<(1 << 3 * lev); i++) {
-	  int c = i + childOffset;
-	  int p = (i >> 3) + parentOffset;
-	  ivec3 iX;
-	  iX[0] = 1 - (i & 1) * 2;
-	  iX[1] = 1 - ((i / 2) & 1) * 2;
-	  iX[2] = 1 - ((i / 4) & 1) * 2;
-	  vec3 dX;
-	  for_3d dX[d] = iX[d] * radius;
-	  real_t M[MTERM];
-	  real_t C[LTERM];
-	  C[0] = 1;
-	  powerM(C,dX);
-	  for_m M[m] = Multipole[c][m];
-	  for_m Multipole[p][m] += C[m] * M[0];
-	  M2MSum(Multipole[p],C,M);
-	}
-      }
     }
 
     void M2L() const {
-      ivec3 iXc;
-      int DM2LC = DM2L;
-      getGlobIndex(iXc,MPIRANK,maxGlobLevel);
-      for (int lev=1; lev<=maxLevel; lev++) {
-	if (lev==maxLevel) DM2LC = DP2P;
-	int levelOffset = ((1 << 3 * lev) - 1) / 7;
-	int nunit = 1 << lev;
-	ivec3 nunitGlob;
-	for_3d nunitGlob[d] = nunit * numPartition[maxGlobLevel][d];
-	ivec3 nxmin, nxmax;
-	for_3d nxmin[d] = -iXc[d] * (nunit >> 1);
-	for_3d nxmax[d] = (nunitGlob[d] >> 1) + nxmin[d] - 1;
-	if (numImages != 0) {
-	  for_3d nxmin[d] -= (nunitGlob[d] >> 1);
-	  for_3d nxmax[d] += (nunitGlob[d] >> 1);
-	}
-	real_t diameter = 2 * R0 / (1 << lev);
-#pragma omp parallel for
-	for (int i=0; i<(1 << 3 * lev); i++) {
-	  real_t L[LTERM];
-	  for_l L[l] = 0;
-	  ivec3 iX = 0;
-	  getIndex(iX,i);
-	  ivec3 jXmin;
-	  for_3d jXmin[d] = (std::max(nxmin[d],(iX[d] >> 1) - DM2L) << 1);
-	  ivec3 jXmax;
-	  for_3d jXmax[d] = (std::min(nxmax[d],(iX[d] >> 1) + DM2L) << 1) + 1;
-	  ivec3 jX;
-	  for (jX[2]=jXmin[2]; jX[2]<=jXmax[2]; jX[2]++) {
-	    for (jX[1]=jXmin[1]; jX[1]<=jXmax[1]; jX[1]++) {
-	      for (jX[0]=jXmin[0]; jX[0]<=jXmax[0]; jX[0]++) {
-		if(jX[0] < iX[0]-DM2LC || iX[0]+DM2LC < jX[0] ||
-		   jX[1] < iX[1]-DM2LC || iX[1]+DM2LC < jX[1] ||
-		   jX[2] < iX[2]-DM2LC || iX[2]+DM2LC < jX[2]) {
-		  ivec3 jXp;
-		  for_3d jXp[d] = (jX[d] + nunit) % nunit;
-		  int j = getKey(jXp,lev);
-		  for_3d jXp[d] = (jX[d] + nunit) / nunit;
-#if EXAFMM_SERIAL
-		  int rankOffset = 13 * numCells;
-#else
-		  int rankOffset = (jXp[0] + 3 * jXp[1] + 9 * jXp[2]) * numCells;
-#endif
-		  j += rankOffset;
-		  real_t M[MTERM];
-		  for_m M[m] = Multipole[j][m];
-		  vec3 dX;
-		  for_3d dX[d] = (iX[d] - jX[d]) * diameter;
-		  real_t invR2 = 1. / (dX[0] * dX[0] + dX[1] * dX[1] + dX[2] * dX[2]);
-		  real_t invR  = sqrt(invR2);
-		  real_t C[LTERM];
-		  getCoef(C,dX,invR2,invR);
-		  M2LSum(L,C,M);
-		}
-	      }
-	    }
-	  }
-	  for_l Local[i+levelOffset][l] += L[l];
-	}
-      }
     }
 
     void L2L() const {

@@ -87,9 +87,7 @@ int main(int argc, char ** argv) {
     logger::stopTimer("Comm LET bodies");
 #endif
 
-    logger::startTimer("Upward pass");
     FMM.upwardPass();
-    logger::stopTimer("Upward pass");
 
 #if EXAFMM_SERIAL
 #else
