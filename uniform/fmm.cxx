@@ -3,6 +3,7 @@
 #include "bound_box.h"
 #include "build_tree.h"
 #include "ewald.h"
+#include "ewald2.h"
 #include "verify.h"
 #if EXAFMM_SERIAL
 #include "serialfmm.h"

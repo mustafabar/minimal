@@ -1,4 +1,6 @@
+rethink Ewald parallelism
 write Ewald using uniform FMM
 remove unused args
 proper parallel Ewald without shiftBodies
 fuse all triple loops for periodic
+MD driver code with VdW
