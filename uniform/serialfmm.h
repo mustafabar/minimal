@@ -357,14 +357,12 @@ namespace exafmm {
 	if (lev==maxLevel) DM2LC = DP2P;
 	int levelOffset = ((1 << 3 * lev) - 1) / 7;
 	int nunit = 1 << lev;
-	ivec3 nunitGlob;
-	for_3d nunitGlob[d] = nunit * numPartition[maxGlobLevel][d];
-	ivec3 nxmin, nxmax;
-	for_3d nxmin[d] = -iXc[d] * (nunit >> 1);
-	for_3d nxmax[d] = (nunitGlob[d] >> 1) + nxmin[d] - 1;
+	ivec3 nunitGlob = numPartition[maxGlobLevel] * nunit;
+	ivec3 nxmin = -iXc * (nunit >> 1);
+	ivec3 nxmax = (nunitGlob >> 1) + nxmin - 1;
 	if (numImages != 0) {
-	  for_3d nxmin[d] -= (nunitGlob[d] >> 1);
-	  for_3d nxmax[d] += (nunitGlob[d] >> 1);
+	  nxmin -= (nunitGlob >> 1);
+	  nxmax += (nunitGlob >> 1);
 	}
 	real_t diameter = 2 * R0 / (1 << lev);
 #pragma omp parallel for
@@ -372,10 +370,8 @@ namespace exafmm {
 	  cvecP L = complex_t(0);
 	  ivec3 iX = 0;
 	  getIndex(iX,i);
-	  ivec3 jXmin;
-	  for_3d jXmin[d] = (std::max(nxmin[d],(iX[d] >> 1) - DM2L) << 1);
-	  ivec3 jXmax;
-	  for_3d jXmax[d] = (std::min(nxmax[d],(iX[d] >> 1) + DM2L) << 1) + 1;
+	  ivec3 jXmin = (max(nxmin,(iX >> 1) - DM2L) << 1);
+	  ivec3 jXmax = (min(nxmax,(iX >> 1) + DM2L) << 1) + 1;
 	  ivec3 jX;
 	  for (jX[2]=jXmin[2]; jX[2]<=jXmax[2]; jX[2]++) {
 	    for (jX[1]=jXmin[1]; jX[1]<=jXmax[1]; jX[1]++) {
@@ -383,10 +379,9 @@ namespace exafmm {
 		if(jX[0] < iX[0]-DM2LC || iX[0]+DM2LC < jX[0] ||
 		   jX[1] < iX[1]-DM2LC || iX[1]+DM2LC < jX[1] ||
 		   jX[2] < iX[2]-DM2LC || iX[2]+DM2LC < jX[2]) {
-		  ivec3 jXp;
-		  for_3d jXp[d] = (jX[d] + nunit) % nunit;
+		  ivec3 jXp = (jX + nunit) % nunit;
 		  int j = getKey(jXp,lev);
-		  for_3d jXp[d] = (jX[d] + nunit) / nunit;
+		  jXp = (jX + nunit) / nunit;
 #if EXAFMM_SERIAL
 		  int rankOffset = 13 * numCells;
 #else
@@ -394,7 +389,7 @@ namespace exafmm {
 #endif
 		  j += rankOffset;
 		  vec3 dX;
-		  for_3d dX[d] = (iX[d] - jX[d]) * diameter;
+                  for_3d dX[d]= (iX[d] - jX[d]) * diameter;
                   M2L(dX,Multipole[j],L);
 		}
 	      }
@@ -444,30 +439,26 @@ namespace exafmm {
       logger::startTimer("P2P");
       getGlobIndex(iXc,MPIRANK,maxGlobLevel);
       int nunit = 1 << maxLevel;
-      ivec3 nunitGlob;
-      for_3d nunitGlob[d] = nunit * numPartition[maxGlobLevel][d];
-      ivec3 nxmin, nxmax;
-      for_3d nxmin[d] = -iXc[d] * nunit;
-      for_3d nxmax[d] = nunitGlob[d] + nxmin[d] - 1;
+      ivec3 nunitGlob = numPartition[maxGlobLevel] * nunit;
+      ivec3 nxmin = -iXc * nunit;
+      ivec3 nxmax = nunitGlob + nxmin - 1;
       if (numImages != 0) {
-	for_3d nxmin[d] -= nunitGlob[d];
-	for_3d nxmax[d] += nunitGlob[d];
+	nxmin -= nunitGlob;
+	nxmax += nunitGlob;
       }
 #pragma omp parallel for
       for (int i=0; i<numLeafs; i++) {
 	ivec3 iX = 0;
 	getIndex(iX,i);
-	ivec3 jXmin, jXmax;
-	for_3d jXmin[d] = std::max(nxmin[d],iX[d] - DP2P);
-	for_3d jXmax[d] = std::min(nxmax[d],iX[d] + DP2P);
+	ivec3 jXmin = max(nxmin,iX - DP2P);
+	ivec3 jXmax = min(nxmax,iX + DP2P);
 	ivec3 jX;
 	for (jX[2]=jXmin[2]; jX[2]<=jXmax[2]; jX[2]++) {
 	  for (jX[1]=jXmin[1]; jX[1]<=jXmax[1]; jX[1]++) {
 	    for (jX[0]=jXmin[0]; jX[0]<=jXmax[0]; jX[0]++) {
-	      ivec3 jXp;
-	      for_3d jXp[d] = (jX[d] + nunit) % nunit;
+	      ivec3 jXp = (jX + nunit) % nunit;
 	      int j = getKey(jXp,maxLevel,false);
-	      for_3d jXp[d] = (jX[d] + nunit) / nunit;
+	      jXp = (jX + nunit) / nunit;
 #if EXAFMM_SERIAL
 	      int rankOffset = 13 * numLeafs;
 #else
@@ -475,8 +466,8 @@ namespace exafmm {
 #endif
 	      j += rankOffset;
 	      rankOffset = 13 * numLeafs;
-	      vec3 periodic = 0;
-	      for_3d jXp[d] = (jX[d] + iXc[d] * nunit + nunitGlob[d]) / nunitGlob[d];
+	      jXp = (jX + iXc * nunit + nunitGlob) / nunitGlob;
+	      vec3 periodic;
 	      for_3d periodic[d] = (jXp[d] - 1) * 2 * RGlob[d];
 	      P2P(Leafs[i+rankOffset][0],Leafs[i+rankOffset][1],Leafs[j][0],Leafs[j][1],periodic);
 	    }
@@ -495,8 +486,7 @@ namespace exafmm {
 #endif
       cvecP L = complex_t(0);
       for( int lev=1; lev<numImages; lev++ ) {
-	vec3 diameter;
-	for_3d diameter[d] = 2 * RGlob[d] * std::pow(3.,lev-1);
+	vec3 diameter = RGlob * 2 * std::pow(3.,lev-1);
 	ivec3 jX;
 	for( jX[2]=-4; jX[2]<=4; jX[2]++ ) {
 	  for( jX[1]=-4; jX[1]<=4; jX[1]++ ) {
