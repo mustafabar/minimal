@@ -138,8 +138,15 @@ int main(int argc, char ** argv) {
       bounds = boundBox.getBounds(jbodies);
       buffer = jbodies;
       Cells jcells = buildTree.buildTree(jbodies, buffer, bounds);
-      ewald.wavePart(bodies, jbodies);
+    start("Ewald wave part");
+    Waves waves = ewald.initWaves();
+    ewald.dft(waves,jbodies);
+    ewald.wavePart(waves);
+    ewald.idft(waves,bodies);
+    stop("Ewald wave part");
+      start("Ewald real part");
       ewald.realPart(cells, jcells);
+      stop("Ewald real part");
     }
     ewald.selfTerm(bodies);
     stop("Total Ewald");

@@ -80,5 +80,14 @@ namespace exafmm {
   };
   typedef std::vector<Cell> Cells;                              //!< Vector of cells
   typedef typename Cells::iterator C_iter;                      //!< Iterator of cell vector
+
+  //! Wave structure for Ewald summation
+  struct Wave {
+    vec3   K;                                                 //!< 3-D wave number vector
+    real_t REAL;                                              //!< real part of wave
+    real_t IMAG;                                              //!< imaginary part of wave
+  };
+  typedef std::vector<Wave> Waves;                            //!< Vector of Wave types
+  typedef typename Waves::iterator W_iter;                    //!< Iterator of Wave types
 }
 #endif
