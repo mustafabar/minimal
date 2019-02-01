@@ -170,7 +170,7 @@ namespace exafmm {
 	bucket[key[i]-Imin]--;
 	int inew = bucket[key[i]-Imin];
 	ibuffer[inew] = index[i];
-	for_4d buffer[inew][d] = bodies[i][d];
+	buffer[inew] = bodies[i];
       }
     }
 
@@ -275,7 +275,7 @@ namespace exafmm {
       sort(Jbodies,sendJbodies,Index,sendIndex,key);
       for( int i=0; i<numBodies; i++ ) {
 	Index[i] = sendIndex[i];
-	for_4d Jbodies[i][d] = sendJbodies[i][d];
+	Jbodies[i] = sendJbodies[i];
       }
       delete[] key;
     }

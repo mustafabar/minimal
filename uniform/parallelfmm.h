@@ -74,7 +74,7 @@ namespace exafmm {
 		    MPI_COMM_WORLD);
       int newBodies = (recvBodiesDispl[MPISIZE-1] + recvBodiesCount[MPISIZE-1]) / 4;
       for( int i=0; i<newBodies; i++ ) {
-	for_4d Jbodies[i][d] = recvJbodies[i][d];
+	Jbodies[i] = recvJbodies[i];
       }
       sort(Ibodies,sendJbodies,Index,sendIndex,Rank);
       MPI_Alltoallv(&sendJbodies[0][0], sendBodiesCount, sendBodiesDispl, MPI_FLOAT,
