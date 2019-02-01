@@ -101,8 +101,7 @@ namespace exafmm {
       int rankOffset = 13 * numLeafs;
       ivec3 iXc;
       getGlobIndex(iXc,MPIRANK,maxGlobLevel);
-      ivec3 nunit;
-      for_3d nunit[d] = numPartition[maxGlobLevel][d];
+      ivec3 nunit = numPartition[maxGlobLevel];
       int ileaf = 0;
       int iforward = 0;
       ivec3 iX;
@@ -131,10 +130,9 @@ namespace exafmm {
 	      if(iforward != 25 ) {
 		if( ibody > bodiesDispl[iforward+1] ) std::cout << "ibody: " << ibody << " bodiesDispl: " << bodiesDispl[iforward+1] << " @rank: " << MPIRANK << std::endl;
 	      }
-	      ivec3 iXp;
-	      for_3d iXp[d] = (iXc[d] - iX[d] + nunit[d]) % nunit[d];
+	      ivec3 iXp = (iXc - iX + nunit) % nunit;
 	      int sendRank = getGlobKey(iXp,maxGlobLevel);
-	      for_3d iXp[d] = (iXc[d] + iX[d] + nunit[d]) % nunit[d];
+	      ivec3 iXp = (iXc + iX + nunit) % nunit;
 	      int recvRank = getGlobKey(iXp,maxGlobLevel);
 	      assert(0<=sendRank && sendRank<MPISIZE);
 	      assert(0<=recvRank && recvRank<MPISIZE);
