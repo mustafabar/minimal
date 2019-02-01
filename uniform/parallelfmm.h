@@ -132,7 +132,7 @@ namespace exafmm {
 	      }
 	      ivec3 iXp = (iXc - iX + nunit) % nunit;
 	      int sendRank = getGlobKey(iXp,maxGlobLevel);
-	      ivec3 iXp = (iXc + iX + nunit) % nunit;
+	      iXp = (iXc + iX + nunit) % nunit;
 	      int recvRank = getGlobKey(iXp,maxGlobLevel);
 	      assert(0<=sendRank && sendRank<MPISIZE);
 	      assert(0<=recvRank && recvRank<MPISIZE);
@@ -204,8 +204,7 @@ namespace exafmm {
       int rankOffset = 13 * numCells;
       ivec3 iXc;
       getGlobIndex(iXc,MPIRANK,maxGlobLevel);
-      ivec3 nunit;
-      for_3d nunit[d] = numPartition[maxGlobLevel][d];
+      ivec3 nunit = numPartition[maxGlobLevel];
       int nxmin[3] = {(1 << lev) - 2, 0, 0};
       int nxmax[3] = {1 << lev, 1 << lev, 2};
       int i = 0;
@@ -227,10 +226,9 @@ namespace exafmm {
 		  }
 		}
 	      }
-	      ivec3 iXp;
-	      for_3d iXp[d] = (iXc[d] - iX[d] + nunit[d]) % nunit[d];
+	      ivec3 iXp = (iXc - iX + nunit) % nunit;
 	      int sendRank = getGlobKey(iXp,maxGlobLevel);
-	      for_3d iXp[d] = (iXc[d] + iX[d] + nunit[d]) % nunit[d];
+	      iXp = (iXc + iX + nunit) % nunit;
 	      int recvRank = getGlobKey(iXp,maxGlobLevel);
 	      int sendDispl = multipoleDispl[lev][iforward];
 	      int sendCount = multipoleCount[lev][iforward];
@@ -286,16 +284,11 @@ namespace exafmm {
 
     void globM2MSend(int level) {
       MPI_Status stats[8];
-      ivec3 numChild;
-      for_3d numChild[d] = numPartition[level][d] / numPartition[level-1][d];
-      ivec3 numStride;
-      for_3d numStride[d] = numPartition[maxGlobLevel][d] / numPartition[level][d];
-      ivec3 iX;
-      for_3d iX[d] = IX[level][d];
-      ivec3 iXoff;
-      for_3d iXoff[d] = IX[maxGlobLevel][d] % numStride[d];
-      ivec3 jXoff;
-      for_3d jXoff[d] = (IX[level][d] / numChild[d]) * numChild[d];
+      ivec3 numChild = numPartition[level] / numPartition[level-1];
+      ivec3 numStride = numPartition[maxGlobLevel] / numPartition[level];
+      ivec3 iX = IX[level];
+      ivec3 iXoff = IX[maxGlobLevel] % numStride;
+      ivec3 jXoff = (IX[level] / numChild) * numChild;
       int i = getGlobKey(iX,level) + globLevelOffset[level];
       for_m sendMultipole[0][m] = globMultipole[i][m];
       int iforward = 0;
@@ -306,8 +299,7 @@ namespace exafmm {
 	for( jX[1]=jXoff[1]; jX[1]<jXoff[1]+numChild[1]; jX[1]++ ) {
 	  for( jX[0]=jXoff[0]; jX[0]<jXoff[0]+numChild[0]; jX[0]++ ) {
 	    if( iX[0] != jX[0] || iX[1] != jX[1] || iX[2] != jX[2] ) {
-	      ivec3 jXp;
-	      for_3d jXp[d] = iXoff[d] + jX[d] * numStride[d];
+	      ivec3 jXp = iXoff + jX * numStride;
 	      int commRank = getGlobKey(jXp,maxGlobLevel);
 	      commBytes += NTERM * 4;
 	      MPI_Isend(sendMultipole[0],NTERM,MPI_COMPLEX,
@@ -357,10 +349,8 @@ namespace exafmm {
 	globM2MRecv(lev);
 	logger::stopTimer("Comm LET cells", 0);
 	logger::startTimer("Upward pass");
-	ivec3 numChild;
-	for_3d numChild[d] = numPartition[lev][d] / numPartition[lev-1][d];
-	ivec3 jXoff;
-	for_3d jXoff[d] = (IX[lev][d] / numChild[d]) * numChild[d];
+	ivec3 numChild = numPartition[lev] / numPartition[lev-1];
+	ivec3 jXoff = (IX[lev] / numChild) * numChild;
 	int childOffset = globLevelOffset[lev];
 	int parentOffset = globLevelOffset[lev-1];
 	vec3 diameter;
@@ -369,8 +359,7 @@ namespace exafmm {
 	for( jX[2]=jXoff[2]; jX[2]<jXoff[2]+numChild[2]; jX[2]++ ) {
 	  for( jX[1]=jXoff[1]; jX[1]<jXoff[1]+numChild[1]; jX[1]++ ) {
 	    for( jX[0]=jXoff[0]; jX[0]<jXoff[0]+numChild[0]; jX[0]++ ) {
-	      ivec3 iX;
-	      for_3d iX[d] = jX[d] / numChild[d];
+	      ivec3 iX = jX / numChild;
 	      int c = getGlobKey(jX,lev) + childOffset;
 	      int p = getGlobKey(iX,lev-1) + parentOffset;
 	      vec3 dX;
@@ -386,8 +375,7 @@ namespace exafmm {
       logger::stopTimer("Comm LET cells", 0);
       logger::startTimer("Upward pass");
       for( int lev=gatherLevel; lev>0; lev-- ) {
-	ivec3 numChild;
-	for_3d numChild[d] = numPartition[lev][d] / numPartition[lev-1][d];
+	ivec3 numChild = numPartition[lev] / numPartition[lev-1];
 	int childOffset = globLevelOffset[lev];
 	int parentOffset = globLevelOffset[lev-1];
 	vec3 diameter;
@@ -396,8 +384,7 @@ namespace exafmm {
 	for( jX[2]=0; jX[2]<numPartition[lev][2]; jX[2]++ ) {
 	  for( jX[1]=0; jX[1]<numPartition[lev][1]; jX[1]++ ) {
 	    for( jX[0]=0; jX[0]<numPartition[lev][0]; jX[0]++ ) {
-	      ivec3 iX;
-	      for_3d iX[d] = jX[d] / numChild[d];
+	      ivec3 iX = jX / numChild;
 	      int c = getGlobKey(jX,lev) + childOffset;
 	      int p = getGlobKey(iX,lev-1) + parentOffset;
 	      vec3 dX;
@@ -412,14 +399,10 @@ namespace exafmm {
 
     void globM2LSend(int level) {
       MPI_Status stats[26];
-      ivec3 numChild;
-      for_3d numChild[d] = numPartition[level][d] / numPartition[level-1][d];
-      ivec3 numStride;
-      for_3d numStride[d] = numPartition[maxGlobLevel][d] / numPartition[level-1][d];
-      ivec3 iXc;
-      for_3d iXc[d] = IX[level-1][d];
-      ivec3 iXoff;
-      for_3d iXoff[d] = IX[maxGlobLevel][d] % numStride[d];
+      ivec3 numChild = numPartition[level] / numPartition[level-1];
+      ivec3 numStride = numPartition[maxGlobLevel] / numPartition[level-1];
+      ivec3 iXc = IX[level-1];
+      ivec3 iXoff = IX[maxGlobLevel] % numStride;
       int numGroup = numChild[0] * numChild[1] * numChild[2];
       float commBytes = 0;
       int i = 0;
@@ -438,15 +421,14 @@ namespace exafmm {
 		  }
 		}
 	      }
-	      ivec3 iXp;
-	      for_3d iXp[d] = (iXc[d] + iX[d] + numPartition[level-1][d]) % numPartition[level-1][d];
-	      for_3d iXp[d] = iXoff[d] + iXp[d] * numStride[d];
+	      ivec3 iXp = (iXc + iX + numPartition[level-1]) % numPartition[level-1];
+	      iXp = iXoff + iXp * numStride;
 	      int sendRank = getGlobKey(iXp,maxGlobLevel);
 	      commBytes += numGroup * NTERM * 4;
 	      MPI_Isend(sendMultipole[iforward*numGroup],numGroup*NTERM,MPI_COMPLEX,
 			sendRank,iforward,MPI_COMM_WORLD,&requests[iforward]);
-	      for_3d iXp[d] = (iXc[d] - iX[d] + numPartition[level-1][d]) % numPartition[level-1][d];
-	      for_3d iXp[d] = iXoff[d] + iXp[d] * numStride[d];
+	      iXp = (iXc - iX + numPartition[level-1]) % numPartition[level-1];
+	      iXp = iXoff + iXp * numStride;
 	      int recvRank = getGlobKey(iXp,maxGlobLevel);
 	      MPI_Irecv(recvMultipole[iforward*numGroup],numGroup*NTERM,MPI_COMPLEX,
 			recvRank,iforward,MPI_COMM_WORLD,&requests[iforward+26]);
@@ -461,10 +443,8 @@ namespace exafmm {
     void globM2LRecv(int level) {
       MPI_Status stats[26];
       MPI_Waitall(26,&requests[26],stats);
-      ivec3 numChild;
-      for_3d numChild[d] = numPartition[level][d] / numPartition[level-1][d];
-      ivec3 iXc;
-      for_3d iXc[d] = IX[level-1][d];
+      ivec3 numChild = numPartition[level] / numPartition[level-1];
+      ivec3 iXc = IX[level-1];
       int i = 0;
       int iforward = 0;
       ivec3 iX;
@@ -472,8 +452,7 @@ namespace exafmm {
 	for( iX[1]=-1; iX[1]<=1; iX[1]++ ) {
 	  for( iX[0]=-1; iX[0]<=1; iX[0]++ ) {
 	    if( iX[0] != 0 || iX[1] != 0 || iX[2] != 0 ) {
-	      ivec3 iXp;
-	      for_3d iXp[d] = (iXc[d] - iX[d] + numPartition[level-1][d]) % numPartition[level-1][d];
+	      ivec3 iXp = (iXc - iX + numPartition[level-1]) % numPartition[level-1];
 	      ivec3 jX;
 	      for( jX[2]=iXp[2]*numChild[2]; jX[2]<(iXp[2]+1)*numChild[2]; jX[2]++ ) {
 		for( jX[1]=iXp[1]*numChild[1]; jX[1]<(iXp[1]+1)*numChild[1]; jX[1]++ ) {
@@ -496,24 +475,20 @@ namespace exafmm {
 	logger::startTimer("Comm LET cells");
 	logger::stopTimer("Comm LET cells");
 	logger::startTimer("Traverse");
-	ivec3 nxmin = 0, nxmax, nunit;
-	for_3d nxmax[d] = numPartition[lev-1][d]-1;
-	for_3d nunit[d] = numPartition[lev][d];
+	ivec3 nxmin = 0;
+	ivec3 nxmax = numPartition[lev-1] - 1;
+	ivec3 nunit = numPartition[lev];
 	vec3 diameter;
 	for_3d diameter[d] = 2 * RGlob[d] / numPartition[lev][d];
 	if( numImages != 0 ) {
-	  for_3d nxmin[d] = -nxmax[d] - 1;
-	  for_3d nxmax[d] = 2 * nxmax[d] + 1;
+	  nxmin = -nxmax - 1;
+	  nxmax = nxmax * 2 + 1;
 	}
 	cvecP L = complex_t(0);
-	ivec3 iX;
-	for_3d iX[d] = IX[lev][d];
-	ivec3 iXp;
-	for_3d iXp[d] = IX[lev-1][d];
-	ivec3 jXmin;
-	for_3d jXmin[d] =  std::max(nxmin[d], iXp[d] - 1)      * numPartition[lev][d] / numPartition[lev-1][d];
-	ivec3 jXmax;
-	for_3d jXmax[d] = (std::min(nxmax[d], iXp[d] + 1) + 1) * numPartition[lev][d] / numPartition[lev-1][d];
+	ivec3 iX = IX[lev];
+	ivec3 iXp = IX[lev-1];
+	ivec3 jXmin =  max(nxmin, iXp - 1)      * numPartition[lev] / numPartition[lev-1];
+	ivec3 jXmax = (min(nxmax, iXp + 1) + 1) * numPartition[lev] / numPartition[lev-1];
 	ivec3 jX;
 	for( jX[2]=jXmin[2]; jX[2]<jXmax[2]; jX[2]++ ) {
 	  for( jX[1]=jXmin[1]; jX[1]<jXmax[1]; jX[1]++ ) {
@@ -521,8 +496,7 @@ namespace exafmm {
 	      if(jX[0] < iX[0]-1 || iX[0]+1 < jX[0] ||
 		 jX[1] < iX[1]-1 || iX[1]+1 < jX[1] ||
 		 jX[2] < iX[2]-1 || iX[2]+1 < jX[2]) {
-		ivec3 jXp;
-		for_3d jXp[d] = (jX[d] + nunit[d]) % nunit[d];
+		ivec3 jXp = (jX + nunit) % nunit;
 		int j = getGlobKey(jXp,lev) + globLevelOffset[lev];
 		vec3 dX;
 		for_3d dX[d] = (iX[d] - jX[d]) * diameter[d];
