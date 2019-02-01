@@ -28,7 +28,6 @@ int main(int argc, char ** argv) {
   ParallelFMM FMM;
 #endif
   Verify verify(args.path);
-  verify.verbose = args.verbose;
 
   args.numBodies /= FMM.MPISIZE;
   int numBodies = args.numBodies;
@@ -41,16 +40,16 @@ int main(int argc, char ** argv) {
   }
 
   FMM.allocate(numBodies, maxLevel, numImages);
-  args.verbose &= FMM.MPIRANK == 0;
-  logger::verbose = args.verbose;
-  logger::printTitle("FMM Parameters");
-  args.print(logger::stringLength);
+  VERBOSE = FMM.MPIRANK == 0;
+  args.verbose = VERBOSE;
+  print("FMM Parameters");
+  args.print(stringLength);
 
-  logger::printTitle("FMM Profiling");
-  logger::startTimer("Total FMM");
-  logger::startTimer("Partition");
+  print("FMM Profiling");
+  start("Total FMM");
+  start("Partition");
   FMM.partitioner(gatherLevel);
-  logger::stopTimer("Partition");
+  stop("Partition");
 
   for (int it=0; it<1; it++) {
     int iX[3] = {0, 0, 0};
@@ -72,31 +71,31 @@ int main(int argc, char ** argv) {
       FMM.Jbodies[i][3] -= average;
     }
 
-    logger::startTimer("Grow tree");
+    start("Grow tree");
     FMM.sortBodies();
     FMM.buildTree();
-    logger::stopTimer("Grow tree");
+    stop("Grow tree");
 
 #if EXAFMM_SERIAL
 #else
-    logger::startTimer("Comm LET bodies");
+    start("Comm LET bodies");
     FMM.P2PSend();
     FMM.P2PRecv();
-    logger::stopTimer("Comm LET bodies");
+    stop("Comm LET bodies");
 #endif
 
     FMM.upwardPass();
 
 #if EXAFMM_SERIAL
 #else
-    logger::startTimer("Comm LET cells");
+    start("Comm LET cells");
     for (int lev=FMM.maxLevel; lev>0; lev--) {
       MPI_Barrier(MPI_COMM_WORLD);
       FMM.M2LSend(lev);
       FMM.M2LRecv(lev);
     }
     FMM.rootGather();
-    logger::stopTimer("Comm LET cells", 0);
+    stop("Comm LET cells");
     FMM.globM2M();
     FMM.globM2L();
 #endif
@@ -105,13 +104,13 @@ int main(int argc, char ** argv) {
 
 #if EXAFMM_SERIAL
 #else
-    logger::startTimer("Downward pass");
+    start("Downward pass");
     FMM.globL2L();
-    logger::stopTimer("Downward pass", 0);
+    stop("Downward pass");
 #endif
 
     FMM.downwardPass();
-    logger::stopTimer("Total FMM", 0);
+    stop("Total FMM");
 
     Bodies bodies(FMM.numBodies);
     B_iter B = bodies.begin();
@@ -126,14 +125,14 @@ int main(int argc, char ** argv) {
     numBodies = baseMPI.allreduceInt(bodies.size());
 
     ewald.dipoleCorrection(bodies, globalDipole, numBodies, cycle);
-    logger::startTimer("Total Ewald");
+    start("Total Ewald");
     Bounds bounds = boundBox.getBounds(bodies);
     Bodies buffer = bodies;
     Cells cells = buildTree.buildTree(bodies, buffer, bounds);
     Bodies bodies2 = bodies;
     ewald.initTarget(bodies);
     for (int i=0; i<FMM.MPISIZE; i++) {
-      if (args.verbose) std::cout << "Ewald loop           : " << i+1 << "/" << FMM.MPISIZE << std::endl;
+      if (VERBOSE) std::cout << "Ewald loop           : " << i+1 << "/" << FMM.MPISIZE << std::endl;
       if (FMM.MPISIZE > 1) baseMPI.shiftBodies(jbodies);
       bounds = boundBox.getBounds(jbodies);
       buffer = jbodies;
@@ -142,11 +141,12 @@ int main(int argc, char ** argv) {
       ewald.realPart(cells, jcells);
     }
     ewald.selfTerm(bodies);
+    stop("Total Ewald");
     double potSum = verify.getSumScalar(bodies);
     double potSum2 = verify.getSumScalar(bodies2);
     double accDif = verify.getDifVector(bodies, bodies2);
     double accNrm = verify.getNrmVector(bodies);
-    logger::printTitle("FMM vs. direct");
+    print("FMM vs. direct");
 #if EXAFMM_SERIAL
     double potDif = (potSum - potSum2) * (potSum - potSum2);
     double potNrm = potSum * potSum;

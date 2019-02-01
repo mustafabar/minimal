@@ -1,6 +1,6 @@
 #ifndef build_tree_tbb_h
 #define build_tree_tbb_h
-#include "logger.h"
+#include "timer.h"
 #include "types.h"
 
 namespace exafmm {
@@ -182,7 +182,7 @@ namespace exafmm {
 
     //! Build tree structure top down
     Cells buildTree(Bodies & bodies, Bodies & buffer, Bounds bounds) {
-      logger::startTimer("Grow tree");                          // Start timer
+      start("Grow tree");                                       // Start timer
       Box box = bounds2box(bounds);                             // Get box from bounds
       if (bodies.empty()) {                                     // If bodies vector is empty
 	N0 = NULL;                                              //  Reinitialize N0 with NULL
@@ -193,8 +193,8 @@ namespace exafmm {
         buildNodes(N0, bodies, buffer, 0, bodies.size(),        // Build octree nodes
                    box.X, box.R);
       }                                                         // End if for empty root
-      logger::stopTimer("Grow tree");                           // Stop timer
-      logger::startTimer("Link tree");                          // Start timer
+      stop("Grow tree");                                        // Stop timer
+      start("Link tree");                                       // Start timer
       Cells cells;                                              // Initialize cell array
       if (N0 != NULL) {                                         // If the node tree is not empty
 	cells.resize(N0->NNODE);                                //  Allocate cells array
@@ -202,22 +202,10 @@ namespace exafmm {
 	nodes2cells(N0, C0, C0, C0+1, box.X, box.R, numLevels); // Instantiate recursive functor
 	delete N0;                                              //  Deallocate nodes
       }                                                         // End if for empty node tree
-      logger::stopTimer("Link tree");                           // Stop timer
+      stop("Link tree");                                        // Stop timer
       return cells;                                             // Return cells array
     }
 
-    //! Print tree structure statistics
-    void printTreeData(Cells & cells) {
-      if (logger::verbose && !cells.empty()) {                  // If verbose flag is true
-	logger::printTitle("Tree stats");                       //  Print title
-	std::cout  << std::setw(logger::stringLength) << std::left//  Set format
-		   << "Bodies"     << " : " << cells.front().NBODY << std::endl// Print number of bodies
-		   << std::setw(logger::stringLength) << std::left//  Set format
-		   << "Cells"      << " : " << cells.size() << std::endl// Print number of cells
-		   << std::setw(logger::stringLength) << std::left//  Set format
-		   << "Tree depth" << " : " << numLevels << std::endl;//  Print number of levels
-      }                                                         // End if for verbose flag
-    }
   };
 }
 #endif

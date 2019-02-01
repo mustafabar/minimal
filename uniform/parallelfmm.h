@@ -344,11 +344,11 @@ namespace exafmm {
       int i = MPIRANK + globLevelOffset[maxGlobLevel];
       globMultipole[i] = Multipole[rankOffset];
       for( int lev=maxGlobLevel; lev>gatherLevel; lev-- ) {
-	logger::startTimer("Comm LET cells");
+	start("Comm LET cells");
 	globM2MSend(lev);
 	globM2MRecv(lev);
-	logger::stopTimer("Comm LET cells", 0);
-	logger::startTimer("Upward pass");
+	stop("Comm LET cells");
+	start("Upward pass");
 	ivec3 numChild = numPartition[lev] / numPartition[lev-1];
 	ivec3 jXoff = (IX[lev] / numChild) * numChild;
 	int childOffset = globLevelOffset[lev];
@@ -368,12 +368,12 @@ namespace exafmm {
 	    }
 	  }
 	}
-	logger::stopTimer("Upward pass", 0);
+	stop("Upward pass");
       }
-      logger::startTimer("Comm LET cells");
+      start("Comm LET cells");
       gatherMultipoles();
-      logger::stopTimer("Comm LET cells", 0);
-      logger::startTimer("Upward pass");
+      stop("Comm LET cells");
+      start("Upward pass");
       for( int lev=gatherLevel; lev>0; lev-- ) {
 	ivec3 numChild = numPartition[lev] / numPartition[lev-1];
 	int childOffset = globLevelOffset[lev];
@@ -394,7 +394,7 @@ namespace exafmm {
 	  }
 	}
       }
-      logger::stopTimer("Upward pass", 0);
+      stop("Upward pass");
     }
 
     void globM2LSend(int level) {
@@ -472,9 +472,7 @@ namespace exafmm {
     void globM2L() {
       for( int lev=maxGlobLevel; lev>0; lev-- ) {
 	MPI_Barrier(MPI_COMM_WORLD);
-	logger::startTimer("Comm LET cells");
-	logger::stopTimer("Comm LET cells");
-	logger::startTimer("Traverse");
+	start("glob M2L");
 	ivec3 nxmin = 0;
 	ivec3 nxmax = numPartition[lev-1] - 1;
 	ivec3 nunit = numPartition[lev];
@@ -506,7 +504,7 @@ namespace exafmm {
 	  }
 	}
 	globLocal[lev] += L;
-	logger::stopTimer("Traverse", 0);
+	stop("glob M2L");
       }
     }
 

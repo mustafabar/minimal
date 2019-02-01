@@ -311,7 +311,7 @@ namespace exafmm {
 	Local[i] = 0;
       }
 
-      logger::startTimer("P2M");
+      start("P2M");
       rankOffset = 13 * numLeafs;
       int levelOffset = ((1 << 3 * maxLevel) - 1) / 7 + 13 * numCells;
 #pragma omp parallel for
@@ -324,9 +324,9 @@ namespace exafmm {
           P2M(dX,Jbodies[j][3],Multipole[i+levelOffset]);
 	}
       }
-      logger::stopTimer("P2M");
+      stop("P2M");
 
-      logger::startTimer("M2M");
+      start("M2M");
       rankOffset = 13 * numCells;
       for (int lev=maxLevel; lev>0; lev--) {
 	int childOffset = ((1 << 3 * lev) - 1) / 7 + rankOffset;
@@ -345,11 +345,11 @@ namespace exafmm {
           M2M(dX,Multipole[c],Multipole[p]);
 	}
       }
-      logger::stopTimer("M2M");
+      stop("M2M");
     }
 
     void downwardPass() {
-      logger::startTimer("M2L"); 
+      start("M2L"); 
       ivec3 iXc;
       int DM2LC = DM2L;
       getGlobIndex(iXc,MPIRANK,maxGlobLevel);
@@ -398,9 +398,9 @@ namespace exafmm {
 	  Local[i+levelOffset] += L;
 	}
       }
-      logger::stopTimer("M2L");
+      stop("M2L");
 
-      logger::startTimer("L2L");
+      start("L2L");
       for (int lev=1; lev<=maxLevel; lev++) {
 	int childOffset = ((1 << 3 * lev) - 1) / 7;
 	int parentOffset = ((1 << 3 * (lev - 1)) - 1) / 7;
@@ -418,9 +418,9 @@ namespace exafmm {
           L2L(dX,Local[p],Local[c]);
 	}
       }
-      logger::stopTimer("L2L");
+      stop("L2L");
 
-      logger::startTimer("L2P");
+      start("L2P");
       int rankOffset = 13 * numLeafs;
       int levelOffset = ((1 << 3 * maxLevel) - 1) / 7;
 #pragma omp parallel for
@@ -434,9 +434,9 @@ namespace exafmm {
           L2P(dX,L,Ibodies[j]);
 	}
       }
-      logger::stopTimer("L2P");
+      stop("L2P");
 
-      logger::startTimer("P2P");
+      start("P2P");
       getGlobIndex(iXc,MPIRANK,maxGlobLevel);
       int nunit = 1 << maxLevel;
       ivec3 nunitGlob = numPartition[maxGlobLevel] * nunit;
@@ -474,7 +474,7 @@ namespace exafmm {
 	  }
 	}
       }
-      logger::stopTimer("P2P");
+      stop("P2P");
     }
 
     void periodicM2L() {

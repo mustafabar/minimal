@@ -1,6 +1,5 @@
 #ifndef van_der_waals_h
 #define van_der_waals_h
-#include "logger.h"
 #include "types.h"
 
 namespace exafmm {
@@ -95,29 +94,15 @@ namespace exafmm {
 
     //! Evaluate Van Der Waals potential and force
     void evaluate(Cells & cells, Cells & jcells) {
-      logger::startTimer("Van der Waals");                      // Start timer
       C_iter Cj = jcells.begin();                               // Set begin iterator of source cells
-      mk_task_group;                                            // Intitialize tasks
       for (C_iter Ci=cells.begin(); Ci!=cells.end(); Ci++) {    // Loop over target cells
 	if (Ci->NCHILD == 0) {                                  //  If target cell is leaf
 	  Neighbor neighbor(this, Ci, Cj, Cj);                  //   Instantiate recursive functor
-	  create_taskc(neighbor);                               //   Create task for recursive call
+	  neighbor();                                           //   Create task for recursive call
 	}                                                       //  End if for leaf target cell
       }                                                         // End loop over target cells
-      wait_tasks;                                               // Synchronize tasks
-      logger::stopTimer("Van der Waals");                       // Stop timer
     }
 
-    void print(int stringLength) {
-      if (logger::verbose) {                                    // If verbose flag is true
-	std::cout << std::setw(stringLength) << std::fixed << std::left// Set format
-		  << "cuton" << " : " << cuton << std::endl     //  Print cuton
-		  << std::setw(stringLength)                    //  Set format
-		  << "cutoff" << " : " << cutoff << std::endl   //  Print cutoff
-		  << std::setw(stringLength)                    //  Set format
-		  << "cycle" << " : " << cycle << std::endl;    //  Print cycle
-      }                                                         // End if for verbose flag
-    }
   };
 }
 #endif
