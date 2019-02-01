@@ -118,7 +118,7 @@ int main(int argc, char ** argv) {
     for (int b=0; b<FMM.numBodies; b++, B++) {
       for_3d B->X[d] = FMM.Jbodies[b][d];
       B->SRC = FMM.Jbodies[b][3];
-      for_4d B->TRG[d] = FMM.Ibodies[b][d];
+      B->TRG = FMM.Ibodies[b];
     }
     Bodies jbodies = bodies;
     vec3 localDipole = ewald.getDipole(bodies, FMM.RGlob[0]);

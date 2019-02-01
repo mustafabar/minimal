@@ -92,7 +92,7 @@ namespace exafmm {
       numBodies = newBodies;
       for( int i=0; i<numBodies; i++ ) {
 	Index[i] = recvIndex[i];
-	for_4d Ibodies[i][d] = recvJbodies[i][d];
+	Ibodies[i] = recvJbodies[i];
       }
     }
 
@@ -121,7 +121,7 @@ namespace exafmm {
 		    int j = getKey(jXp,maxLevel,false) + rankOffset;
 		    sendLeafs[ileaf][0] = ibody;
 		    for( int jbody=Leafs[j][0]; jbody<Leafs[j][1]; ibody++, jbody++ ) {
-		      for_4d sendJbodies[ibody][d] = Jbodies[jbody][d];
+		      sendJbodies[ibody] = Jbodies[jbody];
 		    }
 		    sendLeafs[ileaf][1] = ibody;
 		  }
@@ -186,7 +186,7 @@ namespace exafmm {
 		    int j = getKey(jXp,maxLevel,false) + rankOffset;
 		    Leafs[j][0] = ibody;
 		    for( int jbody=recvLeafs[ileaf][0]; jbody<recvLeafs[ileaf][1]; ibody++, jbody++ ) {
-		      for_4d Jbodies[ibody][d] = recvJbodies[jbody][d];
+		      Jbodies[ibody] = recvJbodies[jbody];
 		    }
 		    Leafs[j][1] = ibody;
 		  }
