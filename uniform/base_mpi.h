@@ -69,6 +69,25 @@ namespace exafmm {
       return global;                                            // Return global bounds
     }
 
+    //! Allreduce waves type from all ranks
+    Waves allreduceWaves(Waves waves) {
+      int numWaves = waves.size();
+      std::vector<float> fsend(2*numWaves);                     // Single precision buffers
+      int w = 0;                                                // Wave counter
+      for (W_iter W=waves.begin(); W!=waves.end(); W++, w++) {  // Loop over waves
+        fsend[2*w+0] = W->REAL;                                 //  Real part
+        fsend[2*w+1] = W->IMAG;                                 //  Imag part
+      }                                                         // End loop over waves
+      std::vector<float> frecv(2*numWaves);                     // Single precision buffers
+      MPI_Allreduce(&fsend[0], &frecv[0], 2*numWaves, MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD);// Communicate values
+      w = 0;                                                    // Wave counter
+      for (W_iter W=waves.begin(); W!=waves.end(); W++, w++) {  // Loop over waves
+        W->REAL = frecv[2*w+0];                                 //  Real part
+        W->IMAG = frecv[2*w+1];                                 //  Imag part
+      }                                                         // End loop over waves
+      return waves;                                             // Return received values
+    }
+
     //! Send bodies to next rank (round robin)
     void shiftBodies(Bodies & bodies) {
       int newSize;                                              // New number of bodies
