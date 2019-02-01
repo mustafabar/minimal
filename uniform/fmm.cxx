@@ -112,6 +112,10 @@ int main(int argc, char ** argv) {
     FMM.downwardPass();
     stop("Total FMM");
 
+    vec3 localDipole = FMM.getDipole();
+    vec3 globalDipole = baseMPI.allreduceVec3(localDipole);
+    numBodies = baseMPI.allreduceInt(FMM.numBodies);
+    FMM.dipoleCorrection(globalDipole, numBodies); 
     Bodies bodies(FMM.numBodies);
     B_iter B = bodies.begin();
     for (int b=0; b<FMM.numBodies; b++, B++) {
@@ -119,17 +123,13 @@ int main(int argc, char ** argv) {
       B->SRC = FMM.Jbodies[b][3];
       B->TRG = FMM.Ibodies[b];
     }
-    Bodies jbodies = bodies;
-    vec3 localDipole = ewald.getDipole(bodies, FMM.RGlob[0]);
-    vec3 globalDipole = baseMPI.allreduceVec3(localDipole);
-    numBodies = baseMPI.allreduceInt(bodies.size());
 
-    ewald.dipoleCorrection(bodies, globalDipole, numBodies, cycle);
     start("Total Ewald");
     Bounds bounds = boundBox.getBounds(bodies);
     Bodies buffer = bodies;
     Cells cells = buildTree.buildTree(bodies, buffer, bounds);
     Bodies bodies2 = bodies;
+    Bodies jbodies = bodies;
     ewald.initTarget(bodies);
     for (int i=0; i<FMM.MPISIZE; i++) {
       if (VERBOSE) std::cout << "Ewald loop           : " << i+1 << "/" << FMM.MPISIZE << std::endl;

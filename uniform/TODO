@@ -1,4 +1,3 @@
-use timer from exafmm-beta
 write Ewald using uniform FMM
 remove unused args
 proper parallel Ewald without shiftBodies

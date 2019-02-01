@@ -124,7 +124,7 @@ namespace exafmm {
         if (d == 0) level++;
       }
     }
-    
+
     inline void setGlobIndex(int i, ivec3 &iX) const {
 #if NOWRAP
       i = (i / 3) * 3;
@@ -142,7 +142,7 @@ namespace exafmm {
       }
       return id;
     }
-    
+
     inline int getGlobKey(ivec3 &iX, int level) const {
       return iX[0] + (iX[1] + iX[2] * numPartition[level][1]) * numPartition[level][0];
     }
@@ -153,7 +153,7 @@ namespace exafmm {
       getIndex(iX, index);
       for_3d dX[d] = X0[d] - R0 + (2 * iX[d] + 1) * R;
     }
-    
+
     void sort(vec4 *bodies, vec4 *buffer, int *index, int *ibuffer, int *key) const {
       int Imax = key[0];
       int Imin = key[0];
@@ -228,7 +228,7 @@ namespace exafmm {
       iX[1] = index / numPartition[level][0] % numPartition[level][1];
       iX[2] = index / numPartition[level][0] / numPartition[level][1];
     }
-    
+
     void partitioner(int level) {
       int mpisize = MPISIZE;
       ivec3 maxPartition = 1;
@@ -349,7 +349,7 @@ namespace exafmm {
     }
 
     void downwardPass() {
-      start("M2L"); 
+      start("M2L");
       ivec3 iXc;
       int DM2LC = DM2L;
       getGlobIndex(iXc,MPIRANK,maxGlobLevel);
@@ -519,6 +519,25 @@ namespace exafmm {
 #else
       globLocal[0] += L;
 #endif
+    }
+
+    vec3 getDipole() {
+      vec3 dipole = 0;
+      for (int i=0; i<numBodies; i++) {
+        for_3d dipole[d] += (Jbodies[i][d] - RGlob[d]) * Jbodies[i][3];
+      }
+      return dipole;
+    }
+
+    void dipoleCorrection(vec3 dipole, int numBodiesGlob) {
+      vec3 cycle = RGlob * 2;
+      real_t coef = 4 * M_PI / (3 * cycle[0] * cycle[1] * cycle[2]);
+      for (int i=0; i<numBodies; i++) {
+        Ibodies[i][0] -= coef * norm(dipole) / numBodiesGlob / Jbodies[i][3];
+        for (int d=0; d<3; d++) {
+          Ibodies[i][d+1] -= coef * dipole[d];
+        }
+      }
     }
   };
 }
