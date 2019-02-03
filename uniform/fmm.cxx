@@ -116,7 +116,8 @@ int main(int argc, char ** argv) {
     vec3 localDipole = FMM.getDipole();
     vec3 globalDipole = baseMPI.allreduceVec3(localDipole);
     numBodies = baseMPI.allreduceInt(FMM.numBodies);
-    FMM.dipoleCorrection(globalDipole, numBodies); 
+    FMM.dipoleCorrection(globalDipole, numBodies);
+
     Bodies bodies(FMM.numBodies);
     B_iter B = bodies.begin();
     for (int b=0; b<FMM.numBodies; b++, B++) {
@@ -129,7 +130,12 @@ int main(int argc, char ** argv) {
     Bounds bounds = boundBox.getBounds(bodies);
     Bodies buffer = bodies;
     Cells cells = buildTree.buildTree(bodies, buffer, bounds);
-    Bodies bodies2 = bodies;
+    std::vector<vec4> ibodies2(FMM.numBodies);
+    B = bodies.begin();
+    for (int b=0; b<FMM.numBodies; b++, B++) {
+      ibodies2[b] = B->TRG;
+      ibodies2[b][0] *= B->SRC;
+    }
     Bodies jbodies = bodies;
     ewald.initTarget(bodies);
     for (int i=0; i<FMM.MPISIZE; i++) {
@@ -150,11 +156,17 @@ int main(int argc, char ** argv) {
     ewald.idft(waves,bodies);
     stop("Ewald wave part");
     ewald.selfTerm(bodies);
+    std::vector<vec4> ibodies(FMM.numBodies);
+    B = bodies.begin();
+    for (int b=0; b<FMM.numBodies; b++, B++) {
+      ibodies[b] = B->TRG;
+      ibodies[b][0] *= B->SRC;
+    }
     stop("Total Ewald");
-    double potSum = verify.getSumScalar(bodies);
-    double potSum2 = verify.getSumScalar(bodies2);
-    double accDif = verify.getDifVector(bodies, bodies2);
-    double accNrm = verify.getNrmVector(bodies);
+    double potSum = verify.getSumScalar(ibodies);
+    double potSum2 = verify.getSumScalar(ibodies2);
+    double accDif = verify.getDifVector(ibodies, ibodies2);
+    double accNrm = verify.getNrmVector(ibodies);
     print("FMM vs. direct");
 #if EXAFMM_SERIAL
     double potDif = (potSum - potSum2) * (potSum - potSum2);

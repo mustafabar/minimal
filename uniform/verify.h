@@ -23,78 +23,35 @@ namespace exafmm {
     Verify(const char * _path) : path(_path), average(0), average2(0) {}
 
     //! Get sum of scalar component of a vector of target bodies
-    double getSumScalar(Bodies & bodies) {
+    double getSumScalar(std::vector<vec4> & bodies) {
       double v = 0;                                             // Initialize difference
-      for (B_iter B=bodies.begin(); B!=bodies.end(); B++) {     // Loop over bodies
-	v += B->TRG[0] * B->SRC;                                //  Sum of scalar component for Laplace
+      for (size_t b=0; b<bodies.size(); b++) {                  // Loop over bodies
+	v += bodies[b][0];                                      //  Sum of scalar component for Laplace
       }                                                         // End loop over bodies
       return v;                                                 // Return difference
     }
 
     //! Get norm of scalar component of a vector of target bodies
-    double getNrmScalar(Bodies & bodies) {
+    double getNrmVector(std::vector<vec4> & bodies) {
       double v = 0;                                             // Initialize norm
-      for (B_iter B=bodies.begin(); B!=bodies.end(); B++) {     // Loop over bodies
-	v += std::abs(B->TRG[0] * B->TRG[0]);                   //  Norm of scalar component
+      for (size_t b=0; b<bodies.size(); b++) {                  // Loop over bodies
+	v += std::abs(bodies[b][1] * bodies[b][1] +             //  Norm of vector x component
+		      bodies[b][2] * bodies[b][2] +             //  Norm of vector y component
+		      bodies[b][3] * bodies[b][3]);             //  Norm of vector z component
       }                                                         // End loop over bodies
       return v;                                                 // Return norm
     }
 
     //! Get difference between scalar component of two vectors of target bodies
-    double getDifScalar(Bodies & bodies, Bodies & bodies2) {
+    double getDifVector(std::vector<vec4> & bodies, std::vector<vec4> & bodies2) {
       double v = 0;                                             // Initialize difference
-      B_iter B2 = bodies2.begin();                              // Set iterator of bodies2
-      for (B_iter B=bodies.begin(); B!=bodies.end(); B++, B2++) { // Loop over bodies & bodies2
-	v += std::abs((B->TRG[0] - B2->TRG[0]) * (B->TRG[0] - B2->TRG[0])); //  Difference of scalar component
-      }                                                         // End loop over bodies & bodies2
-      return v;                                                 // Return difference
-    }
-
-    //! Get difference between scalar component of two vectors of target bodies
-    double getRelScalar(Bodies & bodies, Bodies & bodies2) {
-      double v = 0;                                             // Initialize difference
-      B_iter B2 = bodies2.begin();                              // Set iterator of bodies2
-      for (B_iter B=bodies.begin(); B!=bodies.end(); B++, B2++) { // Loop over bodies & bodies2
-	v += std::abs(((B->TRG[0] - B2->TRG[0]) * (B->TRG[0] - B2->TRG[0]))
-		      / (B2->TRG[0] * B2->TRG[0]));             //  Difference of scalar component
-      }                                                         // End loop over bodies & bodies2
-      return v;                                                 // Return difference
-    }
-
-    //! Get norm of scalar component of a vector of target bodies
-    double getNrmVector(Bodies & bodies) {
-      double v = 0;                                             // Initialize norm
-      for (B_iter B=bodies.begin(); B!=bodies.end(); B++) {     // Loop over bodies
-	v += std::abs(B->TRG[1] * B->TRG[1] +                   //  Norm of vector x component
-		      B->TRG[2] * B->TRG[2] +                   //  Norm of vector y component
-		      B->TRG[3] * B->TRG[3]);                   //  Norm of vector z component
-      }                                                         // End loop over bodies
-      return v;                                                 // Return norm
-    }
-
-    //! Get difference between scalar component of two vectors of target bodies
-    double getDifVector(Bodies & bodies, Bodies & bodies2) {
-      double v = 0;                                             // Initialize difference
-      B_iter B2 = bodies2.begin();                              // Set iterator of bodies2
-      for (B_iter B=bodies.begin(); B!=bodies.end(); B++, B2++) { // Loop over bodies & bodies2
-	v += std::abs((B->TRG[1] - B2->TRG[1]) * (B->TRG[1] - B2->TRG[1]) + //  Difference of vector x component
-		      (B->TRG[2] - B2->TRG[2]) * (B->TRG[2] - B2->TRG[2]) + //  Difference of vector y component
-		      (B->TRG[3] - B2->TRG[3]) * (B->TRG[3] - B2->TRG[3])); //  Difference of vector z component
-      }                                                         // End loop over bodies & bodies2
-      return v;                                                 // Return difference
-    }
-
-    //! Get difference between scalar component of two vectors of target bodies
-    double getRelVector(Bodies & bodies, Bodies & bodies2) {
-      double v = 0;                                             // Initialize difference
-      B_iter B2 = bodies2.begin();                              // Set iterator of bodies2
-      for (B_iter B=bodies.begin(); B!=bodies.end(); B++, B2++) { // Loop over bodies & bodies2
-	v += std::abs(((B->TRG[1] - B2->TRG[1]) * (B->TRG[1] - B2->TRG[1]) +//  Difference of vector x component
-		       (B->TRG[2] - B2->TRG[2]) * (B->TRG[2] - B2->TRG[2]) +//  Difference of vector y component
-		       (B->TRG[3] - B2->TRG[3]) * (B->TRG[3] - B2->TRG[3]))//   Difference of vector z component
-		      / (B2->TRG[1] * B2->TRG[1] +              //  Norm of vector x component
-			 B2->TRG[2] * B2->TRG[2] +              //  Norm of vector y component
-			 B2->TRG[3] * B2->TRG[3]));             //  Norm of vector z component
+      for (size_t b=0; b<bodies.size(); b++) {                  // Loop over bodies
+	v += std::abs((bodies[b][1] - bodies2[b][1]) *
+                      (bodies[b][1] - bodies2[b][1]) +          //  Difference of vector x component
+		      (bodies[b][2] - bodies2[b][2]) *
+                      (bodies[b][2] - bodies2[b][2]) +          //  Difference of vector y component
+		      (bodies[b][3] - bodies2[b][3]) *
+                      (bodies[b][3] - bodies2[b][3]));          //  Difference of vector z component
       }                                                         // End loop over bodies & bodies2
       return v;                                                 // Return difference
     }

@@ -49,10 +49,10 @@ namespace exafmm {
     int (*recvLeafs)[2];
     vec4 *Ibodies;
     vec4 *Jbodies;
-    cvecP (*Multipole);
-    cvecP (*Local);
-    cvecP (*globMultipole);
-    cvecP (*globLocal);
+    cvecP *Multipole;
+    cvecP *Local;
+    cvecP *globMultipole;
+    cvecP *globLocal;
     vec4 *sendJbodies;
     vec4 *recvJbodies;
     fcvecP (*sendMultipole);
