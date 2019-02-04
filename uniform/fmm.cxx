@@ -117,6 +117,8 @@ int main(int argc, char ** argv) {
     numBodies = baseMPI.allreduceInt(FMM.numBodies);
     FMM.dipoleCorrection(globalDipole, numBodies);
 
+    start("Total Ewald");
+#if 0
     Bodies bodies(FMM.numBodies);
     B_iter B = bodies.begin();
     for (int b=0; b<FMM.numBodies; b++, B++) {
@@ -124,8 +126,6 @@ int main(int argc, char ** argv) {
       B->SRC = FMM.Jbodies[b][3];
       B->TRG = FMM.Ibodies[b];
     }
-
-    start("Total Ewald");
     Bounds bounds = boundBox.getBounds(bodies);
     Bodies buffer = bodies;
     Cells cells = buildTree.buildTree(bodies, buffer, bounds);
@@ -155,6 +155,22 @@ int main(int argc, char ** argv) {
       jbodies[b][3] = B->SRC;
       ibodies[b] = B->TRG;
     }
+#else
+    std::vector<vec4> ibodies2(FMM.numBodies);
+    for (int b=0; b<FMM.numBodies; b++) {
+      ibodies2[b] = FMM.Ibodies[b];
+      FMM.Ibodies[b] = 0;
+    }
+    start("Ewald real part");
+    FMM.ewaldRealPart(alpha,cutoff);
+    stop("Ewald real part");
+    std::vector<vec4> ibodies(FMM.numBodies);
+    std::vector<vec4> jbodies(FMM.numBodies);    
+    for (int b=0; b<FMM.numBodies; b++) {
+      jbodies[b] = FMM.Jbodies[b];
+      ibodies[b] = FMM.Ibodies[b];
+    }
+#endif
     start("Ewald wave part");
     Waves waves = ewald.initWaves();
     ewald.dft(waves,jbodies);
@@ -165,6 +181,7 @@ int main(int argc, char ** argv) {
     ewald.selfTerm(ibodies, jbodies);
     for (int b=0; b<FMM.numBodies; b++) {
       ibodies[b][0] *= jbodies[b][3];
+      ibodies2[b][0] *= jbodies[b][3];
     }
     stop("Total Ewald");
     double potSum = verify.getSumScalar(ibodies);

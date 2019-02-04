@@ -106,7 +106,7 @@ namespace exafmm {
         fact += 2;
       }
     }
-    
+
   protected:
     void P2M(vec3 dX, real_t SRC, complex_t *Mj) const {
       complex_t Ynm[P*P], YnmTheta[P*P];
@@ -150,7 +150,7 @@ namespace exafmm {
                 M += std::conj(Mc[jnkms]) * Ynm[nm]
                   * real_t(oddOrEven(k+n+m) * Anm[nm] * Anm[jnkm] / Anm[jk]);
               }
-            } 
+            }
           }
           Mp[jks] += M * EPS;
         }
@@ -265,6 +265,36 @@ namespace exafmm {
 	  Fx += dX[0] * invR3;
 	  Fy += dX[1] * invR3;
 	  Fz += dX[2] * invR3;
+	}
+	Ibodies[i][0] += Po;
+	Ibodies[i][1] -= Fx;
+	Ibodies[i][2] -= Fy;
+	Ibodies[i][3] -= Fz;
+      }
+    }
+
+    void EwaldP2P(std::vector<vec4> &Ibodies, int ibegin, int iend,
+                  std::vector<vec4> &Jbodies, int jbegin, int jend, vec3 periodic,
+                  real_t alpha, real_t cutoff) const {
+      for (int i=ibegin; i<iend; i++) {
+	real_t Po = 0, Fx = 0, Fy = 0, Fz = 0;
+	for (int j=jbegin; j<jend; j++) {
+	  vec3 dX;
+	  for_3d dX[d] = Jbodies[i][d] - Jbodies[j][d] - periodic[d];
+	  real_t R2 = norm(dX);
+          if (0 < R2 && R2 < cutoff * cutoff) {
+            real_t R2s = R2 * alpha * alpha;
+            real_t Rs = std::sqrt(R2s);
+            real_t invRs = 1 / Rs;
+            real_t invR2s = invRs * invRs;
+            real_t invR3s = invR2s * invRs;
+            real_t dtmp = Jbodies[j][3] * (M_2_SQRTPI * std::exp(-R2s) * invR2s + erfc(Rs) * invR3s);
+            dtmp *= alpha * alpha * alpha;
+            Po += Jbodies[j][3] * erfc(Rs) * invRs * alpha;
+            Fx += dX[0] * dtmp;
+            Fy += dX[1] * dtmp;
+            Fz += dX[2] * dtmp;
+          }
 	}
 	Ibodies[i][0] += Po;
 	Ibodies[i][1] -= Fx;
