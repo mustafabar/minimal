@@ -9,18 +9,12 @@ namespace exafmm {
     typedef std::map<uint64_t,double> Record;                   //!< Map of regression key value pair
     typedef Record::iterator R_iter;                            //!< Iterator of regression map
 
-  private:
-    const char * path;                                          //!< Path to save files
-
   public:
     bool verbose;                                               //!< Print to screen
     double average, average2;                                   //!< Average for regression
 
     //! Constructor
-    Verify() : path("./"), average(0), average2(0) {}
-
-    //! Constructor with argument
-    Verify(const char * _path) : path(_path), average(0), average2(0) {}
+    Verify() : average(0), average2(0) {}
 
     //! Get sum of scalar component of a vector of target bodies
     double getSumScalar(std::vector<vec4> & bodies) {

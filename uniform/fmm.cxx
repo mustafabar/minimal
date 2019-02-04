@@ -3,7 +3,6 @@
 #include "bound_box.h"
 #include "build_tree.h"
 #include "ewald.h"
-#include "ewald2.h"
 #include "verify.h"
 #if EXAFMM_SERIAL
 #include "serialfmm.h"
@@ -23,7 +22,7 @@ int main(int argc, char ** argv) {
   BoundBox boundBox;
   BuildTree buildTree(args.ncrit);
   Ewald ewald(ksize, alpha, sigma, cutoff, cycle);
-  Verify verify(args.path);
+  Verify verify;
 
   args.numBodies /= baseMPI.mpisize;
   int numBodies = args.numBodies;

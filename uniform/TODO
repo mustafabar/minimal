@@ -1,7 +1,7 @@
-move allocate to constructor
-remove new delete
-move class variables to parallel
+remove W_iter
 write Ewald using uniform FMM
+move allocate to constructor
+move class variables to parallel
 remove unused args
 proper parallel Ewald without shiftBodies
 fuse all triple loops for periodic
