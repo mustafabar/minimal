@@ -86,8 +86,8 @@ namespace exafmm {
 	recvBodiesCount[i] /= 4;
 	recvBodiesDispl[i] /= 4;
       }
-      MPI_Alltoallv(sendIndex, sendBodiesCount, sendBodiesDispl, MPI_INT,
-		    recvIndex, recvBodiesCount, recvBodiesDispl, MPI_INT,
+      MPI_Alltoallv(&sendIndex[0], sendBodiesCount, sendBodiesDispl, MPI_INT,
+		    &recvIndex[0], recvBodiesCount, recvBodiesDispl, MPI_INT,
 		    MPI_COMM_WORLD);
       numBodies = newBodies;
       for( int i=0; i<numBodies; i++ ) {

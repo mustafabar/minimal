@@ -154,7 +154,8 @@ namespace exafmm {
       for_3d dX[d] = X0[d] - R0 + (2 * iX[d] + 1) * R;
     }
 
-    void sort(std::vector<vec4> &bodies, std::vector<vec4> &buffer, int *index, int *ibuffer, int *key) const {
+    void sort(std::vector<vec4> &bodies, std::vector<vec4> &buffer, std::vector<int> &index,
+              std::vector<int> &ibuffer, std::vector<int> &key) const {
       int Imax = key[0];
       int Imin = key[0];
       for( int i=0; i<numBodies; i++ ) {
@@ -184,13 +185,13 @@ namespace exafmm {
       numSendCells = 64 * L + 48 * ((1 << (L + 1)) - 2) + 12 * (((1 << (2 * L + 2)) - 1) / 3 - 1);
       numSendLeafs = 8 + 12 * (1 << L) + 6 * (1 << (2 * L));
       numSendBodies = numSendLeafs * float(numBodies) / numLeafs * 4;
-      Index = new int [2*numBodies];
-      Rank = new int [2*numBodies];
-      sendIndex = new int [2*numBodies];
-      recvIndex = new int [2*numBodies];
-      Leafs = new Range [27*numLeafs];
-      sendLeafs = new Range [numSendLeafs];
-      recvLeafs = new Range [numSendLeafs];
+      Index.resize(2*numBodies);
+      Rank.resize(2*numBodies);
+      sendIndex.resize(2*numBodies);
+      recvIndex.resize(2*numBodies);
+      Leafs.resize(27*numLeafs);
+      sendLeafs.resize(numSendLeafs);
+      recvLeafs.resize(numSendLeafs);
       Ibodies.resize(2*numBodies);
       Jbodies.resize(2*numBodies+numSendBodies);
       Multipole.resize(27*numCells);
@@ -204,13 +205,6 @@ namespace exafmm {
     }
 
     void deallocate() {
-      delete[] Index;
-      delete[] Rank;
-      delete[] sendIndex;
-      delete[] recvIndex;
-      delete[] Leafs;
-      delete[] sendLeafs;
-      delete[] recvLeafs;
     }
 
     inline void getGlobIndex(int *iX, int index, int level) const {
@@ -255,7 +249,7 @@ namespace exafmm {
     }
 
     void sortBodies() {
-      int *key = new int [numBodies];
+      std::vector<int> key(numBodies);
       real_t diameter = 2 * R0 / (1 << maxLevel);
       ivec3 iX = 0;
       for( int i=0; i<numBodies; i++ ) {
@@ -267,10 +261,9 @@ namespace exafmm {
 	Index[i] = sendIndex[i];
 	Jbodies[i] = sendJbodies[i];
       }
-      delete[] key;
     }
 
-    void buildTree() const {
+    void buildTree() {
       int rankOffset = 13 * numLeafs;
       for( int i=rankOffset; i<numLeafs+rankOffset; i++ ) {
 	Leafs[i].begin = Leafs[i].end = 0;

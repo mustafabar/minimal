@@ -1,5 +1,6 @@
 use std::vector in uniform
 move allocate to constructor
+remove new delete
 write Ewald using uniform FMM
 remove unused args
 proper parallel Ewald without shiftBodies
