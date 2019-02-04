@@ -4,7 +4,7 @@
 namespace exafmm {
   class SerialFMM : public Kernel {
   protected:
-    const int DP2P = 1; // Use 1 for parallel
+    const int DP2P = 2; // Use 1 for parallel
     int bodiesDispl[26];
     int bodiesCount[26];
     int sendBodiesDispl[1024];
@@ -95,7 +95,7 @@ namespace exafmm {
 
     void setSendCounts() {
       ivec3 leafsType, bodiesType;
-      for_3d leafsType[d] = 1 << (d * maxLevel);
+      for_3d leafsType[d] = (1 << (d * maxLevel)) * std::pow(DP2P,3-d);
       bodiesType = leafsType * float(numBodies) / numLeafs * 4;
       int i = 0;
       ivec3 iX;
@@ -218,7 +218,7 @@ namespace exafmm {
       numCells = ((1 << 3 * (L + 1)) - 1) / 7;
       numLeafs = 1 << 3 * L;
       numSendCells = 64 * L + 48 * ((1 << (L + 1)) - 2) + 12 * (((1 << (2 * L + 2)) - 1) / 3 - 1);
-      numSendLeafs = 8 + 12 * (1 << L) + 6 * (1 << (2 * L));
+      numSendLeafs = 8 * std::pow(DP2P,3) + 12 * (1 << L) * std::pow(DP2P,2) + 6 * (1 << (2 * L)) * DP2P;
       numSendBodies = numSendLeafs * float(numBodies) / numLeafs * 4;
       Index.resize(2*numBodies);
       Rank.resize(2*numBodies);
