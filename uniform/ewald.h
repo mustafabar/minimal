@@ -65,39 +65,38 @@ namespace exafmm {
       ksize(_ksize), alpha(_alpha), sigma(_sigma), cutoff(_cutoff), cycle(_cycle) {} // Initialize variables
 
     //! Forward DFT
-    void dft(Waves & waves, Bodies & bodies) const {
+    void dft(Waves & waves, std::vector<vec4> & Jbodies) const {
       vec3 scale;
       for (int d=0; d<3; d++) scale[d]= 2 * M_PI / cycle[d];    // Scale conversion
 #pragma omp parallel for
       for (int w=0; w<int(waves.size()); w++) {                 // Loop over waves
 	W_iter W=waves.begin()+w;                               //  Wave iterator
 	W->REAL = W->IMAG = 0;                                  //  Initialize waves
-	for (B_iter B=bodies.begin(); B!=bodies.end(); B++) {   //  Loop over bodies
+	for (int b=0; b<int(Jbodies.size()); b++) {             //  Loop over bodies
 	  real_t th = 0;                                        //   Initialize phase
-	  for (int d=0; d<3; d++) th += W->K[d] * B->X[d] * scale[d];//  Determine phase
-	  W->REAL += B->SRC * std::cos(th);                     //   Accumulate real component
-	  W->IMAG += B->SRC * std::sin(th);                     //   Accumulate imaginary component
+	  for (int d=0; d<3; d++) th += W->K[d] * Jbodies[b][d] * scale[d];//  Determine phase
+	  W->REAL += Jbodies[b][3] * std::cos(th);              //   Accumulate real component
+	  W->IMAG += Jbodies[b][3] * std::sin(th);              //   Accumulate imaginary component
 	}                                                       //  End loop over bodies
       }                                                         // End loop over waves
     }
 
     //! Inverse DFT
-    void idft(Waves & waves, Bodies & bodies) const {
+    void idft(Waves & waves, std::vector<vec4> & Ibodies, std::vector<vec4> & Jbodies) const {
       vec3 scale;
       for (int d=0; d<3; d++) scale[d] = 2 * M_PI / cycle[d];   // Scale conversion
 #pragma omp parallel for
-      for (int b=0; b<int(bodies.size()); b++) {                // Loop over bodies
-	B_iter B=bodies.begin()+b;                              //  Body iterator
+      for (int b=0; b<int(Ibodies.size()); b++) {               // Loop over bodies
 	vec4 TRG = 0;                                           //  Initialize target values
 	for (W_iter W=waves.begin(); W!=waves.end(); W++) {     //   Loop over waves
 	  real_t th = 0;                                        //    Initialzie phase
-	  for (int d=0; d<3; d++) th += W->K[d] * B->X[d] * scale[d];// Determine phase
+	  for (int d=0; d<3; d++) th += W->K[d] * Jbodies[b][d] * scale[d];// Determine phase
 	  real_t dtmp = W->REAL * std::sin(th) - W->IMAG * std::cos(th);// Temporary value
 	  TRG[0]     += W->REAL * std::cos(th) + W->IMAG * std::sin(th);// Accumulate potential
 	  for (int d=0; d<3; d++) TRG[d+1] -= dtmp * W->K[d];   //    Accumulate force
 	}                                                       //   End loop over waves
 	for (int d=0; d<3; d++) TRG[d+1] *= scale[d];           //   Scale forces
-	B->TRG += TRG;                                          //  Copy results to bodies
+	Ibodies[b] += TRG;                                      //  Copy results to bodies
       }                                                         // End loop over bodies
     }
 

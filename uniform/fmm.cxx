@@ -147,13 +147,6 @@ int main(int argc, char ** argv) {
       ewald.realPart(cells, jcells);
       stop("Ewald real part");
     }
-    start("Ewald wave part");
-    Waves waves = ewald.initWaves();
-    ewald.dft(waves,bodies);
-    waves = baseMPI.allreduceWaves(waves);
-    ewald.wavePart(waves);
-    ewald.idft(waves,bodies);
-    stop("Ewald wave part");
     std::vector<vec4> ibodies(FMM.numBodies);
     std::vector<vec4> jbodies(FMM.numBodies);    
     B = bodies.begin();
@@ -162,6 +155,13 @@ int main(int argc, char ** argv) {
       jbodies[b][3] = B->SRC;
       ibodies[b] = B->TRG;
     }
+    start("Ewald wave part");
+    Waves waves = ewald.initWaves();
+    ewald.dft(waves,jbodies);
+    waves = baseMPI.allreduceWaves(waves);
+    ewald.wavePart(waves);
+    ewald.idft(waves,ibodies,jbodies);
+    stop("Ewald wave part");
     ewald.selfTerm(ibodies, jbodies);
     for (int b=0; b<FMM.numBodies; b++) {
       ibodies[b][0] *= jbodies[b][3];
