@@ -1,7 +1,5 @@
 #include "base_mpi.h"
 #include "args.h"
-#include "bound_box.h"
-#include "build_tree.h"
 #include "ewald.h"
 #include "verify.h"
 #if EXAFMM_SERIAL
@@ -19,8 +17,6 @@ int main(int argc, char ** argv) {
   const real_t cutoff = 20;
   Args args(argc, argv);
   BaseMPI baseMPI;
-  BoundBox boundBox;
-  BuildTree buildTree(args.ncrit);
   Ewald ewald(ksize, alpha, sigma, cutoff, cycle);
   Verify verify;
 
@@ -118,44 +114,6 @@ int main(int argc, char ** argv) {
     FMM.dipoleCorrection(globalDipole, numBodies);
 
     start("Total Ewald");
-#if 0
-    Bodies bodies(FMM.numBodies);
-    B_iter B = bodies.begin();
-    for (int b=0; b<FMM.numBodies; b++, B++) {
-      for_3d B->X[d] = FMM.Jbodies[b][d];
-      B->SRC = FMM.Jbodies[b][3];
-      B->TRG = FMM.Ibodies[b];
-    }
-    Bounds bounds = boundBox.getBounds(bodies);
-    Bodies buffer = bodies;
-    Cells cells = buildTree.buildTree(bodies, buffer, bounds);
-    std::vector<vec4> ibodies2(FMM.numBodies);
-    B = bodies.begin();
-    for (int b=0; b<FMM.numBodies; b++, B++) {
-      ibodies2[b] = B->TRG;
-      ibodies2[b][0] *= B->SRC;
-    }
-    Bodies jbodies2 = bodies;
-    ewald.initTarget(bodies);
-    for (int i=0; i<FMM.MPISIZE; i++) {
-      if (VERBOSE) std::cout << "Ewald loop           : " << i+1 << "/" << FMM.MPISIZE << std::endl;
-      if (FMM.MPISIZE > 1) baseMPI.shiftBodies(jbodies2);
-      bounds = boundBox.getBounds(jbodies2);
-      buffer = jbodies2;
-      Cells jcells = buildTree.buildTree(jbodies2, buffer, bounds);
-      start("Ewald real part");
-      ewald.realPart(cells, jcells);
-      stop("Ewald real part");
-    }
-    std::vector<vec4> ibodies(FMM.numBodies);
-    std::vector<vec4> jbodies(FMM.numBodies);    
-    B = bodies.begin();
-    for (int b=0; b<FMM.numBodies; b++, B++) {
-      for_3d jbodies[b][d] = B->X[d];
-      jbodies[b][3] = B->SRC;
-      ibodies[b] = B->TRG;
-    }
-#else
     std::vector<vec4> ibodies2(FMM.numBodies);
     for (int b=0; b<FMM.numBodies; b++) {
       ibodies2[b] = FMM.Ibodies[b];
@@ -170,7 +128,6 @@ int main(int argc, char ** argv) {
       jbodies[b] = FMM.Jbodies[b];
       ibodies[b] = FMM.Ibodies[b];
     }
-#endif
     start("Ewald wave part");
     Waves waves = ewald.initWaves();
     ewald.dft(waves,jbodies);

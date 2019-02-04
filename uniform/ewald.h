@@ -12,53 +12,6 @@ namespace exafmm {
     const real_t cutoff;                                        //!< Cutoff distance
     const vec3 cycle;                                           //!< Periodic cycle
 
-  private:
-    //! Ewald real part P2P kernel
-    void P2P(C_iter Ci, C_iter Cj, vec3 Xperiodic) const {
-      for (B_iter Bi=Ci->BODY; Bi!=Ci->BODY+Ci->NBODY; Bi++) {  // Loop over target bodies
-	for (B_iter Bj=Cj->BODY; Bj!=Cj->BODY+Cj->NBODY; Bj++) {//  Loop over source bodies
-	  vec3 dX = Bi->X - Bj->X - Xperiodic;                  //   Distance vector from source to target
-	  real_t R2 = norm(dX);                                 //   R^2
-	  if (0 < R2 && R2 < cutoff * cutoff) {                 //   Exclude self interaction and cutoff
-	    real_t R2s = R2 * alpha * alpha;                    //    (R * alpha)^2
-	    real_t Rs = std::sqrt(R2s);                         //    R * alpha
-	    real_t invRs = 1 / Rs;                              //    1 / (R * alpha)
-	    real_t invR2s = invRs * invRs;                      //    1 / (R * alpha)^2
-	    real_t invR3s = invR2s * invRs;                     //    1 / (R * alpha)^3
-	    real_t dtmp = Bj->SRC * (M_2_SQRTPI * std::exp(-R2s) * invR2s + erfc(Rs) * invR3s);
-	    dtmp *= alpha * alpha * alpha;                      //    Scale temporary value
-	    Bi->TRG[0] += Bj->SRC * erfc(Rs) * invRs * alpha;   //    Ewald real potential
-	    Bi->TRG[1] -= dX[0] * dtmp;                         //    x component of Ewald real force
-	    Bi->TRG[2] -= dX[1] * dtmp;                         //    y component of Ewald real force
-	    Bi->TRG[3] -= dX[2] * dtmp;                         //    z component of Ewald real force
-	  }                                                     //   End if for self interaction
-	}                                                       //  End loop over source bodies
-      }                                                         // End loop over target bodies
-    }
-
-    //! Recursive functor for traversing tree to find neighbors
-    struct Neighbor {
-      Ewald * ewald;                                            //!< Ewald object
-      C_iter Ci;                                                //!< Iterator of current target cell
-      C_iter Cj;                                                //!< Iterator of current source cell
-      C_iter C0;                                                //!< Iterator of first source cell
-      Neighbor(Ewald * _ewald, C_iter _Ci, C_iter _Cj, C_iter _C0) :// Constructor
-	ewald(_ewald), Ci(_Ci), Cj(_Cj), C0(_C0) {}             // Initialize variables
-      void operator() () const {                                // Overload operator()
-	vec3 dX = Ci->X - Cj->X;                                //  Distance vector from source to target
-	wrap(dX, ewald->cycle);                                 //  Wrap around periodic domain
-	vec3 Xperiodic = Ci->X - Cj->X - dX;                    //  Coordinate offset for periodic B.C.
-	real_t R = std::sqrt(norm(dX));                         //  Scalar distance
-	if (R - Ci->R - Cj->R < sqrtf(3) * ewald->cutoff) {     //  If cells are close
-	  if(Cj->NCHILD == 0) ewald->P2P(Ci,Cj,Xperiodic);      //   Ewald real part
-	  for (C_iter CC=C0+Cj->ICHILD; CC!=C0+Cj->ICHILD+Cj->NCHILD; CC++) {// Loop over cell's children
-	    Neighbor neighbor(ewald, Ci, CC, C0);               //    Instantiate recursive functor
-	    neighbor();                                         //    Recursive call
-	  }                                                     //   End loop over cell's children
-	}                                                       //  End if for far cells
-      }                                                         // End overload operator()
-    };
-
   public:
     //! Constructor
     Ewald(int _ksize, real_t _alpha, real_t _sigma, real_t _cutoff, vec3 _cycle) :
@@ -142,32 +95,11 @@ namespace exafmm {
       }                                                         // End loop over waves
     }
 
-    //! Ewald real part
-    void realPart(Cells & cells, Cells & jcells) {
-      C_iter Cj = jcells.begin();                               // Set begin iterator of source cells
-      for (C_iter Ci=cells.begin(); Ci!=cells.end(); Ci++) {    // Loop over target cells
-	if (Ci->NCHILD == 0) {                                  //  If target cell is leaf
-	  Neighbor neighbor(this, Ci, Cj, Cj);                  //   Instantiate recursive functor
-	  neighbor();                                           //   Create task for recursive call
-	}                                                       //  End if for leaf target cell
-      }                                                         // End loop over target cells
-    }
-
     //! Subtract self term
     void selfTerm(std::vector<vec4> & Ibodies, std::vector<vec4> & Jbodies) {
       for (int b=0; b<int(Ibodies.size()); b++) {               // Loop over all bodies
 	Ibodies[b][0] -= M_2_SQRTPI * Jbodies[b][3] * alpha;    //  Self term of Ewald real part
       }                                                         // End loop over all bodies in cell
-    }
-
-    //! Initialize target values
-    void initTarget(Bodies & bodies) {
-      for (B_iter B=bodies.begin(); B!=bodies.end(); B++) {     // Loop over bodies
-	B->TRG = 0;                                             //  Clear target values
-	B->IBODY = B-bodies.begin();                            //  Initial body numbering
-	B->ICELL = 0;                                           //  Initial cell index
-	B->WEIGHT = 1;                                          //  Initial weight
-      }                                                         // End loop over bodies
     }
 
   };
