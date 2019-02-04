@@ -19,6 +19,21 @@ namespace exafmm {
     MPI_Comm MPI_COMM_LOCAL, MPI_COMM_GLOBAL;
 
   public:
+    static vec3 Xperiodic;
+    ivec3 numPartition[10];
+    int maxLevel;
+    int maxGlobLevel;
+    int numBodies;
+    int numImages;
+    int numCells;
+    int numLeafs;
+    int numGlobCells;
+    int globLevelOffset[10];
+    int numSendBodies;
+    int numSendCells;
+    int numSendLeafs;
+    int MPISIZE;
+    int MPIRANK;    
     vec3 X0;
     real_t R0;
     vec3 RGlob;
@@ -199,6 +214,8 @@ namespace exafmm {
     }
 
   public:
+    SerialFMM() : MPISIZE(1), MPIRANK(0) {}
+
     void allocate(int N, int L, int Im) {
       maxLevel = L;
       numBodies = N;
@@ -225,9 +242,6 @@ namespace exafmm {
       recvJbodies.resize(2*numBodies+numSendBodies);
       sendMultipole.resize(numSendCells);
       recvMultipole.resize(numSendCells);
-    }
-
-    void deallocate() {
     }
 
     inline void getGlobIndex(int *iX, int index, int level) const {

@@ -23,23 +23,23 @@ int main(int argc, char ** argv) {
   BoundBox boundBox;
   BuildTree buildTree(args.ncrit);
   Ewald ewald(ksize, alpha, sigma, cutoff, cycle);
-#if EXAFMM_SERIAL
-  SerialFMM FMM;
-#else
-  ParallelFMM FMM;
-#endif
   Verify verify(args.path);
 
-  args.numBodies /= FMM.MPISIZE;
+  args.numBodies /= baseMPI.mpisize;
   int numBodies = args.numBodies;
   const int ncrit = 100;
   const int maxLevel = numBodies >= ncrit ? 1 + int(log(numBodies / ncrit)/M_LN2/3) : 0;
   const int gatherLevel = 1;
   const int numImages = args.images;
-  if (numImages > 0 && int(log2(FMM.MPISIZE)) % 3 != 0) {
-    if (FMM.MPIRANK==0) printf("Warning: MPISIZE must be a power of 8 for periodic domain to be square\n");
+  if (numImages > 0 && int(log2(baseMPI.mpisize)) % 3 != 0) {
+    if (baseMPI.mpirank==0) printf("Warning: MPISIZE must be a power of 8 for periodic domain to be square\n");
   }
 
+#if EXAFMM_SERIAL
+  SerialFMM FMM;
+#else
+  ParallelFMM FMM;
+#endif
   FMM.allocate(numBodies, maxLevel, numImages);
   VERBOSE = FMM.MPIRANK == 0;
   args.verbose = VERBOSE;
@@ -187,6 +187,4 @@ int main(int argc, char ** argv) {
     verify.print("Rel. L2 Error (acc)",accRel);
 #endif
   }
-  FMM.deallocate();
-
 }

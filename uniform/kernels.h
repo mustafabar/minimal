@@ -20,24 +20,6 @@ namespace exafmm {
     std::vector<real_t> Anm;
     std::vector<complex_t> Cnm;
 
-  public:
-    static vec3 Xperiodic;
-    ivec3 numPartition[10];
-    int maxLevel;
-    int maxGlobLevel;
-    int numBodies;
-    int numImages;
-    int numCells;
-    int numLeafs;
-    int numGlobCells;
-    int globLevelOffset[10];
-    int numSendBodies;
-    int numSendCells;
-    int numSendLeafs;
-    int MPISIZE;
-    int MPIRANK;
-
-  private:
     inline int oddOrEven(int n) const {
       return (((n) & 1) == 1) ? -1 : 1;
     }
@@ -292,7 +274,7 @@ namespace exafmm {
     }
 
   public:
-    Kernel() : MPISIZE(1), MPIRANK(0) {
+    Kernel() {
       prefactor.resize(4*P*P);
       Anm.resize(4*P*P);
       Cnm.resize(P*P*P*P);

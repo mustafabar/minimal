@@ -5,7 +5,7 @@ namespace exafmm {
   private:
     int EXTERNAL;
     std::ofstream fid;
-    MPI_Request *requests;
+    std::vector<MPI_Request> requests;
 
     template<typename T>
     void print(T data) {
@@ -44,10 +44,9 @@ namespace exafmm {
       if(!EXTERNAL) MPI_Init(&argc,&argv);
       MPI_Comm_size(MPI_COMM_WORLD,&MPISIZE);
       MPI_Comm_rank(MPI_COMM_WORLD,&MPIRANK);
-      requests = new MPI_Request [104];
+      requests.resize(104);
     }
     ~ParallelFMM() {
-      delete[] requests;
       if(!EXTERNAL) MPI_Finalize();
     }
 
@@ -159,7 +158,7 @@ namespace exafmm {
 	  }
 	}
       }
-      MPI_Waitall(52,requests,stats);
+      MPI_Waitall(52,&requests[0],stats);
     }
 
     void P2PRecv() {
@@ -243,7 +242,7 @@ namespace exafmm {
 	  }
 	}
       }
-      MPI_Waitall(26,requests,stats);
+      MPI_Waitall(26,&requests[0],stats);
     }
 
     void M2LRecv(int lev) {
@@ -311,7 +310,7 @@ namespace exafmm {
 	  }
 	}
       }
-      MPI_Waitall(numComm,requests,stats);
+      MPI_Waitall(numComm,&requests[0],stats);
     }
 
     void globM2MRecv(int level) {
@@ -437,7 +436,7 @@ namespace exafmm {
 	  }
 	}
       }
-      MPI_Waitall(26,requests,stats);
+      MPI_Waitall(26,&requests[0],stats);
     }
 
     void globM2LRecv(int level) {
