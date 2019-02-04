@@ -44,9 +44,9 @@ namespace exafmm {
     int *Rank;
     int *sendIndex;
     int *recvIndex;
-    int (*Leafs)[2];
-    int (*sendLeafs)[2];
-    int (*recvLeafs)[2];
+    Range *Leafs;
+    Range *sendLeafs;
+    Range *recvLeafs;
     std::vector<vec4> Ibodies;
     std::vector<vec4> Jbodies;
     std::vector<cvecP> Multipole;

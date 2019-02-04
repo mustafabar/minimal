@@ -188,9 +188,9 @@ namespace exafmm {
       Rank = new int [2*numBodies];
       sendIndex = new int [2*numBodies];
       recvIndex = new int [2*numBodies];
-      Leafs = new int [27*numLeafs][2];
-      sendLeafs = new int [numSendLeafs][2];
-      recvLeafs = new int [numSendLeafs][2];
+      Leafs = new Range [27*numLeafs];
+      sendLeafs = new Range [numSendLeafs];
+      recvLeafs = new Range [numSendLeafs];
       Ibodies.resize(2*numBodies);
       Jbodies.resize(2*numBodies+numSendBodies);
       Multipole.resize(27*numCells);
@@ -273,25 +273,22 @@ namespace exafmm {
     void buildTree() const {
       int rankOffset = 13 * numLeafs;
       for( int i=rankOffset; i<numLeafs+rankOffset; i++ ) {
-	Leafs[i][0] = Leafs[i][1] = 0;
+	Leafs[i].begin = Leafs[i].end = 0;
       }
       real_t diameter = 2 * R0 / (1 << maxLevel);
       ivec3 iX = 0;
       getIndex(0,iX,diameter);
       int ileaf = getKey(iX,maxLevel,false) + rankOffset;
-      Leafs[ileaf][0] = 0;
+      Leafs[ileaf].begin = 0;
       for( int i=0; i<numBodies; i++ ) {
 	getIndex(i,iX,diameter);
 	int inew = getKey(iX,maxLevel,false) + rankOffset;
 	if( ileaf != inew ) {
-	  Leafs[ileaf][1] = Leafs[inew][0] = i;
+	  Leafs[ileaf].end = Leafs[inew].begin = i;
 	  ileaf = inew;
 	}
       }
-      Leafs[ileaf][1] = numBodies;
-      for( int i=rankOffset; i<numLeafs+rankOffset; i++ ) {
-	//assert( Leafs[i][1] != Leafs[i][0] );
-      }
+      Leafs[ileaf].end = numBodies;
     }
 
     void upwardPass() {
@@ -308,7 +305,7 @@ namespace exafmm {
       for (int i=0; i<numLeafs; i++) {
 	vec3 center;
 	getCenter(center,i,maxLevel);
-	for (int j=Leafs[i+rankOffset][0]; j<Leafs[i+rankOffset][1]; j++) {
+	for (int j=Leafs[i+rankOffset].begin; j<Leafs[i+rankOffset].end; j++) {
 	  vec3 dX;
           for_3d dX[d] = Jbodies[j][d] - center[d];
           P2M(dX,Jbodies[j][3],Multipole[i+levelOffset]);
@@ -418,7 +415,7 @@ namespace exafmm {
 	vec3 center;
 	getCenter(center,i,maxLevel);
 	cvecP L = Local[i+levelOffset];
-	for (int j=Leafs[i+rankOffset][0]; j<Leafs[i+rankOffset][1]; j++) {
+	for (int j=Leafs[i+rankOffset].begin; j<Leafs[i+rankOffset].end; j++) {
 	  vec3 dX;
 	  for_3d dX[d] = Jbodies[j][d] - center[d];
           L2P(dX,L,Ibodies[j]);
@@ -459,7 +456,7 @@ namespace exafmm {
 	      jXp = (jX + iXc * nunit + nunitGlob) / nunitGlob;
 	      vec3 periodic;
 	      for_3d periodic[d] = (jXp[d] - 1) * 2 * RGlob[d];
-	      P2P(Leafs[i+rankOffset][0],Leafs[i+rankOffset][1],Leafs[j][0],Leafs[j][1],periodic);
+	      P2P(Leafs[i+rankOffset].begin,Leafs[i+rankOffset].end,Leafs[j].begin,Leafs[j].end,periodic);
 	    }
 	  }
 	}

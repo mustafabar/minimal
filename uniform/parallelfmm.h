@@ -119,11 +119,11 @@ namespace exafmm {
 		  for( jX[0]=nxmin[iX[0]+1]; jX[0]<nxmax[iX[0]+1]; jX[0]++, ileaf++ ) {
 		    ivec3 jXp = jX;
 		    int j = getKey(jXp,maxLevel,false) + rankOffset;
-		    sendLeafs[ileaf][0] = ibody;
-		    for( int jbody=Leafs[j][0]; jbody<Leafs[j][1]; ibody++, jbody++ ) {
+		    sendLeafs[ileaf].begin = ibody;
+		    for( int jbody=Leafs[j].begin; jbody<Leafs[j].end; ibody++, jbody++ ) {
 		      sendJbodies[ibody] = Jbodies[jbody];
 		    }
-		    sendLeafs[ileaf][1] = ibody;
+		    sendLeafs[ileaf].end = ibody;
 		  }
 		}
 	      }
@@ -139,11 +139,11 @@ namespace exafmm {
 	      int sendDispl = leafsDispl[iforward];
 	      int sendCount = leafsCount[iforward];
 	      commBytes += sendCount * 2 * 4;
-	      MPI_Isend(sendLeafs[sendDispl],sendCount*2,MPI_INT,
+	      MPI_Isend(&sendLeafs[sendDispl].begin,sendCount*2,MPI_INT,
 			sendRank,iforward,MPI_COMM_WORLD,&requests[iforward]);
 	      int recvDispl = leafsDispl[iforward];
 	      int recvCount = leafsCount[iforward];
-	      MPI_Irecv(recvLeafs[recvDispl],recvCount*2,MPI_INT,
+	      MPI_Irecv(&recvLeafs[recvDispl].begin,recvCount*2,MPI_INT,
 			recvRank,iforward,MPI_COMM_WORLD,&requests[iforward+52]);
 	      sendDispl = bodiesDispl[iforward];
 	      sendCount = bodiesCount[iforward];
@@ -184,11 +184,11 @@ namespace exafmm {
 		  for( jX[0]=nxmin[iX[0]+1]; jX[0]<nxmax[iX[0]+1]; jX[0]++, ileaf++ ) {
 		    ivec3 jXp = jX;
 		    int j = getKey(jXp,maxLevel,false) + rankOffset;
-		    Leafs[j][0] = ibody;
-		    for( int jbody=recvLeafs[ileaf][0]; jbody<recvLeafs[ileaf][1]; ibody++, jbody++ ) {
+		    Leafs[j].begin = ibody;
+		    for( int jbody=recvLeafs[ileaf].begin; jbody<recvLeafs[ileaf].end; ibody++, jbody++ ) {
 		      Jbodies[ibody] = recvJbodies[jbody];
 		    }
-		    Leafs[j][1] = ibody;
+		    Leafs[j].end = ibody;
 		  }
 		}
 	      }

@@ -30,6 +30,12 @@ namespace exafmm {
   typedef vec<NTERM,complex_t> cvecP;                           //!< Vector of NTERM complex_t types
   typedef vec<NTERM,fcomplex_t> fcvecP;                         //!< Vector of NTERM fcomplex_t types
 
+  //! Range of indices
+  struct Range {
+    int begin;                                                  //!< Begin index
+    int end;                                                    //!< End index
+  };
+  
   //! Center and radius of bounding box
   struct Box {
     vec3   X;                                                   //!< Box center
