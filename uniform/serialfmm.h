@@ -4,6 +4,7 @@
 namespace exafmm {
   class SerialFMM : public Kernel {
   protected:
+    const int DP2P = 1; // Use 1 for parallel
     int bodiesDispl[26];
     int bodiesCount[26];
     int sendBodiesDispl[1024];
@@ -146,9 +147,6 @@ namespace exafmm {
 
   protected:
     inline void getIndex(int i, ivec3 &iX, real_t diameter) const {
-#if NOWRAP
-      i = (i / 3) * 3;
-#endif
       for_3d iX[d] = int((Jbodies[i][d] + R0 - X0[d]) / diameter);
     }
 
@@ -164,9 +162,6 @@ namespace exafmm {
     }
 
     inline void setGlobIndex(int i, ivec3 &iX) const {
-#if NOWRAP
-      i = (i / 3) * 3;
-#endif
       for_3d iX[d] = int(Jbodies[i][d] / (2 * R0));
       iX %= numPartition[maxGlobLevel];
     }
@@ -368,7 +363,7 @@ namespace exafmm {
     void downwardPass() {
       start("M2L");
       ivec3 iXc;
-      int DM2LC = DM2L;
+      int DM2LC = 1;
       getGlobIndex(iXc,MPIRANK,maxGlobLevel);
       for (int lev=1; lev<=maxLevel; lev++) {
 	if (lev==maxLevel) DM2LC = DP2P;
@@ -387,8 +382,8 @@ namespace exafmm {
 	  cvecP L = complex_t(0);
 	  ivec3 iX = 0;
 	  getIndex(iX,i);
-	  ivec3 jXmin = (max(nxmin,(iX >> 1) - DM2L) << 1);
-	  ivec3 jXmax = (min(nxmax,(iX >> 1) + DM2L) << 1) + 1;
+	  ivec3 jXmin = (max(nxmin,(iX >> 1) - 1) << 1);
+	  ivec3 jXmax = (min(nxmax,(iX >> 1) + 1) << 1) + 1;
 	  ivec3 jX;
 	  for (jX[2]=jXmin[2]; jX[2]<=jXmax[2]; jX[2]++) {
 	    for (jX[1]=jXmin[1]; jX[1]<=jXmax[1]; jX[1]++) {

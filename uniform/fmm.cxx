@@ -21,8 +21,8 @@ int main(int argc, char ** argv) {
   Verify verify;
 
   args.numBodies /= baseMPI.mpisize;
-  int numBodies = args.numBodies;
-  const int ncrit = 100;
+  const int numBodies = args.numBodies;
+  const int ncrit = args.ncrit;
   const int maxLevel = numBodies >= ncrit ? 1 + int(log(numBodies / ncrit)/M_LN2/3) : 0;
   const int gatherLevel = 1;
   const int numImages = args.images;
@@ -108,8 +108,8 @@ int main(int argc, char ** argv) {
 
     vec3 localDipole = FMM.getDipole();
     vec3 globalDipole = baseMPI.allreduceVec3(localDipole);
-    numBodies = baseMPI.allreduceInt(FMM.numBodies);
-    FMM.dipoleCorrection(globalDipole, numBodies);
+    int globalNumBodies = baseMPI.allreduceInt(FMM.numBodies);
+    FMM.dipoleCorrection(globalDipole, globalNumBodies);
 
     start("Total Ewald");
     std::vector<vec4> Ibodies(FMM.numBodies);

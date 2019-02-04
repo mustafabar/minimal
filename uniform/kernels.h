@@ -5,13 +5,8 @@
 #include <iostream>
 #include <omp.h>
 
-const int DP2P = 1; // Use 1 for parallel
-const int DM2L = 1; // Use 1 for parallel
-
 #define for_3d for (int d=0; d<3; d++)
 #define for_m for (int m=0; m<NTERM; m++)
-#define EXAFMM_MAX(a,b) (((a) > (b)) ? (a) : (b))
-#define EXAFMM_MIN(a,b) (((a) < (b)) ? (a) : (b))
 
 namespace exafmm {
   class Kernel {
@@ -252,7 +247,7 @@ namespace exafmm {
     void P2P(std::vector<vec4> &Ibodies, int ibegin, int iend,
              std::vector<vec4> &Jbodies, int jbegin, int jend, vec3 periodic) const {
       for (int i=ibegin; i<iend; i++) {
-	real_t Po = 0, Fx = 0, Fy = 0, Fz = 0;
+        vec4 TRG = 0;
 	for (int j=jbegin; j<jend; j++) {
 	  vec3 dX;
 	  for_3d dX[d] = Jbodies[i][d] - Jbodies[j][d] - periodic[d];
@@ -261,15 +256,12 @@ namespace exafmm {
 	  if (R2 == 0) invR2 = 0;
 	  real_t invR = Jbodies[j][3] * sqrt(invR2);
 	  real_t invR3 = invR2 * invR;
-	  Po += invR;
-	  Fx += dX[0] * invR3;
-	  Fy += dX[1] * invR3;
-	  Fz += dX[2] * invR3;
+	  TRG[0] += invR;
+	  TRG[1] -= dX[0] * invR3;
+	  TRG[2] -= dX[1] * invR3;
+	  TRG[3] -= dX[2] * invR3;
 	}
-	Ibodies[i][0] += Po;
-	Ibodies[i][1] -= Fx;
-	Ibodies[i][2] -= Fy;
-	Ibodies[i][3] -= Fz;
+	Ibodies[i] += TRG;
       }
     }
 
@@ -277,7 +269,7 @@ namespace exafmm {
                   std::vector<vec4> &Jbodies, int jbegin, int jend, vec3 periodic,
                   real_t alpha, real_t cutoff) const {
       for (int i=ibegin; i<iend; i++) {
-	real_t Po = 0, Fx = 0, Fy = 0, Fz = 0;
+        vec4 TRG = 0;
 	for (int j=jbegin; j<jend; j++) {
 	  vec3 dX;
 	  for_3d dX[d] = Jbodies[i][d] - Jbodies[j][d] - periodic[d];
@@ -290,16 +282,13 @@ namespace exafmm {
             real_t invR3s = invR2s * invRs;
             real_t dtmp = Jbodies[j][3] * (M_2_SQRTPI * std::exp(-R2s) * invR2s + erfc(Rs) * invR3s);
             dtmp *= alpha * alpha * alpha;
-            Po += Jbodies[j][3] * erfc(Rs) * invRs * alpha;
-            Fx += dX[0] * dtmp;
-            Fy += dX[1] * dtmp;
-            Fz += dX[2] * dtmp;
+            TRG[0] += Jbodies[j][3] * erfc(Rs) * invRs * alpha;
+            TRG[1] -= dX[0] * dtmp;
+            TRG[2] -= dX[1] * dtmp;
+            TRG[3] -= dX[2] * dtmp;
           }
 	}
-	Ibodies[i][0] += Po;
-	Ibodies[i][1] -= Fx;
-	Ibodies[i][2] -= Fy;
-	Ibodies[i][3] -= Fz;
+	Ibodies[i] += TRG;
       }
     }
 

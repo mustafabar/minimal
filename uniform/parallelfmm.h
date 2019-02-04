@@ -110,8 +110,8 @@ namespace exafmm {
 	  for( iX[0]=-1; iX[0]<=1; iX[0]++ ) {
 	    if( iX[0] != 0 || iX[1] != 0 || iX[2] != 0 ) {
 	      int ibody = bodiesDispl[iforward];
-	      int nxmin[3] = {(1 << maxLevel) - 1, 0, 0};
-	      int nxmax[3] = {1 << maxLevel, 1 << maxLevel, 1};
+	      int nxmin[3] = {(1 << maxLevel) - DP2P, 0, 0};
+	      int nxmax[3] = {1 << maxLevel, 1 << maxLevel, DP2P};
 	      ivec3 jX;
 	      for( jX[2]=nxmin[iX[2]+1]; jX[2]<nxmax[iX[2]+1]; jX[2]++ ) {
 		for( jX[1]=nxmin[iX[1]+1]; jX[1]<nxmax[iX[1]+1]; jX[1]++ ) {
@@ -175,8 +175,8 @@ namespace exafmm {
 	      int rankIndex = (iX[0] + 1) + 3 * (iX[1] + 1) + 9 * (iX[2] + 1);
 	      int rankOffset = rankIndex * numLeafs;
 	      int ibody = numBodies + bodiesDispl[iforward];
-	      int nxmin[3] = {(1 << maxLevel) - 1, 0, 0};
-	      int nxmax[3] = {1 << maxLevel, 1 << maxLevel, 1};
+	      int nxmin[3] = {(1 << maxLevel) - DP2P, 0, 0};
+	      int nxmax[3] = {1 << maxLevel, 1 << maxLevel, DP2P};
 	      ivec3 jX;
 	      for( jX[2]=nxmin[iX[2]+1]; jX[2]<nxmax[iX[2]+1]; jX[2]++ ) {
 		for( jX[1]=nxmin[iX[1]+1]; jX[1]<nxmax[iX[1]+1]; jX[1]++ ) {

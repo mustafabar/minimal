@@ -1,9 +1,3 @@
-remove Bodies, Cells
-use TRG in P2P
-remove W_iter
 move allocate to constructor
-move class variables to parallel
-remove unused args
-proper parallel Ewald without shiftBodies
 fuse all triple loops for periodic
 MD driver code with VdW
