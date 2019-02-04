@@ -135,31 +135,36 @@ int main(int argc, char ** argv) {
       ibodies2[b] = B->TRG;
       ibodies2[b][0] *= B->SRC;
     }
-    Bodies jbodies = bodies;
+    Bodies jbodies2 = bodies;
     ewald.initTarget(bodies);
     for (int i=0; i<FMM.MPISIZE; i++) {
       if (VERBOSE) std::cout << "Ewald loop           : " << i+1 << "/" << FMM.MPISIZE << std::endl;
-      if (FMM.MPISIZE > 1) baseMPI.shiftBodies(jbodies);
-      bounds = boundBox.getBounds(jbodies);
-      buffer = jbodies;
-      Cells jcells = buildTree.buildTree(jbodies, buffer, bounds);
+      if (FMM.MPISIZE > 1) baseMPI.shiftBodies(jbodies2);
+      bounds = boundBox.getBounds(jbodies2);
+      buffer = jbodies2;
+      Cells jcells = buildTree.buildTree(jbodies2, buffer, bounds);
       start("Ewald real part");
       ewald.realPart(cells, jcells);
       stop("Ewald real part");
     }
     start("Ewald wave part");
     Waves waves = ewald.initWaves();
-    ewald.dft(waves,jbodies);
+    ewald.dft(waves,bodies);
     waves = baseMPI.allreduceWaves(waves);
     ewald.wavePart(waves);
     ewald.idft(waves,bodies);
     stop("Ewald wave part");
-    ewald.selfTerm(bodies);
     std::vector<vec4> ibodies(FMM.numBodies);
+    std::vector<vec4> jbodies(FMM.numBodies);    
     B = bodies.begin();
     for (int b=0; b<FMM.numBodies; b++, B++) {
+      for_3d jbodies[b][d] = B->X[d];
+      jbodies[b][3] = B->SRC;
       ibodies[b] = B->TRG;
-      ibodies[b][0] *= B->SRC;
+    }
+    ewald.selfTerm(ibodies, jbodies);
+    for (int b=0; b<FMM.numBodies; b++) {
+      ibodies[b][0] *= jbodies[b][3];
     }
     stop("Total Ewald");
     double potSum = verify.getSumScalar(ibodies);

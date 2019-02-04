@@ -155,9 +155,9 @@ namespace exafmm {
     }
 
     //! Subtract self term
-    void selfTerm(Bodies & bodies) {
-      for (B_iter B=bodies.begin(); B!=bodies.end(); B++) {     // Loop over all bodies
-	B->TRG[0] -= M_2_SQRTPI * B->SRC * alpha;               //  Self term of Ewald real part
+    void selfTerm(std::vector<vec4> & Ibodies, std::vector<vec4> & Jbodies) {
+      for (int b=0; b<int(Ibodies.size()); b++) {               // Loop over all bodies
+	Ibodies[b][0] -= M_2_SQRTPI * Jbodies[b][3] * alpha;    //  Self term of Ewald real part
       }                                                         // End loop over all bodies in cell
     }
 
