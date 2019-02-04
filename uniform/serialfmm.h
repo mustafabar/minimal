@@ -154,7 +154,7 @@ namespace exafmm {
       for_3d dX[d] = X0[d] - R0 + (2 * iX[d] + 1) * R;
     }
 
-    void sort(vec4 *bodies, vec4 *buffer, int *index, int *ibuffer, int *key) const {
+    void sort(std::vector<vec4> &bodies, std::vector<vec4> &buffer, int *index, int *ibuffer, int *key) const {
       int Imax = key[0];
       int Imin = key[0];
       for( int i=0; i<numBodies; i++ ) {
@@ -188,19 +188,19 @@ namespace exafmm {
       Rank = new int [2*numBodies];
       sendIndex = new int [2*numBodies];
       recvIndex = new int [2*numBodies];
-      Leafs = new int [27*numLeafs][2]();
-      sendLeafs = new int [numSendLeafs][2]();
-      recvLeafs = new int [numSendLeafs][2]();
-      Ibodies = new vec4 [2*numBodies]();
-      Jbodies = new vec4 [2*numBodies+numSendBodies];
-      Multipole = new cvecP [27*numCells];
-      Local = new cvecP [numCells];
-      globMultipole = new cvecP [2*MPISIZE];
-      globLocal = new cvecP [10];
-      sendJbodies = new vec4 [2*numBodies+numSendBodies];
-      recvJbodies = new vec4 [2*numBodies+numSendBodies];
-      sendMultipole = new fcvecP [numSendCells];
-      recvMultipole = new fcvecP [numSendCells];
+      Leafs = new int [27*numLeafs][2];
+      sendLeafs = new int [numSendLeafs][2];
+      recvLeafs = new int [numSendLeafs][2];
+      Ibodies.resize(2*numBodies);
+      Jbodies.resize(2*numBodies+numSendBodies);
+      Multipole.resize(27*numCells);
+      Local.resize(numCells);
+      globMultipole.resize(2*MPISIZE);
+      globLocal.resize(10);
+      sendJbodies.resize(2*numBodies+numSendBodies);
+      recvJbodies.resize(2*numBodies+numSendBodies);
+      sendMultipole.resize(numSendCells);
+      recvMultipole.resize(numSendCells);
     }
 
     void deallocate() {
@@ -211,16 +211,6 @@ namespace exafmm {
       delete[] Leafs;
       delete[] sendLeafs;
       delete[] recvLeafs;
-      delete[] Ibodies;
-      delete[] Jbodies;
-      delete[] Multipole;
-      delete[] Local;
-      delete[] globMultipole;
-      delete[] globLocal;
-      delete[] sendJbodies;
-      delete[] recvJbodies;
-      delete[] sendMultipole;
-      delete[] recvMultipole;
     }
 
     inline void getGlobIndex(int *iX, int index, int level) const {
@@ -264,7 +254,7 @@ namespace exafmm {
 #endif
     }
 
-    void sortBodies() const {
+    void sortBodies() {
       int *key = new int [numBodies];
       real_t diameter = 2 * R0 / (1 << maxLevel);
       ivec3 iX = 0;
@@ -304,7 +294,7 @@ namespace exafmm {
       }
     }
 
-    void upwardPass() const {
+    void upwardPass() {
       int rankOffset = 13 * numCells;
       for( int i=0; i<numCells; i++ ) {
 	Multipole[i+rankOffset] = 0;

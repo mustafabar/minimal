@@ -47,16 +47,16 @@ namespace exafmm {
     int (*Leafs)[2];
     int (*sendLeafs)[2];
     int (*recvLeafs)[2];
-    vec4 *Ibodies;
-    vec4 *Jbodies;
-    cvecP *Multipole;
-    cvecP *Local;
-    cvecP *globMultipole;
-    cvecP *globLocal;
-    vec4 *sendJbodies;
-    vec4 *recvJbodies;
-    fcvecP (*sendMultipole);
-    fcvecP (*recvMultipole);
+    std::vector<vec4> Ibodies;
+    std::vector<vec4> Jbodies;
+    std::vector<cvecP> Multipole;
+    std::vector<cvecP> Local;
+    std::vector<cvecP> globMultipole;
+    std::vector<cvecP> globLocal;
+    std::vector<vec4> sendJbodies;
+    std::vector<vec4> recvJbodies;
+    std::vector<fcvecP> sendMultipole;
+    std::vector<fcvecP> recvMultipole;
 
   private:
     inline int oddOrEven(int n) const {
@@ -288,7 +288,7 @@ namespace exafmm {
       TRG[3] += cartesian[2];
     }
 
-    void P2P(int ibegin, int iend, int jbegin, int jend, vec3 periodic) const {
+    void P2P(int ibegin, int iend, int jbegin, int jend, vec3 periodic) {
       for (int i=ibegin; i<iend; i++) {
 	real_t Po = 0, Fx = 0, Fy = 0, Fz = 0;
 	for (int j=jbegin; j<jend; j++) {
