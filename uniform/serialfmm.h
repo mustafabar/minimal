@@ -18,6 +18,29 @@ namespace exafmm {
     int gatherLevel;
     MPI_Comm MPI_COMM_LOCAL, MPI_COMM_GLOBAL;
 
+  public:
+    vec3 X0;
+    real_t R0;
+    vec3 RGlob;
+    std::vector<int> Index;
+    std::vector<int> Rank;
+    std::vector<int> sendIndex;
+    std::vector<int> recvIndex;
+    std::vector<Range> Leafs;
+    std::vector<Range> sendLeafs;
+    std::vector<Range> recvLeafs;
+    std::vector<vec4> Ibodies;
+    std::vector<vec4> Jbodies;
+    std::vector<cvecP> Multipole;
+    std::vector<cvecP> Local;
+    std::vector<cvecP> globMultipole;
+    std::vector<cvecP> globLocal;
+    std::vector<vec4> sendJbodies;
+    std::vector<vec4> recvJbodies;
+    std::vector<fcvecP> sendMultipole;
+    std::vector<fcvecP> recvMultipole;
+
+    
   private:
     void checkPartition(ivec3 &maxPartition) {
       int partitionSize = 1;
@@ -449,7 +472,8 @@ namespace exafmm {
 	      jXp = (jX + iXc * nunit + nunitGlob) / nunitGlob;
 	      vec3 periodic;
 	      for_3d periodic[d] = (jXp[d] - 1) * 2 * RGlob[d];
-	      P2P(Leafs[i+rankOffset].begin,Leafs[i+rankOffset].end,Leafs[j].begin,Leafs[j].end,periodic);
+	      P2P(Ibodies,Leafs[i+rankOffset].begin,Leafs[i+rankOffset].end,
+                  Jbodies,Leafs[j].begin,Leafs[j].end,periodic);
 	    }
 	  }
 	}

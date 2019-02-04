@@ -37,27 +37,6 @@ namespace exafmm {
     int MPISIZE;
     int MPIRANK;
 
-    vec3 X0;
-    real_t R0;
-    vec3 RGlob;
-    std::vector<int> Index;
-    std::vector<int> Rank;
-    std::vector<int> sendIndex;
-    std::vector<int> recvIndex;
-    std::vector<Range> Leafs;
-    std::vector<Range> sendLeafs;
-    std::vector<Range> recvLeafs;
-    std::vector<vec4> Ibodies;
-    std::vector<vec4> Jbodies;
-    std::vector<cvecP> Multipole;
-    std::vector<cvecP> Local;
-    std::vector<cvecP> globMultipole;
-    std::vector<cvecP> globLocal;
-    std::vector<vec4> sendJbodies;
-    std::vector<vec4> recvJbodies;
-    std::vector<fcvecP> sendMultipole;
-    std::vector<fcvecP> recvMultipole;
-
   private:
     inline int oddOrEven(int n) const {
       return (((n) & 1) == 1) ? -1 : 1;
@@ -288,7 +267,8 @@ namespace exafmm {
       TRG[3] += cartesian[2];
     }
 
-    void P2P(int ibegin, int iend, int jbegin, int jend, vec3 periodic) {
+    void P2P(std::vector<vec4> &Ibodies, int ibegin, int iend,
+             std::vector<vec4> &Jbodies, int jbegin, int jend, vec3 periodic) const {
       for (int i=ibegin; i<iend; i++) {
 	real_t Po = 0, Fx = 0, Fy = 0, Fz = 0;
 	for (int j=jbegin; j<jend; j++) {
