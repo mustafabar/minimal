@@ -35,57 +35,6 @@ namespace exafmm {
     int begin;                                                  //!< Begin index
     int end;                                                    //!< End index
   };
-  
-  //! Center and radius of bounding box
-  struct Box {
-    vec3   X;                                                   //!< Box center
-    real_t R;                                                   //!< Box radius
-  };
-
-  //! Min & max bounds of bounding box
-  struct Bounds {
-    vec3 Xmin;                                                  //!< Minimum value of coordinates
-    vec3 Xmax;                                                  //!< Maximum value of coordinates
-  };
-
-  //! Structure of aligned source for SIMD
-  struct Source {                                               //!< Base components of source structure
-    vec3      X;                                                //!< Position
-    real_t    SRC;                                              //!< Scalar real values
-  };
-
-  //! Structure of bodies
-  struct Body : public Source {                                 //!< Base components of body structure
-    int     IBODY;                                              //!< Initial body numbering for sorting back
-    int     IRANK;                                              //!< Initial rank numbering for partitioning back
-    int64_t ICELL;                                              //!< Cell index
-    real_t  WEIGHT;                                             //!< Weight for partitioning
-    vec4   TRG;                                                //!< Scalar+vector3 real values
-  };
-  typedef std::vector<Body> Bodies;                             //!< Vector of bodies
-  typedef typename Bodies::iterator B_iter;                     //!< Iterator of body vector
-
-  //! Base components of cells
-  struct CellBase {
-    int IPARENT;                                                //!< Index of parent cell
-    int ICHILD;                                                 //!< Index of first child cell
-    int NCHILD;                                                 //!< Number of child cells
-    int IBODY;                                                  //!< Index of first body
-    int NBODY;                                                  //!< Number of descendant bodies
-    uint64_t ICELL;                                             //!< Cell index
-    real_t   WEIGHT;                                            //!< Weight for partitioning
-    vec3     X;                                                 //!< Cell center
-    real_t   R;                                                 //!< Cell radius
-    B_iter   BODY;                                              //!< Iterator of first body
-  };
-  //! Structure of cells
-  struct Cell : public CellBase {
-    std::vector<complex_t> M;                                   //!< Multipole expansion coefs
-    std::vector<complex_t> L;                                   //!< Local expansion coefs
-    using CellBase::operator=;
-  };
-  typedef std::vector<Cell> Cells;                              //!< Vector of cells
-  typedef typename Cells::iterator C_iter;                      //!< Iterator of cell vector
 
   //! Wave structure for Ewald summation
   struct Wave {

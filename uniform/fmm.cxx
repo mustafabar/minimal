@@ -100,9 +100,7 @@ int main(int argc, char ** argv) {
 
 #if EXAFMM_SERIAL
 #else
-    start("Downward pass");
     FMM.globL2L();
-    stop("Downward pass");
 #endif
 
     FMM.downwardPass();
@@ -114,37 +112,34 @@ int main(int argc, char ** argv) {
     FMM.dipoleCorrection(globalDipole, numBodies);
 
     start("Total Ewald");
-    std::vector<vec4> ibodies2(FMM.numBodies);
+    std::vector<vec4> Ibodies(FMM.numBodies);
     for (int b=0; b<FMM.numBodies; b++) {
-      ibodies2[b] = FMM.Ibodies[b];
+      Ibodies[b] = FMM.Ibodies[b];
+      Ibodies[b][0] *= FMM.Jbodies[b][3];
       FMM.Ibodies[b] = 0;
     }
     start("Ewald real part");
     FMM.ewaldRealPart(alpha,cutoff);
     stop("Ewald real part");
-    std::vector<vec4> ibodies(FMM.numBodies);
-    std::vector<vec4> jbodies(FMM.numBodies);    
-    for (int b=0; b<FMM.numBodies; b++) {
-      jbodies[b] = FMM.Jbodies[b];
-      ibodies[b] = FMM.Ibodies[b];
-    }
+    FMM.Ibodies.resize(FMM.numBodies);
+    FMM.Jbodies.resize(FMM.numBodies);
     start("Ewald wave part");
     Waves waves = ewald.initWaves();
-    ewald.dft(waves,jbodies);
+    ewald.dft(waves,FMM.Jbodies);
     waves = baseMPI.allreduceWaves(waves);
     ewald.wavePart(waves);
-    ewald.idft(waves,ibodies,jbodies);
+    ewald.idft(waves,FMM.Ibodies,FMM.Jbodies);
     stop("Ewald wave part");
-    ewald.selfTerm(ibodies, jbodies);
+    ewald.selfTerm(FMM.Ibodies, FMM.Jbodies);
     for (int b=0; b<FMM.numBodies; b++) {
-      ibodies[b][0] *= jbodies[b][3];
-      ibodies2[b][0] *= jbodies[b][3];
+      FMM.Ibodies[b][0] *= FMM.Jbodies[b][3];
+      //ibodies2[b][0] *= FMM.Jbodies[b][3];
     }
     stop("Total Ewald");
-    double potSum = verify.getSumScalar(ibodies);
-    double potSum2 = verify.getSumScalar(ibodies2);
-    double accDif = verify.getDifVector(ibodies, ibodies2);
-    double accNrm = verify.getNrmVector(ibodies);
+    double potSum = verify.getSumScalar(FMM.Ibodies);
+    double potSum2 = verify.getSumScalar(Ibodies);
+    double accDif = verify.getDifVector(FMM.Ibodies, Ibodies);
+    double accNrm = verify.getNrmVector(FMM.Ibodies);
     print("FMM vs. direct");
 #if EXAFMM_SERIAL
     double potDif = (potSum - potSum2) * (potSum - potSum2);

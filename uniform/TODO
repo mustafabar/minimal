@@ -1,6 +1,6 @@
+remove Bodies, Cells
 use TRG in P2P
 remove W_iter
-write Ewald using uniform FMM
 move allocate to constructor
 move class variables to parallel
 remove unused args
