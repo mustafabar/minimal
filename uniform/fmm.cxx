@@ -31,11 +31,10 @@ int main(int argc, char ** argv) {
   }
 
 #if EXAFMM_SERIAL
-  SerialFMM FMM;
+  SerialFMM FMM(numBodies, maxLevel, numImages);
 #else
-  ParallelFMM FMM;
+  ParallelFMM FMM(numBodies, maxLevel, numImages);
 #endif
-  FMM.allocate(numBodies, maxLevel, numImages);
   VERBOSE = FMM.MPIRANK == 0;
   args.verbose = VERBOSE;
   print("FMM Parameters");

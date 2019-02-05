@@ -210,9 +210,7 @@ namespace exafmm {
     }
 
   public:
-    SerialFMM() : MPISIZE(1), MPIRANK(0) {}
-
-    void allocate(int N, int L, int Im) {
+    SerialFMM(int N, int L, int Im) : MPISIZE(1), MPIRANK(0) {
       maxLevel = L;
       numBodies = N;
       numImages = Im;
