@@ -80,6 +80,7 @@ namespace exafmm {
 	checkLevel[d] = lev - 1;
       }
       maxGlobLevel = std::max(std::max(checkLevel[0],checkLevel[1]),checkLevel[2]);
+      assert(maxGlobLevel < 10);
       numPartition[0] = 1;
       partition = maxPartition;
       for( int lev=1; lev<=maxGlobLevel; lev++ ) {
@@ -231,8 +232,6 @@ namespace exafmm {
       Jbodies.resize(2*numBodies+numSendBodies);
       Multipole.resize(27*numCells);
       Local.resize(numCells);
-      globMultipole.resize(2*MPISIZE);
-      globLocal.resize(10);
       sendJbodies.resize(2*numBodies+numSendBodies);
       recvJbodies.resize(2*numBodies+numSendBodies);
       sendMultipole.resize(numSendCells);

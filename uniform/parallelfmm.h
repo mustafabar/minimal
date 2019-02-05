@@ -4,7 +4,6 @@ namespace exafmm {
   class ParallelFMM : public SerialFMM {
   private:
     int EXTERNAL;
-    std::ofstream fid;
     std::vector<MPI_Request> requests;
 
     template<typename T>
@@ -44,6 +43,8 @@ namespace exafmm {
       if(!EXTERNAL) MPI_Init(&argc,&argv);
       MPI_Comm_size(MPI_COMM_WORLD,&MPISIZE);
       MPI_Comm_rank(MPI_COMM_WORLD,&MPIRANK);
+      globMultipole.resize(2*MPISIZE);
+      globLocal.resize(10);
       requests.resize(104);
     }
     ~ParallelFMM() {

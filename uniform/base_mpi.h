@@ -11,16 +11,13 @@ namespace exafmm {
   private:
     int external;                                               //!< Flag to indicate external MPI_Init/Finalize
 
-  protected:
-    const int wait;                                             //!< Waiting time between output of different ranks
-
   public:
     int mpirank;                                                //!< Rank of MPI communicator
     int mpisize;                                                //!< Size of MPI communicator
 
   public:
     //! Constructor
-    BaseMPI() : external(0), wait(100) {                        // Initialize variables
+    BaseMPI() : external(0) {                                   // Initialize variables
       int argc(0);                                              // Dummy argument count
       char **argv;                                              // Dummy argument value
       MPI_Initialized(&external);                               // Check if MPI_Init has been called
