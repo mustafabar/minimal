@@ -6,6 +6,7 @@
 #include <omp.h>
 
 #define for_3d for (int d=0; d<3; d++)
+#define for_4d for (int d=0; d<4; d++)
 #define for_m for (int m=0; m<NTERM; m++)
 
 namespace exafmm {

@@ -1,4 +1,4 @@
-add vdw
+shared memory MPI
 create charmm.cxx
 call from test_charmm.f90
 add smoothing

@@ -26,6 +26,7 @@ namespace exafmm {
   typedef vec<3,real_t> vec3;                                   //!< Vector of 3 real_t types
   typedef vec<4,real_t> vec4;                                   //!< Vector of 4 real_t types
   typedef vec<3,float> fvec3;                                   //!< Vector of 3 float types
+  typedef vec<4,float> fvec4;                                   //!< Vector of 4 float types
   typedef vec<3,complex_t> cvec3;                               //!< Vector of 3 complex_t types
   typedef vec<NTERM,complex_t> cvecP;                           //!< Vector of NTERM complex_t types
   typedef vec<NTERM,fcomplex_t> fcvecP;                         //!< Vector of NTERM fcomplex_t types

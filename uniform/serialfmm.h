@@ -51,8 +51,8 @@ namespace exafmm {
     std::vector<cvecP> Local;
     std::vector<cvecP> globMultipole;
     std::vector<cvecP> globLocal;
-    std::vector<vec4> sendJbodies;
-    std::vector<vec4> recvJbodies;
+    std::vector<fvec4> sendJbodies;
+    std::vector<fvec4> recvJbodies;
     std::vector<fcvecP> sendMultipole;
     std::vector<fcvecP> recvMultipole;
 
@@ -188,7 +188,7 @@ namespace exafmm {
       for_3d dX[d] = X0[d] - R0 + (2 * iX[d] + 1) * R;
     }
 
-    void sort(std::vector<vec4> &bodies, std::vector<vec4> &buffer, std::vector<int> &index,
+    void sort(std::vector<vec4> &bodies, std::vector<fvec4> &buffer, std::vector<int> &index,
               std::vector<int> &ibuffer, std::vector<int> &key) const {
       int Imax = key[0];
       int Imin = key[0];
@@ -205,7 +205,7 @@ namespace exafmm {
 	bucket[key[i]-Imin]--;
 	int inew = bucket[key[i]-Imin];
 	ibuffer[inew] = index[i];
-	buffer[inew] = bodies[i];
+	for_4d buffer[inew][d] = bodies[i][d];
       }
     }
 
@@ -288,7 +288,7 @@ namespace exafmm {
       sort(Jbodies,sendJbodies,Index,sendIndex,key);
       for( int i=0; i<numBodies; i++ ) {
 	Index[i] = sendIndex[i];
-	Jbodies[i] = sendJbodies[i];
+	for_4d Jbodies[i][d] = sendJbodies[i][d];
       }
     }
 

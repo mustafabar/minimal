@@ -2,24 +2,33 @@
 #include "args.h"
 #include "ewald.h"
 #include "verify.h"
-#if EXAFMM_SERIAL
-#include "serialfmm.h"
-#else
 #include "parallelfmm.h"
-#endif
 using namespace exafmm;
+
+void splitRange(int & begin, int & end, int iSplit, int numSplit) {
+  assert(end > begin);
+  int size = end - begin;
+  int increment = size / numSplit;
+  int remainder = size % numSplit;
+  begin += iSplit * increment + std::min(iSplit,remainder);
+  end = begin + increment;
+  if (remainder > iSplit) end++;
+}
 
 int main(int argc, char ** argv) {
   const int ksize = 14;
+  const int nat = 16;
   const vec3 cycle = 10 * M_PI;
   const real_t alpha = 10 / max(cycle);
   const real_t sigma = .25 / M_PI;
+  const real_t cuton = 9.5;
   const real_t cutoff = 10;
   Args args(argc, argv);
   BaseMPI baseMPI;
   Ewald ewald(ksize, alpha, sigma, cutoff, cycle);
   Verify verify;
 
+  const int nglobal = args.numBodies;
   args.numBodies /= baseMPI.mpisize;
   const int numBodies = args.numBodies;
   const int ncrit = args.ncrit;
@@ -30,11 +39,7 @@ int main(int argc, char ** argv) {
     if (baseMPI.mpirank==0) printf("Warning: MPISIZE must be a power of 8 for periodic domain to be square\n");
   }
 
-#if EXAFMM_SERIAL
-  SerialFMM FMM(numBodies, maxLevel, numImages);
-#else
   ParallelFMM FMM(numBodies, maxLevel, numImages);
-#endif
   VERBOSE = FMM.MPIRANK == 0;
   args.verbose = VERBOSE;
   print("FMM Parameters");
@@ -42,17 +47,62 @@ int main(int argc, char ** argv) {
 
   print("FMM Profiling");
   start("Total FMM");
+
+  std::vector<double> x(3*nglobal);
+  std::vector<double> q(nglobal);
+  std::vector<double> p(nglobal, 0);
+  std::vector<double> f(3*nglobal, 0);
+  std::vector<int> icpumap(nglobal,0);
+  std::vector<int> atype(nglobal);
+  std::vector<int> numex(nglobal);
+  std::vector<int> natex(nglobal);
+  std::vector<double> rscale(nat*nat);
+  std::vector<double> gscale(nat*nat);
+  std::vector<double> fgscale(nat*nat);
+
+  double average = 0;
+  for (int i=0; i<nglobal; i++) {
+    for_3d x[3*i+d] = drand48() * cycle[d] - cycle[d] / 2;
+    q[i] = drand48();
+    average += q[i];
+  }
+  average /= nglobal;
+  for (int i=0; i<nglobal; i++)	{
+    q[i] -= average;
+  }
+  for (int i=0; i<nglobal; i++)	{
+    numex[i] = 1;
+    if (i % 2 == 0) {
+      natex[i] = i+1;
+    } else {
+      natex[i] = i-1;
+    }
+    atype[i] = 1;
+  }
+  for (int i=0; i<nat*nat; i++) {
+    rscale[i] = 1;
+    gscale[i] = 0.0001;
+    fgscale[i] = gscale[i];
+  }
+  int ista = 0;
+  int iend = nglobal;
+  splitRange(ista, iend, baseMPI.mpirank, baseMPI.mpisize);
+  for (int i=ista; i<iend; i++) {
+    icpumap[i] = 1;
+  }
+
+  // Init
   start("Partition");
   FMM.partitioner(gatherLevel);
   stop("Partition");
-
   int iX[3] = {0, 0, 0};
   FMM.R0 = 0.5 * max(cycle) / FMM.numPartition[FMM.maxGlobLevel][0];
   for_3d FMM.RGlob[d] = FMM.R0 * FMM.numPartition[FMM.maxGlobLevel][d];
   FMM.getGlobIndex(iX,FMM.MPIRANK,FMM.maxGlobLevel);
   for_3d FMM.X0[d] = 2 * FMM.R0 * (iX[d] + .5);
+
   srand48(FMM.MPIRANK);
-  real_t average = 0;
+  average = 0;
   for (int i=0; i<FMM.numBodies; i++) {
     FMM.Jbodies[i][0] = 2 * FMM.R0 * (drand48() + iX[0]);
     FMM.Jbodies[i][1] = 2 * FMM.R0 * (drand48() + iX[1]);
@@ -64,24 +114,17 @@ int main(int argc, char ** argv) {
   for (int i=0; i<FMM.numBodies; i++) {
     FMM.Jbodies[i][3] -= average;
   }
+  FMM.partitionComm();
 
   start("Grow tree");
   FMM.sortBodies();
   FMM.buildTree();
   stop("Grow tree");
-
-#if EXAFMM_SERIAL
-#else
   start("Comm LET bodies");
   FMM.P2PSend();
   FMM.P2PRecv();
   stop("Comm LET bodies");
-#endif
-
   FMM.upwardPass();
-
-#if EXAFMM_SERIAL
-#else
   start("Comm LET cells");
   for (int lev=FMM.maxLevel; lev>0; lev--) {
     MPI_Barrier(MPI_COMM_WORLD);
@@ -92,15 +135,8 @@ int main(int argc, char ** argv) {
   stop("Comm LET cells");
   FMM.globM2M();
   FMM.globM2L();
-#endif
-
   FMM.periodicM2L();
-
-#if EXAFMM_SERIAL
-#else
   FMM.globL2L();
-#endif
-
   FMM.downwardPass();
   stop("Total FMM");
 
@@ -138,12 +174,6 @@ int main(int argc, char ** argv) {
   double accDif = verify.getDifVector(FMM.Ibodies, Ibodies);
   double accNrm = verify.getNrmVector(FMM.Ibodies);
   print("FMM vs. direct");
-#if EXAFMM_SERIAL
-  double potDif = (potSum - potSum2) * (potSum - potSum2);
-  double potNrm = potSum * potSum;
-  verify.print("Rel. L2 Error (pot)",std::sqrt(potDif/potNrm));
-  verify.print("Rel. L2 Error (acc)",std::sqrt(accDif/accNrm));
-#else
   double potSumGlob, potSumGlob2, accDifGlob, accNrmGlob;
   MPI_Reduce(&potSum,  &potSumGlob,  1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
   MPI_Reduce(&potSum2, &potSumGlob2, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
@@ -155,5 +185,4 @@ int main(int argc, char ** argv) {
   double accRel = std::sqrt(accDifGlob/accNrmGlob);
   verify.print("Rel. L2 Error (pot)",potRel);
   verify.print("Rel. L2 Error (acc)",accRel);
-#endif
 }

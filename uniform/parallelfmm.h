@@ -54,14 +54,12 @@ namespace exafmm {
     void partitionComm() {
       ivec3 iX;
       for( int i=0; i<MPISIZE; i++ ) sendBodiesCount[i] = 0;
-      assert(numBodies % 3 == 0);
       for( int i=0; i<numBodies; i++ ) {
 	setGlobIndex(i,iX);
 	int sendRank = getGlobKey(iX,maxGlobLevel);
 	Rank[i] = sendRank;
 	sendBodiesCount[sendRank] += 4;
       }
-      for( int i=0; i<MPISIZE; i++ ) assert(sendBodiesCount[i] % 12 == 0);
       MPI_Alltoall(sendBodiesCount,1,MPI_INT,recvBodiesCount,1,MPI_INT,MPI_COMM_WORLD);
       sendBodiesDispl[0] = recvBodiesDispl[0] = 0;
       for( int i=1; i<MPISIZE; i++ ) {
@@ -74,7 +72,7 @@ namespace exafmm {
 		    MPI_COMM_WORLD);
       int newBodies = (recvBodiesDispl[MPISIZE-1] + recvBodiesCount[MPISIZE-1]) / 4;
       for( int i=0; i<newBodies; i++ ) {
-	Jbodies[i] = recvJbodies[i];
+	for_4d Jbodies[i][d] = recvJbodies[i][d];
       }
       sort(Ibodies,sendJbodies,Index,sendIndex,Rank);
       MPI_Alltoallv(&sendJbodies[0][0], sendBodiesCount, sendBodiesDispl, MPI_FLOAT,
@@ -92,7 +90,7 @@ namespace exafmm {
       numBodies = newBodies;
       for( int i=0; i<numBodies; i++ ) {
 	Index[i] = recvIndex[i];
-	Ibodies[i] = recvJbodies[i];
+	for_4d Ibodies[i][d] = recvJbodies[i][d];
       }
     }
 
@@ -121,7 +119,7 @@ namespace exafmm {
 		    int j = getKey(jXp,maxLevel,false) + rankOffset;
 		    sendLeafs[ileaf].begin = ibody;
 		    for( int jbody=Leafs[j].begin; jbody<Leafs[j].end; ibody++, jbody++ ) {
-		      sendJbodies[ibody] = Jbodies[jbody];
+		      for_4d sendJbodies[ibody][d] = Jbodies[jbody][d];
 		    }
 		    sendLeafs[ileaf].end = ibody;
 		  }
@@ -186,7 +184,7 @@ namespace exafmm {
 		    int j = getKey(jXp,maxLevel,false) + rankOffset;
 		    Leafs[j].begin = ibody;
 		    for( int jbody=recvLeafs[ileaf].begin; jbody<recvLeafs[ileaf].end; ibody++, jbody++ ) {
-		      Jbodies[ibody] = recvJbodies[jbody];
+		      for_4d Jbodies[ibody][d] = recvJbodies[jbody][d];
 		    }
 		    Leafs[j].end = ibody;
 		  }
