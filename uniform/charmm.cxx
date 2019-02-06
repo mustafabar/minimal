@@ -15,6 +15,57 @@ void splitRange(int & begin, int & end, int iSplit, int numSplit) {
   if (remainder > iSplit) end++;
 }
 
+void directVanDerWaals(int & nglobal, int * icpumap, int * atype,
+                       double * x, double * p, double * f,
+                       double & cuton, double & cutoff, double & cycle,
+                       int & numTypes, double * rscale, double * gscale, double * fgscale) {
+  for (int i=0; i<nglobal; i++) {
+    if (icpumap[i] == 1) {
+      int atypei = atype[i]-1;
+      real_t pp = 0, fx = 0, fy = 0, fz = 0;
+      for (int j=0; j<nglobal; j++) {
+        vec3 dX;
+        for (int d=0; d<3; d++) dX[d] = x[3*i+d] - x[3*j+d];
+        wrap(dX, cycle);
+        real_t R2 = norm(dX);
+        if (R2 != 0) {
+          int atypej = atype[j]-1;
+          real_t rs = rscale[atypei*numTypes+atypej];
+          real_t gs = gscale[atypei*numTypes+atypej];
+          real_t fgs = fgscale[atypei*numTypes+atypej];
+          real_t R2s = R2 * rs;
+          real_t invR2 = 1.0 / R2s;
+          real_t invR6 = invR2 * invR2 * invR2;
+          real_t cuton2 = cuton * cuton;
+          real_t cutoff2 = cutoff * cutoff;
+          if (R2 < cutoff2) {
+            real_t tmp = 0, dtmp = 0;
+            if (cuton2 < R2) {
+              real_t tmp1 = (cutoff2 - R2) / ((cutoff2-cuton2)*(cutoff2-cuton2)*(cutoff2-cuton2));
+              real_t tmp2 = tmp1 * (cutoff2 - R2) * (cutoff2 - 3 * cuton2 + 2 * R2);
+              tmp = invR6 * (invR6 - 1) * tmp2;
+              dtmp = invR6 * (invR6 - 1) * 12 * (cuton2 - R2) * tmp1
+                - 6 * invR6 * (invR6 + (invR6 - 1) * tmp2) * tmp2 / R2;
+            } else {
+              tmp = invR6 * (invR6 - 1);
+              dtmp = invR2 * invR6 * (2 * invR6 - 1);
+            }
+            dtmp *= fgs;
+            pp += gs * tmp;
+            fx += dX[0] * dtmp;
+            fy += dX[1] * dtmp;
+            fz += dX[2] * dtmp;
+          }
+        }
+      }
+      p[i] += pp;
+      f[3*i+0] -= fx;
+      f[3*i+1] -= fy;
+      f[3*i+2] -= fz;
+    }
+  }
+}
+
 int main(int argc, char ** argv) {
   const int ksize = 14;
   const int nat = 16;
@@ -26,7 +77,6 @@ int main(int argc, char ** argv) {
   Args args(argc, argv);
   BaseMPI baseMPI;
   Ewald ewald(ksize, alpha, sigma, cutoff, cycle);
-  Verify verify;
 
   const int nglobal = args.numBodies;
   args.numBodies /= baseMPI.mpisize;
@@ -91,7 +141,7 @@ int main(int argc, char ** argv) {
     icpumap[i] = 1;
   }
 
-  // Init
+  // fmm_init
   start("Partition");
   FMM.partitioner(gatherLevel);
   stop("Partition");
@@ -101,25 +151,37 @@ int main(int argc, char ** argv) {
   FMM.getGlobIndex(iX,FMM.MPIRANK,FMM.maxGlobLevel);
   for_3d FMM.X0[d] = 2 * FMM.R0 * (iX[d] + .5);
 
-  // Partition
+  // fmm_partition
   int nlocal = 0;
   for (int i=0; i<nglobal; i++) {
     if (icpumap[i] == 1) nlocal++;
   }
   FMM.numBodies = nlocal;
   FMM.Jbodies.resize(nlocal);
-  int b = 0;
-  for (int i=0; i<nglobal; i++) {
+  for (int i=0,b=0; i<nglobal; i++) {
     if (icpumap[i] == 1) {
       FMM.Jbodies[b][0] = x[3*i+0];
       FMM.Jbodies[b][1] = x[3*i+1];
       FMM.Jbodies[b][2] = x[3*i+2];
       FMM.Jbodies[b][3] = q[i];
+      FMM.Index[b] = i;
       b++;
     }
   }
   FMM.partitionComm();
-
+  for (int i=0; i<nglobal; i++) {
+    icpumap[i] = 0;
+  }
+  for (int b=0; b<FMM.numBodies; b++) {
+    int i = FMM.Index[b];
+    x[3*i+0] = FMM.Jbodies[b][0];
+    x[3*i+1] = FMM.Jbodies[b][1];
+    x[3*i+2] = FMM.Jbodies[b][2];
+    q[i] = FMM.Jbodies[b][3];
+    icpumap[i] = 1;
+  }
+  
+  // fmm_coulomb
   start("Grow tree");
   FMM.sortBodies();
   FMM.buildTree();
@@ -149,6 +211,7 @@ int main(int argc, char ** argv) {
   int globalNumBodies = baseMPI.allreduceInt(FMM.numBodies);
   FMM.dipoleCorrection(globalDipole, globalNumBodies);
 
+  // ewald_coulomb
   start("Total Ewald");
   std::vector<vec4> Ibodies(FMM.numBodies);
   for (int b=0; b<FMM.numBodies; b++) {
@@ -173,6 +236,9 @@ int main(int argc, char ** argv) {
     FMM.Ibodies[b][0] *= FMM.Jbodies[b][3];
   }
   stop("Total Ewald");
+
+  // verify
+  Verify verify;
   double potSum = verify.getSumScalar(FMM.Ibodies);
   double potSum2 = verify.getSumScalar(Ibodies);
   double accDif = verify.getDifVector(FMM.Ibodies, Ibodies);
@@ -189,4 +255,15 @@ int main(int argc, char ** argv) {
   double accRel = std::sqrt(accDifGlob/accNrmGlob);
   verify.print("Rel. L2 Error (pot)",potRel);
   verify.print("Rel. L2 Error (acc)",accRel);
+
+  // fmm_vanderwaals
+  for (int b=0; b<FMM.numBodies; b++) {
+    FMM.Ibodies[b] = 0;
+  }
+  /*
+  start("FMM Van der Waals");
+  FMM.vanDerWaals(cuton, cutoff, nat, rscale, gscale, fgscale);
+  stop("FMM Van der Waals");
+  */
+
 }
