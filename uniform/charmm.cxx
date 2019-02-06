@@ -5,6 +5,8 @@
 #include "parallelfmm.h"
 using namespace exafmm;
 
+static const real_t Celec = 332.0716;
+
 void splitRange(int & begin, int & end, int iSplit, int numSplit) {
   assert(end > begin);
   int size = end - begin;
@@ -102,6 +104,8 @@ int main(int argc, char ** argv) {
   std::vector<double> q(nglobal);
   std::vector<double> p(nglobal, 0);
   std::vector<double> f(3*nglobal, 0);
+  std::vector<double> p2(nglobal, 0);
+  std::vector<double> f2(3*nglobal, 0);
   std::vector<int> icpumap(nglobal,0);
   std::vector<int> atype(nglobal);
   std::vector<int> numex(nglobal);
@@ -228,25 +232,33 @@ int main(int argc, char ** argv) {
   vec3 globalDipole = baseMPI.allreduceVec3(localDipole);
   int globalNumBodies = baseMPI.allreduceInt(FMM.numBodies);
   FMM.dipoleCorrection(globalDipole, globalNumBodies);
-  for (int i=0; i<nglobal; i++) {
-    icpumap[i] = 0;
-  }
   for (int b=0; b<FMM.numBodies; b++) {
     int i = FMM.Index[b];
-    x[3*i+0] = FMM.Jbodies[b][0];
-    x[3*i+1] = FMM.Jbodies[b][1];
-    x[3*i+2] = FMM.Jbodies[b][2];
-    q[i] = FMM.Jbodies[b][3];
-    icpumap[i] = 1;
+    p[i]     += FMM.Ibodies[b][0] * FMM.Jbodies[b][3] * Celec;
+    f[3*i+0] += FMM.Ibodies[b][1] * FMM.Jbodies[b][3] * Celec;
+    f[3*i+1] += FMM.Ibodies[b][2] * FMM.Jbodies[b][3] * Celec;
+    f[3*i+2] += FMM.Ibodies[b][3] * FMM.Jbodies[b][3] * Celec;
   }
 
   // ewald_coulomb
   start("Total Ewald");
-  std::vector<vec4> Ibodies(FMM.numBodies);
-  for (int b=0; b<FMM.numBodies; b++) {
-    Ibodies[b] = FMM.Ibodies[b];
-    Ibodies[b][0] *= FMM.Jbodies[b][3];
-    FMM.Ibodies[b] = 0;
+  nlocal = 0;
+  for (int i=0; i<nglobal; i++) {
+    if (icpumap[i] == 1) nlocal++;
+    else icpumap[i] = 0;
+  }
+  FMM.numBodies = nlocal;
+  FMM.Jbodies.resize(nlocal);
+  for (int i=0,b=0; i<nglobal; i++) {
+    if (icpumap[i] == 1) {
+      FMM.Jbodies[b][0] = x[3*i+0];
+      FMM.Jbodies[b][1] = x[3*i+1];
+      FMM.Jbodies[b][2] = x[3*i+2];
+      FMM.Jbodies[b][3] = q[i];
+      FMM.Index[b] = i;
+      FMM.Ibodies[b] = 0;
+      b++;
+    }
   }
   start("Ewald real part");
   FMM.ewaldRealPart(alpha,cutoff);
@@ -262,16 +274,28 @@ int main(int argc, char ** argv) {
   stop("Ewald wave part");
   ewald.selfTerm(FMM.Ibodies, FMM.Jbodies);
   for (int b=0; b<FMM.numBodies; b++) {
-    FMM.Ibodies[b][0] *= FMM.Jbodies[b][3];
+    int i = FMM.Index[b];
+    p2[i]     += FMM.Ibodies[b][0] * FMM.Jbodies[b][3] * Celec;
+    f2[3*i+0] += FMM.Ibodies[b][1] * FMM.Jbodies[b][3] * Celec;
+    f2[3*i+1] += FMM.Ibodies[b][2] * FMM.Jbodies[b][3] * Celec;
+    f2[3*i+2] += FMM.Ibodies[b][3] * FMM.Jbodies[b][3] * Celec;
   }
   stop("Total Ewald");
 
   // verify
-  Verify verify;
-  double potSum = verify.getSumScalar(FMM.Ibodies);
-  double potSum2 = verify.getSumScalar(Ibodies);
-  double accDif = verify.getDifVector(FMM.Ibodies, Ibodies);
-  double accNrm = verify.getNrmVector(FMM.Ibodies);
+  double potSum=0, potSum2=0, accDif=0, accNrm=0;
+  for (int i=0; i<nglobal; i++) {
+    if (icpumap[i] == 1) {
+      potSum += p[i];
+      potSum2 += p2[i];
+      accDif += (f[3*i+0] - f2[3*i+0]) * (f[3*i+0] - f2[3*i+0])
+        + (f[3*i+1] - f2[3*i+1]) * (f[3*i+1] - f2[3*i+1])
+        + (f[3*i+2] - f2[3*i+2]) * (f[3*i+2] - f2[3*i+2]);
+      accNrm += f2[3*i+0] * f2[3*i+0]
+        + f2[3*i+1] * f2[3*i+1]
+        + f2[3*i+2] * f2[3*i+2];
+    }
+  }
   print("FMM vs. direct");
   double potSumGlob, potSumGlob2, accDifGlob, accNrmGlob;
   MPI_Reduce(&potSum,  &potSumGlob,  1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
@@ -282,6 +306,7 @@ int main(int argc, char ** argv) {
   double potNrmGlob = potSumGlob * potSumGlob;
   double potRel = std::sqrt(potDifGlob/potNrmGlob);
   double accRel = std::sqrt(accDifGlob/accNrmGlob);
+  Verify verify;
   verify.print("Rel. L2 Error (pot)",potRel);
   verify.print("Rel. L2 Error (acc)",accRel);
 

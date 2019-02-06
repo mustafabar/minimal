@@ -1,5 +1,6 @@
 shared memory MPI
 create charmm.cxx
+get recvBodies
 call from test_charmm.f90
 Add iwrap
 Check energy drift
