@@ -182,6 +182,24 @@ int main(int argc, char ** argv) {
   }
   
   // fmm_coulomb
+  nlocal = 0;
+  for (int i=0; i<nglobal; i++) {
+    if (icpumap[i] == 1) nlocal++;
+    else icpumap[i] = 0;
+  }
+  FMM.numBodies = nlocal;
+  FMM.Jbodies.resize(nlocal);
+  for (int i=0,b=0; i<nglobal; i++) {
+    if (icpumap[i] == 1) {
+      FMM.Jbodies[b][0] = x[3*i+0];
+      FMM.Jbodies[b][1] = x[3*i+1];
+      FMM.Jbodies[b][2] = x[3*i+2];
+      FMM.Jbodies[b][3] = q[i];
+      FMM.Index[b] = i;
+      FMM.Ibodies[b] = 0;
+      b++;
+    }
+  }
   start("Grow tree");
   FMM.sortBodies();
   FMM.buildTree();
@@ -210,6 +228,17 @@ int main(int argc, char ** argv) {
   vec3 globalDipole = baseMPI.allreduceVec3(localDipole);
   int globalNumBodies = baseMPI.allreduceInt(FMM.numBodies);
   FMM.dipoleCorrection(globalDipole, globalNumBodies);
+  for (int i=0; i<nglobal; i++) {
+    icpumap[i] = 0;
+  }
+  for (int b=0; b<FMM.numBodies; b++) {
+    int i = FMM.Index[b];
+    x[3*i+0] = FMM.Jbodies[b][0];
+    x[3*i+1] = FMM.Jbodies[b][1];
+    x[3*i+2] = FMM.Jbodies[b][2];
+    q[i] = FMM.Jbodies[b][3];
+    icpumap[i] = 1;
+  }
 
   // ewald_coulomb
   start("Total Ewald");
