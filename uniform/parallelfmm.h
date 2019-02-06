@@ -6,18 +6,6 @@ namespace exafmm {
     int EXTERNAL;
     std::vector<MPI_Request> requests;
 
-    template<typename T>
-    void print(T data) {
-      for (int irank=0; irank<MPISIZE; irank++ ) {                // Loop over ranks
-	MPI_Barrier(MPI_COMM_WORLD);                              //  Sync processes
-	usleep(100);                                              //  Wait 100 milliseconds
-	if (MPIRANK == irank) std::cout << data << " ";           //  If it's my turn print "data"
-      }                                                           // End loop over ranks
-      MPI_Barrier(MPI_COMM_WORLD);                                // Sync processes
-      usleep(100);                                                // Wait 100 milliseconds
-      if (MPIRANK == MPISIZE-1) std::cout << std::endl;           // New line
-    }
-
     void gatherMultipoles() {
       int i = getGlobKey(IX[gatherLevel],gatherLevel) + globLevelOffset[gatherLevel];
       for_m sendMultipole[0][m] = globMultipole[i][m];
@@ -516,5 +504,18 @@ namespace exafmm {
       }
       Local[0] += globLocal[maxGlobLevel];
     }
+
+    template<typename T>
+    void print(T data) {
+      for (int irank=0; irank<MPISIZE; irank++ ) {                // Loop over ranks
+	MPI_Barrier(MPI_COMM_WORLD);                              //  Sync processes
+	usleep(100);                                              //  Wait 100 milliseconds
+	if (MPIRANK == irank) std::cout << data << " ";           //  If it's my turn print "data"
+      }                                                           // End loop over ranks
+      MPI_Barrier(MPI_COMM_WORLD);                                // Sync processes
+      usleep(100);                                                // Wait 100 milliseconds
+      if (MPIRANK == MPISIZE-1) std::cout << std::endl;           // New line
+    }
+
   };
 }

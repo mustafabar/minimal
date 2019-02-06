@@ -62,7 +62,7 @@ int main(int argc, char ** argv) {
 
   double average = 0;
   for (int i=0; i<nglobal; i++) {
-    for_3d x[3*i+d] = drand48() * cycle[d] - cycle[d] / 2;
+    for_3d x[3*i+d] = drand48() * cycle[d];
     q[i] = drand48();
     average += q[i];
   }
@@ -101,18 +101,22 @@ int main(int argc, char ** argv) {
   FMM.getGlobIndex(iX,FMM.MPIRANK,FMM.maxGlobLevel);
   for_3d FMM.X0[d] = 2 * FMM.R0 * (iX[d] + .5);
 
-  srand48(FMM.MPIRANK);
-  average = 0;
-  for (int i=0; i<FMM.numBodies; i++) {
-    FMM.Jbodies[i][0] = 2 * FMM.R0 * (drand48() + iX[0]);
-    FMM.Jbodies[i][1] = 2 * FMM.R0 * (drand48() + iX[1]);
-    FMM.Jbodies[i][2] = 2 * FMM.R0 * (drand48() + iX[2]);
-    FMM.Jbodies[i][3] = (drand48() - .5) / FMM.numBodies;
-    average += FMM.Jbodies[i][3];
+  // Partition
+  int nlocal = 0;
+  for (int i=0; i<nglobal; i++) {
+    if (icpumap[i] == 1) nlocal++;
   }
-  average /= FMM.numBodies;
-  for (int i=0; i<FMM.numBodies; i++) {
-    FMM.Jbodies[i][3] -= average;
+  FMM.numBodies = nlocal;
+  FMM.Jbodies.resize(nlocal);
+  int b = 0;
+  for (int i=0; i<nglobal; i++) {
+    if (icpumap[i] == 1) {
+      FMM.Jbodies[b][0] = x[3*i+0];
+      FMM.Jbodies[b][1] = x[3*i+1];
+      FMM.Jbodies[b][2] = x[3*i+2];
+      FMM.Jbodies[b][3] = q[i];
+      b++;
+    }
   }
   FMM.partitionComm();
 
