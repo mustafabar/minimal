@@ -11,10 +11,10 @@ using namespace exafmm;
 
 int main(int argc, char ** argv) {
   const int ksize = 14;
-  const vec3 cycle = 20 * M_PI;
+  const vec3 cycle = 10 * M_PI;
   const real_t alpha = 10 / max(cycle);
   const real_t sigma = .25 / M_PI;
-  const real_t cutoff = 20;
+  const real_t cutoff = 10;
   Args args(argc, argv);
   BaseMPI baseMPI;
   Ewald ewald(ksize, alpha, sigma, cutoff, cycle);
@@ -132,7 +132,6 @@ int main(int argc, char ** argv) {
     ewald.selfTerm(FMM.Ibodies, FMM.Jbodies);
     for (int b=0; b<FMM.numBodies; b++) {
       FMM.Ibodies[b][0] *= FMM.Jbodies[b][3];
-      //ibodies2[b][0] *= FMM.Jbodies[b][3];
     }
     stop("Total Ewald");
     double potSum = verify.getSumScalar(FMM.Ibodies);

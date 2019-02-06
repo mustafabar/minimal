@@ -487,49 +487,6 @@ namespace exafmm {
       stop("P2P");
     }
 
-    void ewaldRealPart(real_t alpha, real_t cutoff) {
-      ivec3 iXc;
-      getGlobIndex(iXc,MPIRANK,maxGlobLevel);
-      int nunit = 1 << maxLevel;
-      ivec3 nunitGlob = numPartition[maxGlobLevel] * nunit;
-      ivec3 nxmin = -iXc * nunit;
-      ivec3 nxmax = nunitGlob + nxmin - 1;
-      if (numImages != 0) {
-	nxmin -= nunitGlob;
-	nxmax += nunitGlob;
-      }
-#pragma omp parallel for
-      for (int i=0; i<numLeafs; i++) {
-	ivec3 iX = 0;
-	getIndex(iX,i);
-	ivec3 jXmin = max(nxmin,iX - DP2P);
-	ivec3 jXmax = min(nxmax,iX + DP2P);
-	ivec3 jX;
-	for (jX[2]=jXmin[2]; jX[2]<=jXmax[2]; jX[2]++) {
-	  for (jX[1]=jXmin[1]; jX[1]<=jXmax[1]; jX[1]++) {
-	    for (jX[0]=jXmin[0]; jX[0]<=jXmax[0]; jX[0]++) {
-	      ivec3 jXp = (jX + nunit) % nunit;
-	      int j = getKey(jXp,maxLevel,false);
-	      jXp = (jX + nunit) / nunit;
-#if EXAFMM_SERIAL
-	      int rankOffset = 13 * numLeafs;
-#else
-	      int rankOffset = (jXp[0] + 3 * jXp[1] + 9 * jXp[2]) * numLeafs;
-#endif
-	      j += rankOffset;
-	      rankOffset = 13 * numLeafs;
-	      jXp = (jX + iXc * nunit + nunitGlob) / nunitGlob;
-	      vec3 periodic;
-	      for_3d periodic[d] = (jXp[d] - 1) * 2 * RGlob[d];
-	      EwaldP2P(Ibodies,Leafs[i+rankOffset].begin,Leafs[i+rankOffset].end,
-                       Jbodies,Leafs[j].begin,Leafs[j].end,periodic,
-                       alpha,cutoff);
-	    }
-	  }
-	}
-      }
-    }
-    
     void periodicM2L() {
       cvecP M;
 #if EXAFMM_SERIAL
@@ -572,6 +529,93 @@ namespace exafmm {
 #else
       globLocal[0] += L;
 #endif
+    }
+
+    void ewaldRealPart(real_t alpha, real_t cutoff) {
+      ivec3 iXc;
+      getGlobIndex(iXc,MPIRANK,maxGlobLevel);
+      int nunit = 1 << maxLevel;
+      ivec3 nunitGlob = numPartition[maxGlobLevel] * nunit;
+      ivec3 nxmin = -iXc * nunit;
+      ivec3 nxmax = nunitGlob + nxmin - 1;
+      if (numImages != 0) {
+	nxmin -= nunitGlob;
+	nxmax += nunitGlob;
+      }
+#pragma omp parallel for
+      for (int i=0; i<numLeafs; i++) {
+	ivec3 iX = 0;
+	getIndex(iX,i);
+	ivec3 jXmin = max(nxmin,iX - DP2P);
+	ivec3 jXmax = min(nxmax,iX + DP2P);
+	ivec3 jX;
+	for (jX[2]=jXmin[2]; jX[2]<=jXmax[2]; jX[2]++) {
+	  for (jX[1]=jXmin[1]; jX[1]<=jXmax[1]; jX[1]++) {
+	    for (jX[0]=jXmin[0]; jX[0]<=jXmax[0]; jX[0]++) {
+	      ivec3 jXp = (jX + nunit) % nunit;
+	      int j = getKey(jXp,maxLevel,false);
+	      jXp = (jX + nunit) / nunit;
+#if EXAFMM_SERIAL
+	      int rankOffset = 13 * numLeafs;
+#else
+	      int rankOffset = (jXp[0] + 3 * jXp[1] + 9 * jXp[2]) * numLeafs;
+#endif
+	      j += rankOffset;
+	      rankOffset = 13 * numLeafs;
+	      jXp = (jX + iXc * nunit + nunitGlob) / nunitGlob;
+	      vec3 periodic;
+	      for_3d periodic[d] = (jXp[d] - 1) * 2 * RGlob[d];
+	      EwaldP2P(Ibodies,Leafs[i+rankOffset].begin,Leafs[i+rankOffset].end,
+                       Jbodies,Leafs[j].begin,Leafs[j].end,periodic,
+                       alpha,cutoff);
+	    }
+	  }
+	}
+      }
+    }
+
+    void vanDerWaals(real_t cuton, real_t cutoff, int numTypes,
+                     std::vector<real_t> rscale, std::vector<real_t> gscale, std::vector<real_t> fgscale) {
+      ivec3 iXc;
+      getGlobIndex(iXc,MPIRANK,maxGlobLevel);
+      int nunit = 1 << maxLevel;
+      ivec3 nunitGlob = numPartition[maxGlobLevel] * nunit;
+      ivec3 nxmin = -iXc * nunit;
+      ivec3 nxmax = nunitGlob + nxmin - 1;
+      if (numImages != 0) {
+	nxmin -= nunitGlob;
+	nxmax += nunitGlob;
+      }
+#pragma omp parallel for
+      for (int i=0; i<numLeafs; i++) {
+	ivec3 iX = 0;
+	getIndex(iX,i);
+	ivec3 jXmin = max(nxmin,iX - DP2P);
+	ivec3 jXmax = min(nxmax,iX + DP2P);
+	ivec3 jX;
+	for (jX[2]=jXmin[2]; jX[2]<=jXmax[2]; jX[2]++) {
+	  for (jX[1]=jXmin[1]; jX[1]<=jXmax[1]; jX[1]++) {
+	    for (jX[0]=jXmin[0]; jX[0]<=jXmax[0]; jX[0]++) {
+	      ivec3 jXp = (jX + nunit) % nunit;
+	      int j = getKey(jXp,maxLevel,false);
+	      jXp = (jX + nunit) / nunit;
+#if EXAFMM_SERIAL
+	      int rankOffset = 13 * numLeafs;
+#else
+	      int rankOffset = (jXp[0] + 3 * jXp[1] + 9 * jXp[2]) * numLeafs;
+#endif
+	      j += rankOffset;
+	      rankOffset = 13 * numLeafs;
+	      jXp = (jX + iXc * nunit + nunitGlob) / nunitGlob;
+	      vec3 periodic;
+	      for_3d periodic[d] = (jXp[d] - 1) * 2 * RGlob[d];
+	      VdWP2P(Ibodies,Leafs[i+rankOffset].begin,Leafs[i+rankOffset].end,
+                     Jbodies,Leafs[j].begin,Leafs[j].end,periodic,
+                     cuton,cutoff,numTypes,rscale,gscale,fgscale);
+	    }
+	  }
+	}
+      }
     }
 
     vec3 getDipole() {

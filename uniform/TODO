@@ -1,2 +1,4 @@
-move allocate to constructor
-MD driver code with VdW
+add vdw
+create charmm.cxx
+call from test_charmm.f90
+add smoothing

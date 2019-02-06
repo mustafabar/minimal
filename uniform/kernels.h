@@ -292,6 +292,51 @@ namespace exafmm {
       }
     }
 
+    void VdWP2P(std::vector<vec4> &Ibodies, int ibegin, int iend,
+                std::vector<vec4> &Jbodies, int jbegin, int jend, vec3 periodic,
+                real_t cuton, real_t cutoff, int numTypes,
+                std::vector<real_t> rscale, std::vector<real_t> gscale, std::vector<real_t> fgscale) const {
+      for (int i=ibegin; i<iend; i++) {
+	int atypei = int(Jbodies[i][3]);
+        vec4 TRG = 0;
+	for (int j=jbegin; j<jend; j++) {
+	  vec3 dX;
+	  for_3d dX[d] = Jbodies[i][d] - Jbodies[j][d] - periodic[d];
+	  real_t R2 = norm(dX);
+	  if (R2 != 0) {
+	    int atypej = int(Jbodies[j][3]);
+	    real_t rs = rscale[atypei*numTypes+atypej];
+	    real_t gs = gscale[atypei*numTypes+atypej];
+	    real_t fgs = fgscale[atypei*numTypes+atypej];
+	    real_t R2s = R2 * rs;
+	    real_t invR2 = 1.0 / R2s;
+	    real_t invR6 = invR2 * invR2 * invR2;
+	    real_t cuton2 = cuton * cuton;
+	    real_t cutoff2 = cutoff * cutoff;
+	    if (R2 < cutoff2) {
+	      real_t tmp = 0, dtmp = 0;
+	      if (cuton2 < R2) {
+		real_t tmp1 = (cutoff2 - R2) / ((cutoff2-cuton2)*(cutoff2-cuton2)*(cutoff2-cuton2));
+		real_t tmp2 = tmp1 * (cutoff2 - R2) * (cutoff2 - 3 * cuton2 + 2 * R2);
+		tmp = invR6 * (invR6 - 1) * tmp2;
+		dtmp = invR6 * (invR6 - 1) * 12 * (cuton2 - R2) * tmp1
+		  - 6 * invR6 * (invR6 + (invR6 - 1) * tmp2) * tmp2 / R2;
+	      } else {
+		tmp = invR6 * (invR6 - 1);
+		dtmp = invR2 * invR6 * (2 * invR6 - 1);
+	      }
+	      dtmp *= fgs;
+	      TRG[0] += gs * tmp;
+	      TRG[1] -= dX[0] * dtmp;
+	      TRG[2] -= dX[1] * dtmp;
+	      TRG[3] -= dX[2] * dtmp;
+	    }
+	  }
+	}
+	Ibodies[i] += TRG;
+      }
+    }
+
   public:
     Kernel() {
       prefactor.resize(4*P*P);
