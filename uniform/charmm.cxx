@@ -17,10 +17,10 @@ void splitRange(int & begin, int & end, int iSplit, int numSplit) {
   if (remainder > iSplit) end++;
 }
 
-void directVanDerWaals(int & nglobal, int * icpumap, int * atype,
+void directVanDerWaals(int nglobal, int * icpumap, int * atype,
                        double * x, double * p, double * f,
-                       double & cuton, double & cutoff, double & cycle,
-                       int & numTypes, double * rscale, double * gscale, double * fgscale) {
+                       double cuton, double cutoff, double cycle,
+                       int numTypes, double * rscale, double * gscale, double * fgscale) {
   for (int i=0; i<nglobal; i++) {
     if (icpumap[i] == 1) {
       int atypei = atype[i]-1;
@@ -97,7 +97,7 @@ int main(int argc, char ** argv) {
   print("FMM Parameters");
   args.print(stringLength);
 
-  print("FMM Profiling");
+  print("Coulomb");
   start("Total FMM");
 
   std::vector<double> x(3*nglobal);
@@ -310,14 +310,75 @@ int main(int argc, char ** argv) {
   verify.print("Rel. L2 Error (pot)",potRel);
   verify.print("Rel. L2 Error (acc)",accRel);
 
-  // fmm_vanderwaals
+  std::fill(p.begin(),p.end(),0);
+  std::fill(f.begin(),f.end(),0);
+  std::fill(p2.begin(),p2.end(),0);
+  std::fill(f2.begin(),f2.end(),0);
   for (int b=0; b<FMM.numBodies; b++) {
     FMM.Ibodies[b] = 0;
   }
-  /*
+  
+  // fmm_vanderwaals
+  print("Van der Waals");
   start("FMM Van der Waals");
+  nlocal = 0;
+  for (int i=0; i<nglobal; i++) {
+    if (icpumap[i] == 1) nlocal++;
+    else icpumap[i] = 0;
+  }
+  FMM.numBodies = nlocal;
+  FMM.Jbodies.resize(nlocal);
+  for (int i=0,b=0; i<nglobal; i++) {
+    if (icpumap[i] == 1) {
+      FMM.Jbodies[b][0] = x[3*i+0];
+      FMM.Jbodies[b][1] = x[3*i+1];
+      FMM.Jbodies[b][2] = x[3*i+2];
+      FMM.Jbodies[b][3] = q[i];
+      FMM.Index[b] = i;
+      FMM.Ibodies[b] = 0;
+      b++;
+    }
+  }
   FMM.vanDerWaals(cuton, cutoff, nat, rscale, gscale, fgscale);
+  for (int b=0; b<FMM.numBodies; b++) {
+    int i = FMM.Index[b];
+    p[i]     += FMM.Ibodies[b][0];
+    f[3*i+0] += FMM.Ibodies[b][1];
+    f[3*i+1] += FMM.Ibodies[b][2];
+    f[3*i+2] += FMM.Ibodies[b][3];
+  }
   stop("FMM Van der Waals");
-  */
 
+  // Direct Van der Waals
+  start("Direct Van der Waals");
+  directVanDerWaals(nglobal, &icpumap[0], &atype[0], &x[0], &p2[0], &f2[0],
+                    cuton, cutoff, cycle[0], nat, &rscale[0], &gscale[0], &fgscale[0]);
+  stop("Direct Van der Waals");
+
+    // verify
+  potSum=0, potSum2=0, accDif=0, accNrm=0;
+  for (int i=0; i<nglobal; i++) {
+    if (icpumap[i] == 1) {
+      potSum += p[i];
+      potSum2 += p2[i];
+      accDif += (f[3*i+0] - f2[3*i+0]) * (f[3*i+0] - f2[3*i+0])
+        + (f[3*i+1] - f2[3*i+1]) * (f[3*i+1] - f2[3*i+1])
+        + (f[3*i+2] - f2[3*i+2]) * (f[3*i+2] - f2[3*i+2]);
+      accNrm += f2[3*i+0] * f2[3*i+0]
+        + f2[3*i+1] * f2[3*i+1]
+        + f2[3*i+2] * f2[3*i+2];
+    }
+  }
+  print("FMM vs. direct");
+  potSumGlob, potSumGlob2, accDifGlob, accNrmGlob;
+  MPI_Reduce(&potSum,  &potSumGlob,  1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+  MPI_Reduce(&potSum2, &potSumGlob2, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+  MPI_Reduce(&accDif,  &accDifGlob,  1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+  MPI_Reduce(&accNrm,  &accNrmGlob,  1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+  potDifGlob = (potSumGlob - potSumGlob2) * (potSumGlob - potSumGlob2);
+  potNrmGlob = potSumGlob * potSumGlob;
+  potRel = std::sqrt(potDifGlob/potNrmGlob);
+  accRel = std::sqrt(accDifGlob/accNrmGlob);
+  verify.print("Rel. L2 Error (pot)",potRel);
+  verify.print("Rel. L2 Error (acc)",accRel);
 }
