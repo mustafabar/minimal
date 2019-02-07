@@ -61,6 +61,63 @@ extern "C" void fmm_finalize_() {
   delete ewald;
 }
 
+extern "C" void fmm_partition_(int & nglobal, int * icpumap, double * x, double * q,
+                               double * xold, double & cycle) {
+  start("Partition");
+  const int gatherLevel = 1;
+  FMM->partitioner(gatherLevel);
+  int iX[3] = {0, 0, 0};
+  FMM->R0 = 0.5 * cycle / FMM->numPartition[FMM->maxGlobLevel][0];
+  for_3d FMM->RGlob[d] = FMM->R0 * FMM->numPartition[FMM->maxGlobLevel][d];
+  FMM->getGlobIndex(iX,FMM->MPIRANK,FMM->maxGlobLevel);
+  for_3d FMM->X0[d] = 2 * FMM->R0 * (iX[d] + .5);
+
+  int ista = 0;
+  int iend = nglobal;
+  splitRange(ista, iend, baseMPI->mpirank, baseMPI->mpisize);
+  for (int i=ista; i<iend; i++) {
+    icpumap[i] = 1;
+  }
+  int nlocal = 0;
+  for (int i=0; i<nglobal; i++) {
+    if (icpumap[i] == 1) nlocal++;
+  }
+  FMM->numBodies = nlocal;
+  FMM->Jbodies.resize(nlocal);
+  for (int i=0,b=0; i<nglobal; i++) {
+    if (icpumap[i] == 1) {
+      FMM->Jbodies[b][0] = x[3*i+0];
+      FMM->Jbodies[b][1] = x[3*i+1];
+      FMM->Jbodies[b][2] = x[3*i+2];
+      FMM->Jbodies[b][3] = q[i];
+      int iwrap = wrap(FMM->Jbodies[b], cycle);
+      FMM->Index[b] = i | (iwrap << shift);
+      FMM->Ibodies[b][0] = xold[3*i+0];
+      FMM->Ibodies[b][1] = xold[3*i+1];
+      FMM->Ibodies[b][2] = xold[3*i+2];
+      b++;
+    }
+  }
+  FMM->partitionComm();
+  for (int i=0; i<nglobal; i++) {
+    icpumap[i] = 0;
+  }
+  for (int b=0; b<FMM->numBodies; b++) {
+    int i = FMM->Index[b] & mask;
+    int iwrap = unsigned(FMM->Index[b]) >> shift;
+    unwrap(FMM->Jbodies[b], cycle, iwrap);
+    x[3*i+0] = FMM->Jbodies[b][0];
+    x[3*i+1] = FMM->Jbodies[b][1];
+    x[3*i+2] = FMM->Jbodies[b][2];
+    q[i] = FMM->Jbodies[b][3];
+    xold[3*i+0] = FMM->Ibodies[b][0];
+    xold[3*i+1] = FMM->Ibodies[b][1];
+    xold[3*i+2] = FMM->Ibodies[b][2];
+    icpumap[i] = 1;
+  }
+  stop("Partition");
+}
+
 void directVanDerWaals(int nglobal, int * icpumap, int * atype,
                        double * x, double * p, double * f,
                        double cuton, double cutoff, double cycle,
@@ -171,62 +228,10 @@ int main(int argc, char ** argv) {
   // fmm_partition
   print("Coulomb");
   start("Total FMM");
-  start("Partition");
-  const int gatherLevel = 1;
-  FMM->partitioner(gatherLevel);
-  int iX[3] = {0, 0, 0};
-  FMM->R0 = 0.5 * cycle / FMM->numPartition[FMM->maxGlobLevel][0];
-  for_3d FMM->RGlob[d] = FMM->R0 * FMM->numPartition[FMM->maxGlobLevel][d];
-  FMM->getGlobIndex(iX,FMM->MPIRANK,FMM->maxGlobLevel);
-  for_3d FMM->X0[d] = 2 * FMM->R0 * (iX[d] + .5);
+  fmm_partition_(nglobal, &icpumap[0], &x[0], &q[0], &xold[0], cycle);
 
-  int ista = 0;
-  int iend = nglobal;
-  splitRange(ista, iend, baseMPI->mpirank, baseMPI->mpisize);
-  for (int i=ista; i<iend; i++) {
-    icpumap[i] = 1;
-  }
-  int nlocal = 0;
-  for (int i=0; i<nglobal; i++) {
-    if (icpumap[i] == 1) nlocal++;
-  }
-  FMM->numBodies = nlocal;
-  FMM->Jbodies.resize(nlocal);
-  for (int i=0,b=0; i<nglobal; i++) {
-    if (icpumap[i] == 1) {
-      FMM->Jbodies[b][0] = x[3*i+0];
-      FMM->Jbodies[b][1] = x[3*i+1];
-      FMM->Jbodies[b][2] = x[3*i+2];
-      FMM->Jbodies[b][3] = q[i];
-      int iwrap = wrap(FMM->Jbodies[b], cycle);
-      FMM->Index[b] = i | (iwrap << shift);
-      FMM->Ibodies[b][0] = xold[3*i+0];
-      FMM->Ibodies[b][1] = xold[3*i+1];
-      FMM->Ibodies[b][2] = xold[3*i+2];
-      b++;
-    }
-  }
-  FMM->partitionComm();
-  for (int i=0; i<nglobal; i++) {
-    icpumap[i] = 0;
-  }
-  for (int b=0; b<FMM->numBodies; b++) {
-    int i = FMM->Index[b] & mask;
-    int iwrap = unsigned(FMM->Index[b]) >> shift;
-    unwrap(FMM->Jbodies[b], cycle, iwrap);
-    x[3*i+0] = FMM->Jbodies[b][0];
-    x[3*i+1] = FMM->Jbodies[b][1];
-    x[3*i+2] = FMM->Jbodies[b][2];
-    q[i] = FMM->Jbodies[b][3];
-    xold[3*i+0] = FMM->Ibodies[b][0];
-    xold[3*i+1] = FMM->Ibodies[b][1];
-    xold[3*i+2] = FMM->Ibodies[b][2];
-    icpumap[i] = 1;
-  }
-  stop("Partition");
-  
   // fmm_coulomb
-  nlocal = 0;
+  int nlocal = 0;
   for (int i=0; i<nglobal; i++) {
     if (icpumap[i] == 1) nlocal++;
     else icpumap[i] = 0;
