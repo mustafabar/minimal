@@ -575,7 +575,7 @@ namespace exafmm {
     }
 
     void vanDerWaals(real_t cuton, real_t cutoff, int numTypes,
-                     std::vector<real_t> rscale, std::vector<real_t> gscale, std::vector<real_t> fgscale) {
+                     real_t * rscale, real_t * gscale, real_t * fgscale) {
       ivec3 iXc;
       getGlobIndex(iXc,MPIRANK,maxGlobLevel);
       int nunit = 1 << maxLevel;

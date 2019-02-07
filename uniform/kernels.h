@@ -296,7 +296,7 @@ namespace exafmm {
     void VdWP2P(std::vector<vec4> &Ibodies, int ibegin, int iend,
                 std::vector<vec4> &Jbodies, int jbegin, int jend, vec3 periodic,
                 real_t cuton, real_t cutoff, int numTypes,
-                std::vector<real_t> rscale, std::vector<real_t> gscale, std::vector<real_t> fgscale) const {
+                real_t * rscale, real_t * gscale, real_t * fgscale) const {
       for (int i=ibegin; i<iend; i++) {
 	int atypei = int(Jbodies[i][3]);
         vec4 TRG = 0;
