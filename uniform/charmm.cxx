@@ -118,6 +118,63 @@ extern "C" void fmm_partition_(int & nglobal, int * icpumap, double * x, double 
   stop("Partition");
 }
 
+extern "C" void fmm_coulomb_(int & nglobal, int * icpumap,
+                             double * x, double * q, double * p, double * f,
+                             double & cycle) {
+  int nlocal = 0;
+  for (int i=0; i<nglobal; i++) {
+    if (icpumap[i] == 1) nlocal++;
+    else icpumap[i] = 0;
+  }
+  FMM->numBodies = nlocal;
+  FMM->Jbodies.resize(nlocal);
+  for (int i=0,b=0; i<nglobal; i++) {
+    if (icpumap[i] == 1) {
+      FMM->Jbodies[b][0] = x[3*i+0];
+      FMM->Jbodies[b][1] = x[3*i+1];
+      FMM->Jbodies[b][2] = x[3*i+2];
+      FMM->Jbodies[b][3] = q[i];
+      int iwrap = wrap(FMM->Jbodies[b], cycle);
+      FMM->Index[b] = i | (iwrap << shift);
+      FMM->Ibodies[b] = 0;
+      b++;
+    }
+  }
+  start("Grow tree");
+  FMM->sortBodies();
+  FMM->buildTree();
+  stop("Grow tree");
+  start("Comm LET bodies");
+  FMM->P2PSend();
+  FMM->P2PRecv();
+  stop("Comm LET bodies");
+  FMM->upwardPass();
+  start("Comm LET cells");
+  for (int lev=FMM->maxLevel; lev>0; lev--) {
+    MPI_Barrier(MPI_COMM_WORLD);
+    FMM->M2LSend(lev);
+    FMM->M2LRecv(lev);
+  }
+  FMM->rootGather();
+  stop("Comm LET cells");
+  FMM->globM2M();
+  FMM->globM2L();
+  FMM->periodicM2L();
+  FMM->globL2L();
+  FMM->downwardPass();
+  vec3 localDipole = FMM->getDipole();
+  vec3 globalDipole = baseMPI->allreduceVec3(localDipole);
+  int globalNumBodies = baseMPI->allreduceInt(FMM->numBodies);
+  FMM->dipoleCorrection(globalDipole, globalNumBodies);
+  for (int b=0; b<FMM->numBodies; b++) { 
+    int i = FMM->Index[b] & mask;
+    p[i]     += FMM->Ibodies[b][0] * FMM->Jbodies[b][3] * Celec;
+    f[3*i+0] += FMM->Ibodies[b][1] * FMM->Jbodies[b][3] * Celec;
+    f[3*i+1] += FMM->Ibodies[b][2] * FMM->Jbodies[b][3] * Celec;
+    f[3*i+2] += FMM->Ibodies[b][3] * FMM->Jbodies[b][3] * Celec;
+  }
+}
+
 void directVanDerWaals(int nglobal, int * icpumap, int * atype,
                        double * x, double * p, double * f,
                        double cuton, double cutoff, double cycle,
@@ -229,67 +286,13 @@ int main(int argc, char ** argv) {
   print("Coulomb");
   start("Total FMM");
   fmm_partition_(nglobal, &icpumap[0], &x[0], &q[0], &xold[0], cycle);
-
-  // fmm_coulomb
-  int nlocal = 0;
-  for (int i=0; i<nglobal; i++) {
-    if (icpumap[i] == 1) nlocal++;
-    else icpumap[i] = 0;
-  }
-  FMM->numBodies = nlocal;
-  FMM->Jbodies.resize(nlocal);
-  for (int i=0,b=0; i<nglobal; i++) {
-    if (icpumap[i] == 1) {
-      FMM->Jbodies[b][0] = x[3*i+0];
-      FMM->Jbodies[b][1] = x[3*i+1];
-      FMM->Jbodies[b][2] = x[3*i+2];
-      FMM->Jbodies[b][3] = q[i];
-      int iwrap = wrap(FMM->Jbodies[b], cycle);
-      FMM->Index[b] = i | (iwrap << shift);
-      FMM->Ibodies[b] = 0;
-      b++;
-    }
-  }
-  start("Grow tree");
-  FMM->sortBodies();
-  FMM->buildTree();
-  stop("Grow tree");
-  start("Comm LET bodies");
-  FMM->P2PSend();
-  FMM->P2PRecv();
-  stop("Comm LET bodies");
-  FMM->upwardPass();
-  start("Comm LET cells");
-  for (int lev=FMM->maxLevel; lev>0; lev--) {
-    MPI_Barrier(MPI_COMM_WORLD);
-    FMM->M2LSend(lev);
-    FMM->M2LRecv(lev);
-  }
-  FMM->rootGather();
-  stop("Comm LET cells");
-  FMM->globM2M();
-  FMM->globM2L();
-  FMM->periodicM2L();
-  FMM->globL2L();
-  FMM->downwardPass();
+  fmm_coulomb_(nglobal, &icpumap[0], &x[0], &q[0], &p[0], &f[0], cycle);
   stop("Total FMM");
-
-  vec3 localDipole = FMM->getDipole();
-  vec3 globalDipole = baseMPI->allreduceVec3(localDipole);
-  int globalNumBodies = baseMPI->allreduceInt(FMM->numBodies);
-  FMM->dipoleCorrection(globalDipole, globalNumBodies);
-  for (int b=0; b<FMM->numBodies; b++) { 
-    int i = FMM->Index[b] & mask;
-    p[i]     += FMM->Ibodies[b][0] * FMM->Jbodies[b][3] * Celec;
-    f[3*i+0] += FMM->Ibodies[b][1] * FMM->Jbodies[b][3] * Celec;
-    f[3*i+1] += FMM->Ibodies[b][2] * FMM->Jbodies[b][3] * Celec;
-    f[3*i+2] += FMM->Ibodies[b][3] * FMM->Jbodies[b][3] * Celec;
-  }
 
   // ewald_coulomb
   start("Total Ewald");
   ewald = new Ewald(ksize, alpha, sigma, cutoff, cycle);
-  nlocal = 0;
+  int nlocal = 0;
   for (int i=0; i<nglobal; i++) {
     if (icpumap[i] == 1) nlocal++;
     else icpumap[i] = 0;
