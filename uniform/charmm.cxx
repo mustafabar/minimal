@@ -7,6 +7,8 @@ using namespace exafmm;
 
 static const real_t Celec = 332.0716;
 
+ParallelFMM * FMM;
+
 int wrap(vec4 & X, const real_t & cycle) {
   int iwrap = 0;
   for (int d=0; d<3; d++) {
@@ -111,8 +113,8 @@ int main(int argc, char ** argv) {
     if (baseMPI.mpirank==0) printf("Warning: MPISIZE must be a power of 8 for periodic domain to be square\n");
   }
 
-  ParallelFMM FMM(numBodies, maxLevel, numImages);
-  VERBOSE = FMM.MPIRANK == 0;
+  FMM = new ParallelFMM(numBodies, maxLevel, numImages);
+  VERBOSE = FMM->MPIRANK == 0;
   args.verbose = VERBOSE;
   print("FMM Parameters");
   args.print(stringLength);
@@ -167,41 +169,41 @@ int main(int argc, char ** argv) {
 
   // fmm_init
   start("Partition");
-  FMM.partitioner(gatherLevel);
+  FMM->partitioner(gatherLevel);
   stop("Partition");
   int iX[3] = {0, 0, 0};
-  FMM.R0 = 0.5 * max(cycle) / FMM.numPartition[FMM.maxGlobLevel][0];
-  for_3d FMM.RGlob[d] = FMM.R0 * FMM.numPartition[FMM.maxGlobLevel][d];
-  FMM.getGlobIndex(iX,FMM.MPIRANK,FMM.maxGlobLevel);
-  for_3d FMM.X0[d] = 2 * FMM.R0 * (iX[d] + .5);
+  FMM->R0 = 0.5 * max(cycle) / FMM->numPartition[FMM->maxGlobLevel][0];
+  for_3d FMM->RGlob[d] = FMM->R0 * FMM->numPartition[FMM->maxGlobLevel][d];
+  FMM->getGlobIndex(iX,FMM->MPIRANK,FMM->maxGlobLevel);
+  for_3d FMM->X0[d] = 2 * FMM->R0 * (iX[d] + .5);
 
   // fmm_partition
   int nlocal = 0;
   for (int i=0; i<nglobal; i++) {
     if (icpumap[i] == 1) nlocal++;
   }
-  FMM.numBodies = nlocal;
-  FMM.Jbodies.resize(nlocal);
+  FMM->numBodies = nlocal;
+  FMM->Jbodies.resize(nlocal);
   for (int i=0,b=0; i<nglobal; i++) {
     if (icpumap[i] == 1) {
-      FMM.Jbodies[b][0] = x[3*i+0];
-      FMM.Jbodies[b][1] = x[3*i+1];
-      FMM.Jbodies[b][2] = x[3*i+2];
-      FMM.Jbodies[b][3] = q[i];
-      FMM.Index[b] = i;
+      FMM->Jbodies[b][0] = x[3*i+0];
+      FMM->Jbodies[b][1] = x[3*i+1];
+      FMM->Jbodies[b][2] = x[3*i+2];
+      FMM->Jbodies[b][3] = q[i];
+      FMM->Index[b] = i;
       b++;
     }
   }
-  FMM.partitionComm();
+  FMM->partitionComm();
   for (int i=0; i<nglobal; i++) {
     icpumap[i] = 0;
   }
-  for (int b=0; b<FMM.numBodies; b++) {
-    int i = FMM.Index[b];
-    x[3*i+0] = FMM.Jbodies[b][0];
-    x[3*i+1] = FMM.Jbodies[b][1];
-    x[3*i+2] = FMM.Jbodies[b][2];
-    q[i] = FMM.Jbodies[b][3];
+  for (int b=0; b<FMM->numBodies; b++) {
+    int i = FMM->Index[b];
+    x[3*i+0] = FMM->Jbodies[b][0];
+    x[3*i+1] = FMM->Jbodies[b][1];
+    x[3*i+2] = FMM->Jbodies[b][2];
+    q[i] = FMM->Jbodies[b][3];
     icpumap[i] = 1;
   }
   
@@ -211,53 +213,53 @@ int main(int argc, char ** argv) {
     if (icpumap[i] == 1) nlocal++;
     else icpumap[i] = 0;
   }
-  FMM.numBodies = nlocal;
-  FMM.Jbodies.resize(nlocal);
+  FMM->numBodies = nlocal;
+  FMM->Jbodies.resize(nlocal);
   for (int i=0,b=0; i<nglobal; i++) {
     if (icpumap[i] == 1) {
-      FMM.Jbodies[b][0] = x[3*i+0];
-      FMM.Jbodies[b][1] = x[3*i+1];
-      FMM.Jbodies[b][2] = x[3*i+2];
-      FMM.Jbodies[b][3] = q[i];
-      FMM.Index[b] = i;
-      FMM.Ibodies[b] = 0;
+      FMM->Jbodies[b][0] = x[3*i+0];
+      FMM->Jbodies[b][1] = x[3*i+1];
+      FMM->Jbodies[b][2] = x[3*i+2];
+      FMM->Jbodies[b][3] = q[i];
+      FMM->Index[b] = i;
+      FMM->Ibodies[b] = 0;
       b++;
     }
   }
   start("Grow tree");
-  FMM.sortBodies();
-  FMM.buildTree();
+  FMM->sortBodies();
+  FMM->buildTree();
   stop("Grow tree");
   start("Comm LET bodies");
-  FMM.P2PSend();
-  FMM.P2PRecv();
+  FMM->P2PSend();
+  FMM->P2PRecv();
   stop("Comm LET bodies");
-  FMM.upwardPass();
+  FMM->upwardPass();
   start("Comm LET cells");
-  for (int lev=FMM.maxLevel; lev>0; lev--) {
+  for (int lev=FMM->maxLevel; lev>0; lev--) {
     MPI_Barrier(MPI_COMM_WORLD);
-    FMM.M2LSend(lev);
-    FMM.M2LRecv(lev);
+    FMM->M2LSend(lev);
+    FMM->M2LRecv(lev);
   }
-  FMM.rootGather();
+  FMM->rootGather();
   stop("Comm LET cells");
-  FMM.globM2M();
-  FMM.globM2L();
-  FMM.periodicM2L();
-  FMM.globL2L();
-  FMM.downwardPass();
+  FMM->globM2M();
+  FMM->globM2L();
+  FMM->periodicM2L();
+  FMM->globL2L();
+  FMM->downwardPass();
   stop("Total FMM");
 
-  vec3 localDipole = FMM.getDipole();
+  vec3 localDipole = FMM->getDipole();
   vec3 globalDipole = baseMPI.allreduceVec3(localDipole);
-  int globalNumBodies = baseMPI.allreduceInt(FMM.numBodies);
-  FMM.dipoleCorrection(globalDipole, globalNumBodies);
-  for (int b=0; b<FMM.numBodies; b++) {
-    int i = FMM.Index[b];
-    p[i]     += FMM.Ibodies[b][0] * FMM.Jbodies[b][3] * Celec;
-    f[3*i+0] += FMM.Ibodies[b][1] * FMM.Jbodies[b][3] * Celec;
-    f[3*i+1] += FMM.Ibodies[b][2] * FMM.Jbodies[b][3] * Celec;
-    f[3*i+2] += FMM.Ibodies[b][3] * FMM.Jbodies[b][3] * Celec;
+  int globalNumBodies = baseMPI.allreduceInt(FMM->numBodies);
+  FMM->dipoleCorrection(globalDipole, globalNumBodies);
+  for (int b=0; b<FMM->numBodies; b++) {
+    int i = FMM->Index[b];
+    p[i]     += FMM->Ibodies[b][0] * FMM->Jbodies[b][3] * Celec;
+    f[3*i+0] += FMM->Ibodies[b][1] * FMM->Jbodies[b][3] * Celec;
+    f[3*i+1] += FMM->Ibodies[b][2] * FMM->Jbodies[b][3] * Celec;
+    f[3*i+2] += FMM->Ibodies[b][3] * FMM->Jbodies[b][3] * Celec;
   }
 
   // ewald_coulomb
@@ -267,38 +269,38 @@ int main(int argc, char ** argv) {
     if (icpumap[i] == 1) nlocal++;
     else icpumap[i] = 0;
   }
-  FMM.numBodies = nlocal;
-  FMM.Jbodies.resize(nlocal);
+  FMM->numBodies = nlocal;
+  FMM->Jbodies.resize(nlocal);
   for (int i=0,b=0; i<nglobal; i++) {
     if (icpumap[i] == 1) {
-      FMM.Jbodies[b][0] = x[3*i+0];
-      FMM.Jbodies[b][1] = x[3*i+1];
-      FMM.Jbodies[b][2] = x[3*i+2];
-      FMM.Jbodies[b][3] = q[i];
-      FMM.Index[b] = i;
-      FMM.Ibodies[b] = 0;
+      FMM->Jbodies[b][0] = x[3*i+0];
+      FMM->Jbodies[b][1] = x[3*i+1];
+      FMM->Jbodies[b][2] = x[3*i+2];
+      FMM->Jbodies[b][3] = q[i];
+      FMM->Index[b] = i;
+      FMM->Ibodies[b] = 0;
       b++;
     }
   }
   start("Ewald real part");
-  FMM.ewaldRealPart(alpha,cutoff);
+  FMM->ewaldRealPart(alpha,cutoff);
   stop("Ewald real part");
-  FMM.Ibodies.resize(FMM.numBodies);
-  FMM.Jbodies.resize(FMM.numBodies);
+  FMM->Ibodies.resize(FMM->numBodies);
+  FMM->Jbodies.resize(FMM->numBodies);
   start("Ewald wave part");
   Waves waves = ewald.initWaves();
-  ewald.dft(waves,FMM.Jbodies);
+  ewald.dft(waves,FMM->Jbodies);
   waves = baseMPI.allreduceWaves(waves);
   ewald.wavePart(waves);
-  ewald.idft(waves,FMM.Ibodies,FMM.Jbodies);
+  ewald.idft(waves,FMM->Ibodies,FMM->Jbodies);
   stop("Ewald wave part");
-  ewald.selfTerm(FMM.Ibodies, FMM.Jbodies);
-  for (int b=0; b<FMM.numBodies; b++) {
-    int i = FMM.Index[b];
-    p2[i]     += FMM.Ibodies[b][0] * FMM.Jbodies[b][3] * Celec;
-    f2[3*i+0] += FMM.Ibodies[b][1] * FMM.Jbodies[b][3] * Celec;
-    f2[3*i+1] += FMM.Ibodies[b][2] * FMM.Jbodies[b][3] * Celec;
-    f2[3*i+2] += FMM.Ibodies[b][3] * FMM.Jbodies[b][3] * Celec;
+  ewald.selfTerm(FMM->Ibodies, FMM->Jbodies);
+  for (int b=0; b<FMM->numBodies; b++) {
+    int i = FMM->Index[b];
+    p2[i]     += FMM->Ibodies[b][0] * FMM->Jbodies[b][3] * Celec;
+    f2[3*i+0] += FMM->Ibodies[b][1] * FMM->Jbodies[b][3] * Celec;
+    f2[3*i+1] += FMM->Ibodies[b][2] * FMM->Jbodies[b][3] * Celec;
+    f2[3*i+2] += FMM->Ibodies[b][3] * FMM->Jbodies[b][3] * Celec;
   }
   stop("Total Ewald");
 
@@ -334,8 +336,8 @@ int main(int argc, char ** argv) {
   std::fill(f.begin(),f.end(),0);
   std::fill(p2.begin(),p2.end(),0);
   std::fill(f2.begin(),f2.end(),0);
-  for (int b=0; b<FMM.numBodies; b++) {
-    FMM.Ibodies[b] = 0;
+  for (int b=0; b<FMM->numBodies; b++) {
+    FMM->Ibodies[b] = 0;
   }
   
   // fmm_vanderwaals
@@ -346,26 +348,26 @@ int main(int argc, char ** argv) {
     if (icpumap[i] == 1) nlocal++;
     else icpumap[i] = 0;
   }
-  FMM.numBodies = nlocal;
-  FMM.Jbodies.resize(nlocal);
+  FMM->numBodies = nlocal;
+  FMM->Jbodies.resize(nlocal);
   for (int i=0,b=0; i<nglobal; i++) {
     if (icpumap[i] == 1) {
-      FMM.Jbodies[b][0] = x[3*i+0];
-      FMM.Jbodies[b][1] = x[3*i+1];
-      FMM.Jbodies[b][2] = x[3*i+2];
-      FMM.Jbodies[b][3] = q[i];
-      FMM.Index[b] = i;
-      FMM.Ibodies[b] = 0;
+      FMM->Jbodies[b][0] = x[3*i+0];
+      FMM->Jbodies[b][1] = x[3*i+1];
+      FMM->Jbodies[b][2] = x[3*i+2];
+      FMM->Jbodies[b][3] = q[i];
+      FMM->Index[b] = i;
+      FMM->Ibodies[b] = 0;
       b++;
     }
   }
-  FMM.vanDerWaals(cuton, cutoff, nat, rscale, gscale, fgscale);
-  for (int b=0; b<FMM.numBodies; b++) {
-    int i = FMM.Index[b];
-    p[i]     += FMM.Ibodies[b][0];
-    f[3*i+0] += FMM.Ibodies[b][1];
-    f[3*i+1] += FMM.Ibodies[b][2];
-    f[3*i+2] += FMM.Ibodies[b][3];
+  FMM->vanDerWaals(cuton, cutoff, nat, rscale, gscale, fgscale);
+  for (int b=0; b<FMM->numBodies; b++) {
+    int i = FMM->Index[b];
+    p[i]     += FMM->Ibodies[b][0];
+    f[3*i+0] += FMM->Ibodies[b][1];
+    f[3*i+1] += FMM->Ibodies[b][2];
+    f[3*i+2] += FMM->Ibodies[b][3];
   }
   stop("FMM Van der Waals");
 
@@ -401,4 +403,6 @@ int main(int argc, char ** argv) {
   accRel = std::sqrt(accDifGlob/accNrmGlob);
   verify.print("Rel. L2 Error (pot)",potRel);
   verify.print("Rel. L2 Error (acc)",accRel);
+
+  delete FMM;
 }
