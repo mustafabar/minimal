@@ -11,8 +11,8 @@ using namespace exafmm;
 
 int main(int argc, char ** argv) {
   const int ksize = 14;
-  const vec3 cycle = 10 * M_PI;
-  const real_t alpha = 10 / max(cycle);
+  const real_t cycle = 10 * M_PI;
+  const real_t alpha = 10 / cycle;
   const real_t sigma = .25 / M_PI;
   const real_t cutoff = 10;
   Args args(argc, argv);
@@ -47,7 +47,7 @@ int main(int argc, char ** argv) {
   stop("Partition");
 
   int iX[3] = {0, 0, 0};
-  FMM.R0 = 0.5 * max(cycle) / FMM.numPartition[FMM.maxGlobLevel][0];
+  FMM.R0 = 0.5 * cycle / FMM.numPartition[FMM.maxGlobLevel][0];
   for_3d FMM.RGlob[d] = FMM.R0 * FMM.numPartition[FMM.maxGlobLevel][d];
   FMM.getGlobIndex(iX,FMM.MPIRANK,FMM.maxGlobLevel);
   for_3d FMM.X0[d] = 2 * FMM.R0 * (iX[d] + .5);

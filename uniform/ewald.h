@@ -10,17 +10,17 @@ namespace exafmm {
     const real_t alpha;                                         //!< Scaling parameter for Ewald summation
     const real_t sigma;                                         //!< Scaling parameter for Ewald summation
     const real_t cutoff;                                        //!< Cutoff distance
-    const vec3 cycle;                                           //!< Periodic cycle
+    const real_t cycle;                                         //!< Periodic cycle
 
   public:
     //! Constructor
-    Ewald(int _ksize, real_t _alpha, real_t _sigma, real_t _cutoff, vec3 _cycle) :
+    Ewald(int _ksize, real_t _alpha, real_t _sigma, real_t _cutoff, real_t _cycle) :
       ksize(_ksize), alpha(_alpha), sigma(_sigma), cutoff(_cutoff), cycle(_cycle) {} // Initialize variables
 
     //! Forward DFT
     void dft(Waves & waves, std::vector<vec4> & Jbodies) const {
       vec3 scale;
-      for (int d=0; d<3; d++) scale[d]= 2 * M_PI / cycle[d];    // Scale conversion
+      for (int d=0; d<3; d++) scale[d]= 2 * M_PI / cycle;       // Scale conversion
 #pragma omp parallel for
       for (int w=0; w<int(waves.size()); w++) {                 // Loop over waves
 	W_iter W=waves.begin()+w;                               //  Wave iterator
@@ -37,7 +37,7 @@ namespace exafmm {
     //! Inverse DFT
     void idft(Waves & waves, std::vector<vec4> & Ibodies, std::vector<vec4> & Jbodies) const {
       vec3 scale;
-      for (int d=0; d<3; d++) scale[d] = 2 * M_PI / cycle[d];   // Scale conversion
+      for (int d=0; d<3; d++) scale[d] = 2 * M_PI / cycle;      // Scale conversion
 #pragma omp parallel for
       for (int b=0; b<int(Ibodies.size()); b++) {               // Loop over bodies
 	vec4 TRG = 0;                                           //  Initialize target values
@@ -83,8 +83,8 @@ namespace exafmm {
     //! Ewald wave part
     void wavePart(Waves &waves) {
       vec3 scale;
-      for (int d=0; d<3; d++) scale[d] = 2 * M_PI / cycle[d];   // Scale conversion
-      real_t coef = 2 / sigma / cycle[0] / cycle[1] / cycle[2]; // First constant
+      for (int d=0; d<3; d++) scale[d] = 2 * M_PI / cycle;      // Scale conversion
+      real_t coef = 2 / sigma / cycle / cycle / cycle;          // First constant
       real_t coef2 = 1 / (4 * alpha * alpha);                   // Second constant
       for (W_iter W=waves.begin(); W!=waves.end(); W++) {       // Loop over waves
 	vec3 K = W->K * scale;                                  //  Wave number scaled

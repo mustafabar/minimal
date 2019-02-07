@@ -53,6 +53,12 @@ extern "C" void fmm_init_(int & nglobal, int & images, int & verbose) {
   }
 }
 
+extern "C" void fmm_finalize_() {
+  delete baseMPI;
+  delete FMM;
+  delete ewald;
+}
+
 void directVanDerWaals(int nglobal, int * icpumap, int * atype,
                        double * x, double * p, double * f,
                        double cuton, double cutoff, double cycle,
@@ -110,8 +116,8 @@ int main(int argc, char ** argv) {
   int ksize = 14;
   int nat = 16;
   int verbose = 1;
-  vec3 cycle = 10 * M_PI;
-  real_t alpha = 10 / max(cycle);
+  real_t cycle = 10 * M_PI;
+  real_t alpha = 10 / cycle;
   real_t sigma = .25 / M_PI;
   real_t cuton = 9.5;
   real_t cutoff = 10;
@@ -132,7 +138,7 @@ int main(int argc, char ** argv) {
 
   double average = 0;
   for (int i=0; i<nglobal; i++) {
-    for_3d x[3*i+d] = drand48() * cycle[d];
+    for_3d x[3*i+d] = drand48() * cycle;
     q[i] = drand48();
     average += q[i];
   }
@@ -165,7 +171,7 @@ int main(int argc, char ** argv) {
   const int gatherLevel = 1;
   FMM->partitioner(gatherLevel);
   int iX[3] = {0, 0, 0};
-  FMM->R0 = 0.5 * max(cycle) / FMM->numPartition[FMM->maxGlobLevel][0];
+  FMM->R0 = 0.5 * cycle / FMM->numPartition[FMM->maxGlobLevel][0];
   for_3d FMM->RGlob[d] = FMM->R0 * FMM->numPartition[FMM->maxGlobLevel][d];
   FMM->getGlobIndex(iX,FMM->MPIRANK,FMM->maxGlobLevel);
   for_3d FMM->X0[d] = 2 * FMM->R0 * (iX[d] + .5);
@@ -373,7 +379,7 @@ int main(int argc, char ** argv) {
   // Direct Van der Waals
   start("Direct Van der Waals");
   directVanDerWaals(nglobal, &icpumap[0], &atype[0], &x[0], &p2[0], &f2[0],
-                    cuton, cutoff, cycle[0], nat, &rscale[0], &gscale[0], &fgscale[0]);
+                    cuton, cutoff, cycle, nat, &rscale[0], &gscale[0], &fgscale[0]);
   stop("Direct Van der Waals");
 
   // verify
@@ -402,8 +408,5 @@ int main(int argc, char ** argv) {
   accRel = std::sqrt(accDifGlob/accNrmGlob);
   print("Rel. L2 Error (pot)",potRel);
   print("Rel. L2 Error (acc)",accRel);
-
-  delete baseMPI;
-  delete FMM;
-  delete ewald;
+  fmm_finalize_();
 }
