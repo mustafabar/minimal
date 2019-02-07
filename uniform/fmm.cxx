@@ -57,7 +57,7 @@ int main(int argc, char ** argv) {
     FMM.Jbodies[i][0] = 2 * FMM.R0 * (drand48() + iX[0]);
     FMM.Jbodies[i][1] = 2 * FMM.R0 * (drand48() + iX[1]);
     FMM.Jbodies[i][2] = 2 * FMM.R0 * (drand48() + iX[2]);
-    FMM.Jbodies[i][3] = (drand48() - .5) / FMM.numBodies;
+    FMM.Jbodies[i][3] = drand48();
     average += FMM.Jbodies[i][3];
   }
   average /= FMM.numBodies;

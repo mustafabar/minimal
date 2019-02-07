@@ -676,7 +676,7 @@ program main
   enddo
   if (mpirank == 0) print*,'FMM init'
   path = trim(path)//c_null_char
-  call fmm_init(expansions,images,theta,verbose,nglobal,path)
+  call fmm_init(nglobal,images,verbose)
   if (mpirank == 0) print*,'FMM partition'
   call fmm_partition(nglobal,icpumap,x,q,v,pcycle)
 
