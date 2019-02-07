@@ -239,7 +239,8 @@ int main(int argc, char ** argv) {
       FMM->Jbodies[b][1] = x[3*i+1];
       FMM->Jbodies[b][2] = x[3*i+2];
       FMM->Jbodies[b][3] = q[i];
-      FMM->Index[b] = i;
+      int iwrap = wrap(FMM->Jbodies[b], cycle);
+      FMM->Index[b] = i | (iwrap << shift);
       FMM->Ibodies[b] = 0;
       b++;
     }
@@ -272,8 +273,8 @@ int main(int argc, char ** argv) {
   vec3 globalDipole = baseMPI->allreduceVec3(localDipole);
   int globalNumBodies = baseMPI->allreduceInt(FMM->numBodies);
   FMM->dipoleCorrection(globalDipole, globalNumBodies);
-  for (int b=0; b<FMM->numBodies; b++) {
-    int i = FMM->Index[b];
+  for (int b=0; b<FMM->numBodies; b++) { 
+    int i = FMM->Index[b] & mask;
     p[i]     += FMM->Ibodies[b][0] * FMM->Jbodies[b][3] * Celec;
     f[3*i+0] += FMM->Ibodies[b][1] * FMM->Jbodies[b][3] * Celec;
     f[3*i+1] += FMM->Ibodies[b][2] * FMM->Jbodies[b][3] * Celec;
@@ -296,7 +297,8 @@ int main(int argc, char ** argv) {
       FMM->Jbodies[b][1] = x[3*i+1];
       FMM->Jbodies[b][2] = x[3*i+2];
       FMM->Jbodies[b][3] = q[i];
-      FMM->Index[b] = i;
+      int iwrap = wrap(FMM->Jbodies[b], cycle);
+      FMM->Index[b] = i | (iwrap << shift);
       FMM->Ibodies[b] = 0;
       b++;
     }
@@ -315,7 +317,7 @@ int main(int argc, char ** argv) {
   stop("Ewald wave part");
   ewald->selfTerm(FMM->Ibodies, FMM->Jbodies);
   for (int b=0; b<FMM->numBodies; b++) {
-    int i = FMM->Index[b];
+    int i = FMM->Index[b] & mask;
     p2[i]     += FMM->Ibodies[b][0] * FMM->Jbodies[b][3] * Celec;
     f2[3*i+0] += FMM->Ibodies[b][1] * FMM->Jbodies[b][3] * Celec;
     f2[3*i+1] += FMM->Ibodies[b][2] * FMM->Jbodies[b][3] * Celec;
@@ -374,14 +376,15 @@ int main(int argc, char ** argv) {
       FMM->Jbodies[b][1] = x[3*i+1];
       FMM->Jbodies[b][2] = x[3*i+2];
       FMM->Jbodies[b][3] = q[i];
-      FMM->Index[b] = i;
+      int iwrap = wrap(FMM->Jbodies[b], cycle);
+      FMM->Index[b] = i | (iwrap << shift);
       FMM->Ibodies[b] = 0;
       b++;
     }
   }
   FMM->vanDerWaals(cuton, cutoff, nat, rscale, gscale, fgscale);
   for (int b=0; b<FMM->numBodies; b++) {
-    int i = FMM->Index[b];
+    int i = FMM->Index[b] & mask;
     p[i]     += FMM->Ibodies[b][0];
     f[3*i+0] += FMM->Ibodies[b][1];
     f[3*i+1] += FMM->Ibodies[b][2];
