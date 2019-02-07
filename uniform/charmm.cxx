@@ -1,13 +1,13 @@
 #include "base_mpi.h"
-#include "args.h"
 #include "ewald.h"
-#include "verify.h"
 #include "parallelfmm.h"
 using namespace exafmm;
 
 static const real_t Celec = 332.0716;
 
+BaseMPI * baseMPI;
 ParallelFMM * FMM;
+Ewald * ewald;
 
 int wrap(vec4 & X, const real_t & cycle) {
   int iwrap = 0;
@@ -38,6 +38,10 @@ void splitRange(int & begin, int & end, int iSplit, int numSplit) {
   begin += iSplit * increment + std::min(iSplit,remainder);
   end = begin + increment;
   if (remainder > iSplit) end++;
+}
+
+extern "C" void fmm_init_(int & images, double & theta, int & verbose) {
+
 }
 
 void directVanDerWaals(int nglobal, int * icpumap, int * atype,
@@ -92,6 +96,7 @@ void directVanDerWaals(int nglobal, int * icpumap, int * atype,
 }
 
 int main(int argc, char ** argv) {
+  const int nglobal = 1000;
   const int ksize = 14;
   const int nat = 16;
   const vec3 cycle = 10 * M_PI;
@@ -99,25 +104,20 @@ int main(int argc, char ** argv) {
   const real_t sigma = .25 / M_PI;
   const real_t cuton = 9.5;
   const real_t cutoff = 10;
-  Args args(argc, argv);
-  BaseMPI baseMPI;
-  Ewald ewald(ksize, alpha, sigma, cutoff, cycle);
 
-  const int nglobal = 1000;
-  const int numBodies = nglobal / baseMPI.mpisize;
+  baseMPI = new BaseMPI;
+  const int numBodies = nglobal / baseMPI->mpisize;
   const int ncrit = 32;
   const int maxLevel = numBodies >= ncrit ? 1 + int(log(numBodies / ncrit)/M_LN2/3) : 0;
   const int gatherLevel = 1;
   const int numImages = 6;
-  if (numImages > 0 && int(log2(baseMPI.mpisize)) % 3 != 0) {
-    if (baseMPI.mpirank==0) printf("Warning: MPISIZE must be a power of 8 for periodic domain to be square\n");
-  }
-
   FMM = new ParallelFMM(numBodies, maxLevel, numImages);
+  ewald = new Ewald(ksize, alpha, sigma, cutoff, cycle);
   VERBOSE = FMM->MPIRANK == 0;
-  args.verbose = VERBOSE;
+  if (numImages > 0 && int(log2(FMM->MPISIZE)) % 3 != 0) {
+    if (FMM->MPIRANK==0) printf("Warning: MPISIZE must be a power of 8 for periodic domain to be square\n");
+  }
   print("FMM Parameters");
-  args.print(stringLength);
 
   print("Coulomb");
   start("Total FMM");
@@ -162,7 +162,7 @@ int main(int argc, char ** argv) {
   }
   int ista = 0;
   int iend = nglobal;
-  splitRange(ista, iend, baseMPI.mpirank, baseMPI.mpisize);
+  splitRange(ista, iend, baseMPI->mpirank, baseMPI->mpisize);
   for (int i=ista; i<iend; i++) {
     icpumap[i] = 1;
   }
@@ -251,8 +251,8 @@ int main(int argc, char ** argv) {
   stop("Total FMM");
 
   vec3 localDipole = FMM->getDipole();
-  vec3 globalDipole = baseMPI.allreduceVec3(localDipole);
-  int globalNumBodies = baseMPI.allreduceInt(FMM->numBodies);
+  vec3 globalDipole = baseMPI->allreduceVec3(localDipole);
+  int globalNumBodies = baseMPI->allreduceInt(FMM->numBodies);
   FMM->dipoleCorrection(globalDipole, globalNumBodies);
   for (int b=0; b<FMM->numBodies; b++) {
     int i = FMM->Index[b];
@@ -288,13 +288,13 @@ int main(int argc, char ** argv) {
   FMM->Ibodies.resize(FMM->numBodies);
   FMM->Jbodies.resize(FMM->numBodies);
   start("Ewald wave part");
-  Waves waves = ewald.initWaves();
-  ewald.dft(waves,FMM->Jbodies);
-  waves = baseMPI.allreduceWaves(waves);
-  ewald.wavePart(waves);
-  ewald.idft(waves,FMM->Ibodies,FMM->Jbodies);
+  Waves waves = ewald->initWaves();
+  ewald->dft(waves,FMM->Jbodies);
+  waves = baseMPI->allreduceWaves(waves);
+  ewald->wavePart(waves);
+  ewald->idft(waves,FMM->Ibodies,FMM->Jbodies);
   stop("Ewald wave part");
-  ewald.selfTerm(FMM->Ibodies, FMM->Jbodies);
+  ewald->selfTerm(FMM->Ibodies, FMM->Jbodies);
   for (int b=0; b<FMM->numBodies; b++) {
     int i = FMM->Index[b];
     p2[i]     += FMM->Ibodies[b][0] * FMM->Jbodies[b][3] * Celec;
@@ -328,9 +328,8 @@ int main(int argc, char ** argv) {
   double potNrmGlob = potSumGlob * potSumGlob;
   double potRel = std::sqrt(potDifGlob/potNrmGlob);
   double accRel = std::sqrt(accDifGlob/accNrmGlob);
-  Verify verify;
-  verify.print("Rel. L2 Error (pot)",potRel);
-  verify.print("Rel. L2 Error (acc)",accRel);
+  print("Rel. L2 Error (pot)",potRel);
+  print("Rel. L2 Error (acc)",accRel);
 
   std::fill(p.begin(),p.end(),0);
   std::fill(f.begin(),f.end(),0);
@@ -377,7 +376,7 @@ int main(int argc, char ** argv) {
                     cuton, cutoff, cycle[0], nat, &rscale[0], &gscale[0], &fgscale[0]);
   stop("Direct Van der Waals");
 
-    // verify
+  // verify
   potSum=0, potSum2=0, accDif=0, accNrm=0;
   for (int i=0; i<nglobal; i++) {
     if (icpumap[i] == 1) {
@@ -401,8 +400,10 @@ int main(int argc, char ** argv) {
   potNrmGlob = potSumGlob * potSumGlob;
   potRel = std::sqrt(potDifGlob/potNrmGlob);
   accRel = std::sqrt(accDifGlob/accNrmGlob);
-  verify.print("Rel. L2 Error (pot)",potRel);
-  verify.print("Rel. L2 Error (acc)",accRel);
+  print("Rel. L2 Error (pot)",potRel);
+  print("Rel. L2 Error (acc)",accRel);
 
+  delete baseMPI;
   delete FMM;
+  delete ewald;
 }
