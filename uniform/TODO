@@ -1,8 +1,8 @@
-shared memory MPI
+Add xold
+Add iwrap, test with perturbed coords
 create charmm.cxx
 get recvBodies
 call from test_charmm.f90
-Add iwrap
 Check energy drift
 add smoothing
 Compare energy drift

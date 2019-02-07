@@ -4,6 +4,8 @@
 using namespace exafmm;
 
 static const real_t Celec = 332.0716;
+static const int shift = 29;
+static const int mask = ~(0x7U << shift);
 
 BaseMPI * baseMPI;
 ParallelFMM * FMM;
@@ -124,6 +126,7 @@ int main(int argc, char ** argv) {
 
   std::vector<double> x(3*nglobal);
   std::vector<double> q(nglobal);
+  std::vector<double> xold(3*nglobal);
   std::vector<double> p(nglobal, 0);
   std::vector<double> f(3*nglobal, 0);
   std::vector<double> p2(nglobal, 0);
@@ -139,6 +142,7 @@ int main(int argc, char ** argv) {
   double average = 0;
   for (int i=0; i<nglobal; i++) {
     for_3d x[3*i+d] = drand48() * cycle;
+    for_3d xold[3*i+d] = drand48() * cycle;
     q[i] = drand48();
     average += q[i];
   }
@@ -194,7 +198,11 @@ int main(int argc, char ** argv) {
       FMM->Jbodies[b][1] = x[3*i+1];
       FMM->Jbodies[b][2] = x[3*i+2];
       FMM->Jbodies[b][3] = q[i];
-      FMM->Index[b] = i;
+      int iwrap = wrap(FMM->Jbodies[b], cycle);
+      FMM->Index[b] = i | (iwrap << shift);
+      FMM->Ibodies[b][0] = xold[3*i+0];
+      FMM->Ibodies[b][1] = xold[3*i+1];
+      FMM->Ibodies[b][2] = xold[3*i+2];
       b++;
     }
   }
@@ -203,11 +211,16 @@ int main(int argc, char ** argv) {
     icpumap[i] = 0;
   }
   for (int b=0; b<FMM->numBodies; b++) {
-    int i = FMM->Index[b];
+    int i = FMM->Index[b] & mask;
+    int iwrap = unsigned(FMM->Index[b]) >> shift;
+    unwrap(FMM->Jbodies[b], cycle, iwrap);
     x[3*i+0] = FMM->Jbodies[b][0];
     x[3*i+1] = FMM->Jbodies[b][1];
     x[3*i+2] = FMM->Jbodies[b][2];
     q[i] = FMM->Jbodies[b][3];
+    xold[3*i+0] = FMM->Ibodies[b][0];
+    xold[3*i+1] = FMM->Ibodies[b][1];
+    xold[3*i+2] = FMM->Ibodies[b][2];
     icpumap[i] = 1;
   }
   stop("Partition");
