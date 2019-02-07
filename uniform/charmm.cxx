@@ -7,6 +7,27 @@ using namespace exafmm;
 
 static const real_t Celec = 332.0716;
 
+int wrap(vec4 & X, const real_t & cycle) {
+  int iwrap = 0;
+  for (int d=0; d<3; d++) {
+    if(X[d] < 0) {
+      X[d] += cycle;
+      iwrap |= 1 << d;
+    }
+    if(X[d] > cycle) {
+      X[d] -= cycle;
+      iwrap |= 1 << d;
+    }
+  }
+  return iwrap;
+}
+
+void unwrap(vec4 & X, const real_t & cycle, const int & iwrap) {
+  for (int d=0; d<3; d++) {
+    if((iwrap >> d) & 1) X[d] += (X[d] > (cycle/2) ? -cycle : cycle);
+  }
+}
+
 void splitRange(int & begin, int & end, int iSplit, int numSplit) {
   assert(end > begin);
   int size = end - begin;
@@ -80,13 +101,12 @@ int main(int argc, char ** argv) {
   BaseMPI baseMPI;
   Ewald ewald(ksize, alpha, sigma, cutoff, cycle);
 
-  const int nglobal = args.numBodies;
-  args.numBodies /= baseMPI.mpisize;
-  const int numBodies = args.numBodies;
-  const int ncrit = args.ncrit;
+  const int nglobal = 1000;
+  const int numBodies = nglobal / baseMPI.mpisize;
+  const int ncrit = 32;
   const int maxLevel = numBodies >= ncrit ? 1 + int(log(numBodies / ncrit)/M_LN2/3) : 0;
   const int gatherLevel = 1;
-  const int numImages = args.images;
+  const int numImages = 6;
   if (numImages > 0 && int(log2(baseMPI.mpisize)) % 3 != 0) {
     if (baseMPI.mpirank==0) printf("Warning: MPISIZE must be a power of 8 for periodic domain to be square\n");
   }
