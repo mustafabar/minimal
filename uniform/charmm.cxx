@@ -222,7 +222,6 @@ extern "C" void ewald_coulomb_(int & nglobal, int * icpumap, double * x, double 
 extern "C" void coulomb_exclusion_(int & nglobal, int * icpumap,
                                    double * x, double * q, double * p, double * f,
                                    double & cycle, int * numex, int * natex) {
-  start("Coulomb Exclusion");
   for (int i=0, ic=0; i<nglobal; i++) {
     if (icpumap[i] == 1) {
       real_t pp = 0, fx = 0, fy = 0, fz = 0;
@@ -248,7 +247,6 @@ extern "C" void coulomb_exclusion_(int & nglobal, int * icpumap,
       ic += numex[i];
     }
   }
-  stop("Coulomb Exclusion");
 }
 
 extern "C" void fmm_vanderwaals_(int & nglobal, int * icpumap, int * atype,
@@ -284,10 +282,10 @@ extern "C" void fmm_vanderwaals_(int & nglobal, int * icpumap, int * atype,
   }
 }
 
-void directVanDerWaals(int nglobal, int * icpumap, int * atype,
-                       double * x, double * p, double * f,
-                       double cuton, double cutoff, double cycle,
-                       int nat, double * rscale, double * gscale, double * fgscale) {
+extern "C" void direct_vanderwaals_(int & nglobal, int * icpumap, int * atype,
+                                    double * x, double * p, double * f,
+                                    double & cuton, double & cutoff, double & cycle,
+                                    int & nat, double * rscale, double * gscale, double * fgscale) {
   for (int i=0; i<nglobal; i++) {
     if (icpumap[i] == 1) {
       int atypei = atype[i]-1;
@@ -331,6 +329,56 @@ void directVanDerWaals(int nglobal, int * icpumap, int * atype,
       f[3*i+0] -= fx;
       f[3*i+1] -= fy;
       f[3*i+2] -= fz;
+    }
+  }
+}
+
+extern "C" void vanderwaals_exclusion_(int & nglobal, int * icpumap, int * atype,
+                                       double * x, double * p, double * f,
+                                       double & cuton, double & cutoff, double & cycle,
+                                       int & numTypes, double * rscale, double * gscale,
+                                       double * fgscale, int * numex, int * natex) {
+  for (int i=0, ic=0; i<nglobal; i++) {
+    if (icpumap[i] == 1) {
+      int atypei = atype[i]-1;
+      for (int jc=0; jc<numex[i]; jc++, ic++) {
+        int j = natex[ic]-1;
+        vec3 dX;
+        for (int d=0; d<3; d++) dX[d] = x[3*i+d] - x[3*j+d];
+        wrap(dX, cycle);
+        real_t R2 = norm(dX);
+        if (R2 != 0) {
+          int atypej = atype[j]-1;
+          real_t rs = rscale[atypei*numTypes+atypej];
+          real_t gs = gscale[atypei*numTypes+atypej];
+          real_t fgs = fgscale[atypei*numTypes+atypej];
+          real_t R2s = R2 * rs;
+          real_t invR2 = 1.0 / R2s;
+          real_t invR6 = invR2 * invR2 * invR2;
+          real_t cuton2 = cuton * cuton;
+          real_t cutoff2 = cutoff * cutoff;
+          if (R2 < cutoff2) {
+            real_t tmp = 0, dtmp = 0;
+            if (cuton2 < R2) {
+              real_t tmp1 = (cutoff2 - R2) / ((cutoff2-cuton2)*(cutoff2-cuton2)*(cutoff2-cuton2));
+              real_t tmp2 = tmp1 * (cutoff2 - R2) * (cutoff2 - 3 * cuton2 + 2 * R2);
+              tmp = invR6 * (invR6 - 1) * tmp2;
+              dtmp = invR6 * (invR6 - 1) * 12 * (cuton2 - R2) * tmp1
+                - 6 * invR6 * (invR6 + (invR6 - 1) * tmp2) * tmp2 / R2;
+            } else {
+              tmp = invR6 * (invR6 - 1);
+              dtmp = invR2 * invR6 * (2 * invR6 - 1);
+            }
+            dtmp *= fgs;
+            p[i] -= gs * tmp;
+            f[3*i+0] += dX[0] * dtmp;
+            f[3*i+1] += dX[1] * dtmp;
+            f[3*i+2] += dX[2] * dtmp;
+          }
+        }
+      }
+    } else {
+      ic += numex[i];
     }
   }
 }
@@ -438,11 +486,9 @@ int main(int argc, char ** argv) {
   fmm_vanderwaals_(nglobal, &icpumap[0], &atype[0], &x[0], &p[0], &f[0],
                    cuton, cutoff, cycle, nat, &rscale[0], &gscale[0], &fgscale[0]);
   stop("FMM Van der Waals");
-
-  // Direct Van der Waals
   start("Direct Van der Waals");
-  directVanDerWaals(nglobal, &icpumap[0], &atype[0], &x[0], &p2[0], &f2[0],
-                    cuton, cutoff, cycle, nat, &rscale[0], &gscale[0], &fgscale[0]);
+  direct_vanderwaals_(nglobal, &icpumap[0], &atype[0], &x[0], &p2[0], &f2[0],
+                      cuton, cutoff, cycle, nat, &rscale[0], &gscale[0], &fgscale[0]);
   stop("Direct Van der Waals");
 
   // verify
