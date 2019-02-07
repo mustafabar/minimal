@@ -1,4 +1,4 @@
-debug charmm.cxx -np 1
+debug charmm.cxx -np 1 using bisect
 get recvBodies
 call from test_charmm.f90
 Check energy drift
