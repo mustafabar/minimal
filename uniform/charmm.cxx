@@ -40,8 +40,17 @@ void splitRange(int & begin, int & end, int iSplit, int numSplit) {
   if (remainder > iSplit) end++;
 }
 
-extern "C" void fmm_init_(int & images, double & theta, int & verbose) {
-
+extern "C" void fmm_init_(int & nglobal, int & images, int & verbose) {
+  baseMPI = new BaseMPI;
+  const int numBodies = nglobal / baseMPI->mpisize;
+  const int ncrit = 32;
+  const int maxLevel = numBodies >= ncrit ? 1 + int(log(numBodies / ncrit)/M_LN2/3) : 0;
+  const int numImages = images;
+  FMM = new ParallelFMM(numBodies, maxLevel, numImages);
+  VERBOSE = verbose & (FMM->MPIRANK == 0);
+  if (numImages > 0 && int(log2(FMM->MPISIZE)) % 3 != 0) {
+    if (FMM->MPIRANK==0) printf("Warning: MPISIZE must be a power of 8 for periodic domain to be square\n");
+  }
 }
 
 void directVanDerWaals(int nglobal, int * icpumap, int * atype,
@@ -96,31 +105,16 @@ void directVanDerWaals(int nglobal, int * icpumap, int * atype,
 }
 
 int main(int argc, char ** argv) {
-  const int nglobal = 1000;
-  const int ksize = 14;
-  const int nat = 16;
-  const vec3 cycle = 10 * M_PI;
-  const real_t alpha = 10 / max(cycle);
-  const real_t sigma = .25 / M_PI;
-  const real_t cuton = 9.5;
-  const real_t cutoff = 10;
-
-  baseMPI = new BaseMPI;
-  const int numBodies = nglobal / baseMPI->mpisize;
-  const int ncrit = 32;
-  const int maxLevel = numBodies >= ncrit ? 1 + int(log(numBodies / ncrit)/M_LN2/3) : 0;
-  const int gatherLevel = 1;
-  const int numImages = 6;
-  FMM = new ParallelFMM(numBodies, maxLevel, numImages);
-  ewald = new Ewald(ksize, alpha, sigma, cutoff, cycle);
-  VERBOSE = FMM->MPIRANK == 0;
-  if (numImages > 0 && int(log2(FMM->MPISIZE)) % 3 != 0) {
-    if (FMM->MPIRANK==0) printf("Warning: MPISIZE must be a power of 8 for periodic domain to be square\n");
-  }
-  print("FMM Parameters");
-
-  print("Coulomb");
-  start("Total FMM");
+  int nglobal = 1000;
+  int images = 6;
+  int ksize = 14;
+  int nat = 16;
+  int verbose = 1;
+  vec3 cycle = 10 * M_PI;
+  real_t alpha = 10 / max(cycle);
+  real_t sigma = .25 / M_PI;
+  real_t cuton = 9.5;
+  real_t cutoff = 10;
 
   std::vector<double> x(3*nglobal);
   std::vector<double> q(nglobal);
@@ -160,24 +154,28 @@ int main(int argc, char ** argv) {
     gscale[i] = 0.0001;
     fgscale[i] = gscale[i];
   }
-  int ista = 0;
-  int iend = nglobal;
-  splitRange(ista, iend, baseMPI->mpirank, baseMPI->mpisize);
-  for (int i=ista; i<iend; i++) {
-    icpumap[i] = 1;
-  }
 
   // fmm_init
+  fmm_init_(nglobal, images, verbose);
+  
+  // fmm_partition
+  print("Coulomb");
+  start("Total FMM");
   start("Partition");
+  const int gatherLevel = 1;
   FMM->partitioner(gatherLevel);
-  stop("Partition");
   int iX[3] = {0, 0, 0};
   FMM->R0 = 0.5 * max(cycle) / FMM->numPartition[FMM->maxGlobLevel][0];
   for_3d FMM->RGlob[d] = FMM->R0 * FMM->numPartition[FMM->maxGlobLevel][d];
   FMM->getGlobIndex(iX,FMM->MPIRANK,FMM->maxGlobLevel);
   for_3d FMM->X0[d] = 2 * FMM->R0 * (iX[d] + .5);
 
-  // fmm_partition
+  int ista = 0;
+  int iend = nglobal;
+  splitRange(ista, iend, baseMPI->mpirank, baseMPI->mpisize);
+  for (int i=ista; i<iend; i++) {
+    icpumap[i] = 1;
+  }
   int nlocal = 0;
   for (int i=0; i<nglobal; i++) {
     if (icpumap[i] == 1) nlocal++;
@@ -206,6 +204,7 @@ int main(int argc, char ** argv) {
     q[i] = FMM->Jbodies[b][3];
     icpumap[i] = 1;
   }
+  stop("Partition");
   
   // fmm_coulomb
   nlocal = 0;
@@ -264,6 +263,7 @@ int main(int argc, char ** argv) {
 
   // ewald_coulomb
   start("Total Ewald");
+  ewald = new Ewald(ksize, alpha, sigma, cutoff, cycle);
   nlocal = 0;
   for (int i=0; i<nglobal; i++) {
     if (icpumap[i] == 1) nlocal++;
