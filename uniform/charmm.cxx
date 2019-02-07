@@ -58,7 +58,6 @@ extern "C" void fmm_init_(int & nglobal, int & images, int & verbose) {
 extern "C" void fmm_finalize_() {
   delete baseMPI;
   delete FMM;
-  delete ewald;
 }
 
 extern "C" void fmm_partition_(int & nglobal, int * icpumap, double * x, double * q,
@@ -175,6 +174,51 @@ extern "C" void fmm_coulomb_(int & nglobal, int * icpumap,
   }
 }
 
+extern "C" void ewald_coulomb_(int & nglobal, int * icpumap, double * x, double * q, double * p, double * f,
+                               int & ksize, double & alpha, double & sigma, double & cutoff, double & cycle) {
+  ewald = new Ewald(ksize, alpha, sigma, cutoff, cycle);
+  int nlocal = 0;
+  for (int i=0; i<nglobal; i++) {
+    if (icpumap[i] == 1) nlocal++;
+    else icpumap[i] = 0;
+  }
+  FMM->numBodies = nlocal;
+  FMM->Jbodies.resize(nlocal);
+  for (int i=0,b=0; i<nglobal; i++) {
+    if (icpumap[i] == 1) {
+      FMM->Jbodies[b][0] = x[3*i+0];
+      FMM->Jbodies[b][1] = x[3*i+1];
+      FMM->Jbodies[b][2] = x[3*i+2];
+      FMM->Jbodies[b][3] = q[i];
+      int iwrap = wrap(FMM->Jbodies[b], cycle);
+      FMM->Index[b] = i | (iwrap << shift);
+      FMM->Ibodies[b] = 0;
+      b++;
+    }
+  }
+  start("Ewald real part");
+  FMM->ewaldRealPart(alpha,cutoff);
+  stop("Ewald real part");
+  FMM->Ibodies.resize(FMM->numBodies);
+  FMM->Jbodies.resize(FMM->numBodies);
+  start("Ewald wave part");
+  Waves waves = ewald->initWaves();
+  ewald->dft(waves,FMM->Jbodies);
+  waves = baseMPI->allreduceWaves(waves);
+  ewald->wavePart(waves);
+  ewald->idft(waves,FMM->Ibodies,FMM->Jbodies);
+  stop("Ewald wave part");
+  ewald->selfTerm(FMM->Ibodies, FMM->Jbodies);
+  for (int b=0; b<FMM->numBodies; b++) {
+    int i = FMM->Index[b] & mask;
+    p[i]     += FMM->Ibodies[b][0] * FMM->Jbodies[b][3] * Celec;
+    f[3*i+0] += FMM->Ibodies[b][1] * FMM->Jbodies[b][3] * Celec;
+    f[3*i+1] += FMM->Ibodies[b][2] * FMM->Jbodies[b][3] * Celec;
+    f[3*i+2] += FMM->Ibodies[b][3] * FMM->Jbodies[b][3] * Celec;
+  }
+  delete ewald;
+}
+
 void directVanDerWaals(int nglobal, int * icpumap, int * atype,
                        double * x, double * p, double * f,
                        double cuton, double cutoff, double cycle,
@@ -279,58 +323,15 @@ int main(int argc, char ** argv) {
     fgscale[i] = gscale[i];
   }
 
-  // fmm_init
-  fmm_init_(nglobal, images, verbose);
-  
-  // fmm_partition
+  fmm_init_(nglobal, images, verbose);  
   print("Coulomb");
   start("Total FMM");
   fmm_partition_(nglobal, &icpumap[0], &x[0], &q[0], &xold[0], cycle);
   fmm_coulomb_(nglobal, &icpumap[0], &x[0], &q[0], &p[0], &f[0], cycle);
   stop("Total FMM");
-
-  // ewald_coulomb
   start("Total Ewald");
-  ewald = new Ewald(ksize, alpha, sigma, cutoff, cycle);
-  int nlocal = 0;
-  for (int i=0; i<nglobal; i++) {
-    if (icpumap[i] == 1) nlocal++;
-    else icpumap[i] = 0;
-  }
-  FMM->numBodies = nlocal;
-  FMM->Jbodies.resize(nlocal);
-  for (int i=0,b=0; i<nglobal; i++) {
-    if (icpumap[i] == 1) {
-      FMM->Jbodies[b][0] = x[3*i+0];
-      FMM->Jbodies[b][1] = x[3*i+1];
-      FMM->Jbodies[b][2] = x[3*i+2];
-      FMM->Jbodies[b][3] = q[i];
-      int iwrap = wrap(FMM->Jbodies[b], cycle);
-      FMM->Index[b] = i | (iwrap << shift);
-      FMM->Ibodies[b] = 0;
-      b++;
-    }
-  }
-  start("Ewald real part");
-  FMM->ewaldRealPart(alpha,cutoff);
-  stop("Ewald real part");
-  FMM->Ibodies.resize(FMM->numBodies);
-  FMM->Jbodies.resize(FMM->numBodies);
-  start("Ewald wave part");
-  Waves waves = ewald->initWaves();
-  ewald->dft(waves,FMM->Jbodies);
-  waves = baseMPI->allreduceWaves(waves);
-  ewald->wavePart(waves);
-  ewald->idft(waves,FMM->Ibodies,FMM->Jbodies);
-  stop("Ewald wave part");
-  ewald->selfTerm(FMM->Ibodies, FMM->Jbodies);
-  for (int b=0; b<FMM->numBodies; b++) {
-    int i = FMM->Index[b] & mask;
-    p2[i]     += FMM->Ibodies[b][0] * FMM->Jbodies[b][3] * Celec;
-    f2[3*i+0] += FMM->Ibodies[b][1] * FMM->Jbodies[b][3] * Celec;
-    f2[3*i+1] += FMM->Ibodies[b][2] * FMM->Jbodies[b][3] * Celec;
-    f2[3*i+2] += FMM->Ibodies[b][3] * FMM->Jbodies[b][3] * Celec;
-  }
+  ewald_coulomb_(nglobal, &icpumap[0], &x[0], &q[0], &p2[0], &f2[0],
+                 ksize, alpha, sigma, cutoff, cycle);
   stop("Total Ewald");
 
   // verify
@@ -371,7 +372,7 @@ int main(int argc, char ** argv) {
   // fmm_vanderwaals
   print("Van der Waals");
   start("FMM Van der Waals");
-  nlocal = 0;
+  int nlocal = 0;
   for (int i=0; i<nglobal; i++) {
     if (icpumap[i] == 1) nlocal++;
     else icpumap[i] = 0;
