@@ -98,6 +98,11 @@ extern "C" void fmm_partition_(int & nglobal, int * icpumap, double * x, double 
     }
   }
   FMM->partitionComm();
+  stop("Partition");
+  start("Grow tree");
+  FMM->sortBodies();
+  FMM->buildTree();
+  stop("Grow tree");
   for (int i=0; i<nglobal; i++) {
     icpumap[i] = 0;
   }
@@ -114,7 +119,6 @@ extern "C" void fmm_partition_(int & nglobal, int * icpumap, double * x, double 
     xold[3*i+2] = FMM->Ibodies[b][2];
     icpumap[i] = 1;
   }
-  stop("Partition");
 }
 
 extern "C" void fmm_coulomb_(int & nglobal, int * icpumap,
@@ -139,10 +143,7 @@ extern "C" void fmm_coulomb_(int & nglobal, int * icpumap,
       b++;
     }
   }
-  start("Grow tree");
   FMM->sortBodies();
-  FMM->buildTree();
-  stop("Grow tree");
   start("Comm LET bodies");
   FMM->P2PSend();
   FMM->P2PRecv();
@@ -196,6 +197,7 @@ extern "C" void ewald_coulomb_(int & nglobal, int * icpumap, double * x, double 
       b++;
     }
   }
+  FMM->sortBodies();
   start("Ewald real part");
   FMM->ewaldRealPart(alpha,cutoff);
   stop("Ewald real part");
@@ -272,6 +274,7 @@ extern "C" void fmm_vanderwaals_(int & nglobal, int * icpumap, int * atype,
       b++;
     }
   }
+  FMM->sortBodies();
   FMM->vanDerWaals(cuton, cutoff, nat, rscale, gscale, fgscale);
   for (int b=0; b<FMM->numBodies; b++) {
     int i = FMM->Index[b] & mask;
