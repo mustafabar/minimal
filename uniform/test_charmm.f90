@@ -632,9 +632,9 @@ program main
   include 'mpif.h'
   character(len=128) path,infile,outfile,nstp
   integer dynsteps,accuracy
-  integer i,itry,nitr,itr,ierr,expansions,images,ista,iend,istat,ksize,lnam,mpirank,mpisize
+  integer i,itry,nitr,itr,ierr,images,ista,iend,istat,ksize,lnam,mpirank,mpisize
   integer nat,nglobal,verbose,nbonds,ntheta,imcentfrq,printfrq,nres
-  real(8) alpha,sigma,cuton,cutoff,average,pcycle,theta,time,tic,toc
+  real(8) alpha,sigma,cuton,cutoff,average,pcycle,time,tic,toc
   real(8) pl2err,fl2err,enerf,enere,grmsf,grmse
   integer,dimension (128) :: iseed
   integer,allocatable,dimension(:) :: icpumap,numex,natex,atype,ib,jb,it,jt,kt,ires
@@ -648,25 +648,79 @@ program main
   call mpi_comm_size(mpi_comm_world,mpisize,ierr)
   call mpi_comm_rank(mpi_comm_world,mpirank,ierr)
   nglobal = 1000
-  expansions = 10
-  images = 3
-  theta = 0.3
+  images = 6
   verbose = 0
-  call get_command_argument(1,path,lnam,istat)
-  call get_command_argument(2,infile,lnam,istat)
-  call get_command_argument(3,outfile,lnam,istat)
-  infile = trim(path) // trim(infile)
-  outfile = trim(path) // trim(outfile)
-  call charmm_cor_read(nglobal,x,q,pcycle,infile,numex,natex,nat,atype,&
-       rscale,gscale,fgscale,nbonds,ntheta,ib,jb,it,jt,kt,rbond,cbond,&
-       aangle,cangle,mass,xc,v,nres,ires,time)
+  pcycle = 2 * nglobal ** (1. / 6)
   cutoff = 3 * nglobal ** (1. / 6)
   cuton = 0.95 * cutoff
   alpha = 4 / cutoff
   ksize = int(4 / pi * alpha * pcycle)
   sigma = .25 / pi
-  allocate( p(nglobal),f(3*nglobal),icpumap(nglobal) )
-  allocate( p2(nglobal),f2(3*nglobal) )
+  nat = 16
+  time = 100. ! first 100ps was equilibration with standard CHARMM
+  charmmio: if (command_argument_count() > 1) then
+     call get_command_argument(1,path,lnam,istat)
+     call get_command_argument(2,infile,lnam,istat)
+     call get_command_argument(3,outfile,lnam,istat)
+     infile = trim(path) // trim(infile)
+     outfile = trim(path) // trim(outfile)
+     call charmm_cor_read(nglobal,x,q,pcycle,infile,numex,natex,nat,atype,&
+          rscale,gscale,fgscale,nbonds,ntheta,ib,jb,it,jt,kt,rbond,cbond,&
+          aangle,cangle,mass,xc,v,nres,ires,time)
+     cutoff = 3 * nglobal ** (1. / 6)
+     cuton = 0.95 * cutoff
+     alpha = 4 / cutoff
+     ksize = int(4 / pi * alpha * pcycle)
+     sigma = .25 / pi
+     allocate( p(nglobal),f(3*nglobal),icpumap(nglobal) )
+     allocate( p2(nglobal),f2(3*nglobal) )
+  else
+     allocate( x(3*nglobal),q(nglobal),v(3*nglobal) )
+     allocate( p(nglobal),p2(nglobal),f(3*nglobal),f2(3*nglobal) )
+     allocate( xc(3*nglobal),ires(nglobal),icpumap(nglobal) )
+     allocate( numex(nglobal),natex(nglobal),atype(nglobal) )
+     allocate( rscale(nat*nat),gscale(nat*nat),fgscale(nat*nat) )
+     do i = 1,128
+        iseed(i) = 0
+     enddo
+     call random_seed(put=iseed)
+     call random_number(x)
+     call random_number(q)
+     average = 0
+     do i = 1,nglobal
+        x(3*i-2) = x(3*i-2) * pcycle
+        x(3*i-1) = x(3*i-1) * pcycle
+        x(3*i-0) = x(3*i-0) * pcycle
+        p(i) = 0
+        p2(i) = 0
+        f(3*i-2) = 0
+        f(3*i-1) = 0
+        f(3*i-0) = 0
+        f2(3*i-2) = 0
+        f2(3*i-1) = 0
+        f2(3*i-0) = 0
+        icpumap(i) = 0
+        average = average + q(i)
+     enddo
+     average = average / nglobal
+     do i = 1,nglobal
+        q(i) = q(i) - average
+     enddo
+     do i = 1,nglobal
+        numex(i) = 1
+        if(mod(i,2) == 1)then
+           natex(i) = i+1
+        else
+           natex(i) = i-1
+        endif
+        atype(i) = 1
+     enddo
+     do i = 1,nat*nat
+        rscale(i) = 1
+        gscale(i) = 0.0001
+        fgscale(i) = gscale(i)
+     enddo
+  endif charmmio
   if (mpirank == 0) print*,'I/O done'
   ista = 1
   iend = nglobal
@@ -744,6 +798,7 @@ program main
      print "(a,f15.4)",'GRMS (Direct)        : ',grmse
   endif
 
+  if (1.eq.0) then
   ! run dynamics if third command line argument specified
   call get_command_argument(4,nstp,lnam,istat)
   read(nstp,*)dynsteps
@@ -762,7 +817,8 @@ program main
 
   deallocate( x,q,v,p,f,p2,f2,icpumap )
   deallocate( ires,numex,natex,rscale,gscale,fgscale,atype )
-
+  endif
+  
 ! from the end of run_dynamics():
 !    deallocate(xnew,xold,fac1,fac2)
 !    deallocate(ib,jb,it,jt,kt,rbond,cbond,mass,aangle,cangle,x)

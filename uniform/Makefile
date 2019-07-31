@@ -14,14 +14,15 @@ charmm:
 	mpirun -np 8 ./a.out
 
 test_charmm:
-	make libcharmm.a
+	make clean libcharmm.a
 	mpiifort test_charmm.f90 -fopenmp -L. -lcharmm -lstdc++ -lgomp -lmpi_cxx
-	mpirun -n 8 ./a.out ./ water_32.fmm water.out 0
+	mpirun -n 1 ./a.out ./ water_32.fmm water.out 0
+	mpirun -n 1 ./a.out
 
 libcharmm.a:
-	mpiicpc -I. -Wfatal-errors -fopenmp -mavx -O3 -c -o charmm.o charmm.cxx
+	mpiicpc -I. -Wfatal-errors -fopenmp -mavx -O3 -c -o charmm.o charmm.cxx -DLIBRARY
 	ar ruv libcharmm.a charmm.o
 	ranlib libcharmm.a
 
 clean:
-	@find . -name "*.o" -o -name "*.out*" -o -name "*.a" -o -name "*.mod" | xargs rm -rf
+	@find . -name "*.o" -o -name "*.out*" -o -name "*.a" -o -name "*.mod" -o -name "*.dat" -o -name "*.pdb" | xargs rm -rf

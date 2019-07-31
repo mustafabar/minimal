@@ -136,10 +136,10 @@ extern "C" void fmm_coulomb_(int & nglobal, int * icpumap,
       FMM->Jbodies[b][0] = x[3*i+0];
       FMM->Jbodies[b][1] = x[3*i+1];
       FMM->Jbodies[b][2] = x[3*i+2];
-      FMM->Jbodies[b][3] = q[i];
+      FMM->Jbodies[b][3] = q[i] == 0 ? EPS : q[i];
+      FMM->Ibodies[b] = 0;
       int iwrap = wrap(FMM->Jbodies[b], cycle);
       FMM->Index[b] = i | (iwrap << shift);
-      FMM->Ibodies[b] = 0;
       b++;
     }
   }
@@ -275,6 +275,10 @@ extern "C" void fmm_vanderwaals_(int & nglobal, int * icpumap, int * atype,
     }
   }
   FMM->sortBodies();
+  start("Comm LET bodies");
+  FMM->P2PSend();
+  FMM->P2PRecv();
+  stop("Comm LET bodies");
   FMM->vanDerWaals(cuton, cutoff, nat, rscale, gscale, fgscale);
   for (int b=0; b<FMM->numBodies; b++) {
     int i = FMM->Index[b] & mask;
@@ -386,8 +390,9 @@ extern "C" void vanderwaals_exclusion_(int & nglobal, int * icpumap, int * atype
   }
 }
 
+#ifndef LIBRARY
 int main(int argc, char ** argv) {
-  int nglobal = 1000;
+  int nglobal = 2991;
   int images = 6;
   int ksize = 14;
   int nat = 16;
@@ -425,7 +430,7 @@ int main(int argc, char ** argv) {
     q[i] -= average;
   }
   for (int i=0; i<nglobal; i++)	{
-    numex[i] = 1;
+    numex[i] = 2;
     if (i % 2 == 0) {
       natex[i] = i+1;
     } else {
@@ -444,10 +449,14 @@ int main(int argc, char ** argv) {
   start("Total FMM");
   fmm_partition_(nglobal, &icpumap[0], &x[0], &q[0], &xold[0], cycle);
   fmm_coulomb_(nglobal, &icpumap[0], &x[0], &q[0], &p[0], &f[0], cycle);
+  //coulomb_exclusion_(nglobal, &icpumap[0], &x[0], &q[0], &p[0], &f[0],
+  //                   cycle, &numex[0], &natex[0]);
   stop("Total FMM");
   start("Total Ewald");
   ewald_coulomb_(nglobal, &icpumap[0], &x[0], &q[0], &p2[0], &f2[0],
                  ksize, alpha, sigma, cutoff, cycle);
+  //coulomb_exclusion_(nglobal, &icpumap[0], &x[0], &q[0], &p2[0], &f2[0],
+  //                   cycle, &numex[0], &natex[0]);
   stop("Total Ewald");
   // verify
   double potSum=0, potSum2=0, accDif=0, accNrm=0;
@@ -480,9 +489,6 @@ int main(int argc, char ** argv) {
   std::fill(f.begin(),f.end(),0);
   std::fill(p2.begin(),p2.end(),0);
   std::fill(f2.begin(),f2.end(),0);
-  for (int b=0; b<FMM->numBodies; b++) {
-    FMM->Ibodies[b] = 0;
-  }
   
   print("Van der Waals");
   start("FMM Van der Waals");
@@ -522,3 +528,4 @@ int main(int argc, char ** argv) {
   print("Rel. L2 Error (acc)",accRel);
   fmm_finalize_();
 }
+#endif
