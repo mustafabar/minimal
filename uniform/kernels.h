@@ -103,7 +103,7 @@ namespace exafmm {
       }
     }
 
-  protected:
+  public:
     void P2M(vec3 dX, real_t SRC, complex_t *Mj) const {
       complex_t Ynm[P*P], YnmTheta[P*P];
       real_t rho, alpha, beta;
@@ -338,7 +338,6 @@ namespace exafmm {
       }
     }
 
-  public:
     Kernel() {
       prefactor.resize(4*P*P);
       Anm.resize(4*P*P);

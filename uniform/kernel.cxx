@@ -1,111 +1,57 @@
-#include "base_mpi.h"
-#include "args.h"
-#include "ewald.h"
-#include "verify.h"
-#if EXAFMM_SERIAL
-#include "serialfmm.h"
-#else
-#include "parallelfmm.h"
-#endif
+#include "types.h"
+#include "kernels.h"
+
 using namespace exafmm;
 
 int main(int argc, char ** argv) {
-  const int ksize = 14;
-  const real_t cycle = 10 * M_PI;
-  const real_t alpha = 10 / cycle;
-  const real_t sigma = .25 / M_PI;
-  const real_t cutoff = 10;
-  Args args(argc, argv);
-  BaseMPI baseMPI;
-  Ewald ewald(ksize, alpha, sigma, cutoff, cycle);
-  Verify verify;
-
-  args.numBodies /= baseMPI.mpisize;
-  const int numBodies = args.numBodies;
-  const int ncrit = args.ncrit;
-  const int maxLevel = numBodies >= ncrit ? 1 + int(log(numBodies / ncrit)/M_LN2/3) : 0;
-  const int gatherLevel = 1;
-  const int numImages = args.images;
-
-  SerialFMM FMM(numBodies, maxLevel, numImages);
-  VERBOSE = 1;
-  args.verbose = VERBOSE;
-  print("FMM Parameters");
-  args.print(stringLength);
-
-  print("FMM Profiling");
-  start("Total FMM");
-  start("Partition");
-  FMM.partitioner(gatherLevel);
-  stop("Partition");
-
-  int iX[3] = {0, 0, 0};
-  FMM.R0 = 0.5 * cycle / FMM.numPartition[FMM.maxGlobLevel][0];
-  for_3d FMM.RGlob[d] = FMM.R0 * FMM.numPartition[FMM.maxGlobLevel][d];
-  FMM.getGlobIndex(iX,FMM.MPIRANK,FMM.maxGlobLevel);
-  for_3d FMM.X0[d] = 2 * FMM.R0 * (iX[d] + .5);
-  srand48(0);
-  real_t average = 0;
-  for (int i=0; i<FMM.numBodies; i++) {
-    FMM.Jbodies[i][0] = 2 * FMM.R0 * (drand48() + iX[0]);
-    FMM.Jbodies[i][1] = 2 * FMM.R0 * (drand48() + iX[1]);
-    FMM.Jbodies[i][2] = 2 * FMM.R0 * (drand48() + iX[2]);
-    FMM.Jbodies[i][3] = drand48();
-    average += FMM.Jbodies[i][3];
+  const int numBodies = 10;
+  std::vector<vec4> Ibodies(2*numBodies);
+  std::vector<vec4> Jbodies(2*numBodies);
+  for (int i=0; i<numBodies; i++) {
+    Ibodies[i] = 0;
+    Jbodies[i][0] = drand48();
+    Jbodies[i][1] = drand48();
+    Jbodies[i][2] = drand48();
+    Jbodies[i][3] = drand48();
+    Ibodies[i+numBodies] = 0;
+    Jbodies[i+numBodies][0] = drand48() + 5;
+    Jbodies[i+numBodies][1] = drand48();
+    Jbodies[i+numBodies][2] = drand48();
+    Jbodies[i+numBodies][3] = drand48();
   }
-  average /= FMM.numBodies;
-  for (int i=0; i<FMM.numBodies; i++) {
-    FMM.Jbodies[i][3] -= average;
+  Kernel kernel;
+  cvecP Mc, Mp, Lc = complex_t(0), Lp = complex_t(0);
+  vec3 dX;
+  for (int i=0; i<numBodies; i++) {
+    for_3d dX[d] = Jbodies[i][d] - 0.5;
+    kernel.P2M(dX, Jbodies[i][3], Mc);
   }
-
-  start("Grow tree");
-  FMM.sortBodies();
-  FMM.buildTree();
-  stop("Grow tree");
-
-  FMM.upwardPass();
-
-  FMM.periodicM2L();
-
-  FMM.downwardPass();
-  stop("Total FMM");
-
-  vec3 localDipole = FMM.getDipole();
-  vec3 globalDipole = baseMPI.allreduceVec3(localDipole);
-  int globalNumBodies = baseMPI.allreduceInt(FMM.numBodies);
-  FMM.dipoleCorrection(globalDipole, globalNumBodies);
-
-  start("Total Ewald");
-  std::vector<vec4> Ibodies(FMM.numBodies);
-  for (int b=0; b<FMM.numBodies; b++) {
-    Ibodies[b] = FMM.Ibodies[b];
-    Ibodies[b][0] *= FMM.Jbodies[b][3];
-    FMM.Ibodies[b] = 0;
+  dX = 0.5;
+  kernel.M2M(dX, Mc, Mp);
+  dX = 0;
+  dX[0] = 4;
+  kernel.M2L(dX, Mp, Lp);
+  dX = -0.5;
+  dX[0] = 0.5;
+  kernel.L2L(dX, Lp, Lc);
+  for (int i=0; i<numBodies; i++) {
+    for_3d dX[d] = Jbodies[i+numBodies][d] - 0.5;
+    dX[0] = Jbodies[i+numBodies][0] - 5.5;
+    kernel.L2P(dX, Lc, Ibodies[i]);
   }
-  start("Ewald real part");
-  FMM.ewaldRealPart(alpha,cutoff);
-  stop("Ewald real part");
-  FMM.Ibodies.resize(FMM.numBodies);
-  FMM.Jbodies.resize(FMM.numBodies);
-  start("Ewald wave part");
-  Waves waves = ewald.initWaves();
-  ewald.dft(waves,FMM.Jbodies);
-  waves = baseMPI.allreduceWaves(waves);
-  ewald.wavePart(waves);
-  ewald.idft(waves,FMM.Ibodies,FMM.Jbodies);
-  stop("Ewald wave part");
-  ewald.selfTerm(FMM.Ibodies, FMM.Jbodies);
-  for (int b=0; b<FMM.numBodies; b++) {
-    FMM.Ibodies[b][0] *= FMM.Jbodies[b][3];
-  }
-  stop("Total Ewald");
-  double potSum = verify.getSumScalar(FMM.Ibodies);
-  double potSum2 = verify.getSumScalar(Ibodies);
-  double accDif = verify.getDifVector(FMM.Ibodies, Ibodies);
-  double accNrm = verify.getNrmVector(FMM.Ibodies);
-  print("FMM vs. direct");
-  double potDif = (potSum - potSum2) * (potSum - potSum2);
-  double potNrm = potSum * potSum;
-  verify.print("Rel. L2 Error (pot)",std::sqrt(potDif/potNrm));
-  verify.print("Rel. L2 Error (acc)",std::sqrt(accDif/accNrm));
+  dX = 0;
+  kernel.P2P(Ibodies, numBodies, 2*numBodies, Jbodies, 0, numBodies, dX);
+  double potDif = 0, potNrm = 0, accDif = 0, accNrm = 0;
+  for (int i=0; i<numBodies; i++) {
+    potDif += (Ibodies[i+numBodies][0] - Ibodies[i][0]) * (Ibodies[i+numBodies][0] - Ibodies[i][0]);
+    potNrm += Ibodies[i+numBodies][0] * Ibodies[i+numBodies][0];
+    accDif += (Ibodies[i+numBodies][1] - Ibodies[i][1]) * (Ibodies[i+numBodies][1] - Ibodies[i][1]);
+    accDif += (Ibodies[i+numBodies][2] - Ibodies[i][2]) * (Ibodies[i+numBodies][2] - Ibodies[i][2]);
+    accDif += (Ibodies[i+numBodies][3] - Ibodies[i][3]) * (Ibodies[i+numBodies][3] - Ibodies[i][3]);
+    accNrm += Ibodies[i+numBodies][1] * Ibodies[i+numBodies][1];
+    accNrm += Ibodies[i+numBodies][2] * Ibodies[i+numBodies][2];
+    accNrm += Ibodies[i+numBodies][3] * Ibodies[i+numBodies][3];
+  }  
+  printf("Rel. L2 Error (pot) : %e\n",std::sqrt(potDif/potNrm));
+  printf("Rel. L2 Error (acc) : %e\n",std::sqrt(accDif/accNrm));
 }
