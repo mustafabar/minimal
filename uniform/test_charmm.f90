@@ -721,6 +721,9 @@ program main
         fgscale(i) = gscale(i)
      enddo
   endif charmmio
+  open(unit=3,file='initial.dat',status='unknown')
+  write(3,'(4f28.18)')(x(3*i-2),x(3*i-1),x(3*i-0),q(i),i=1,nglobal)
+
   if (mpirank == 0) print*,'I/O done'
   ista = 1
   iend = nglobal

@@ -16,13 +16,13 @@ parallel:
 charmm:
 	mpiicpc -I. -Wfatal-errors -fopenmp -mavx -O3 -c -o charmm.o charmm.cxx
 	mpiicpc -Wfatal-errors -fopenmp -mavx -O3 charmm.o -lmpi_cxx 
-	mpirun -np 8 ./a.out
+	mpirun -np 1 ./a.out
 
 test_charmm:
 	make clean libcharmm.a
 	mpiifort test_charmm.f90 -fopenmp -L. -lcharmm -lstdc++ -lgomp -lmpi_cxx
 	mpirun -n 1 ./a.out ./ water_32.fmm water.out 0
-	mpirun -n 1 ./a.out
+#	mpirun -n 1 ./a.out
 
 libcharmm.a:
 	mpiicpc -I. -Wfatal-errors -fopenmp -mavx -O3 -c -o charmm.o charmm.cxx -DLIBRARY

@@ -1,6 +1,5 @@
-Debug VdW
-get recvBodies
-call from test_charmm.f90
+Match charmm and test_charmm input
+Debug VdW in test_charmm
 Check energy drift
 add smoothing
 Compare energy drift

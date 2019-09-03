@@ -249,11 +249,11 @@ namespace exafmm {
     friend int wrap(vec & v, const vec & w) {                     // Wrap around periodic boundary
       int iw = 0;
       for (int i=0; i<N; i++) {
-	if(v[i] < -w[i] / 2) {
+	while(v[i] < -w[i] / 2) {
 	  v[i] += w[i];
 	  iw |= 1 << i;
 	}
-	if(v[i] >  w[i] / 2) {
+	while(v[i] >  w[i] / 2) {
 	  v[i] -= w[i];
 	  iw |= 1 << i;
 	}

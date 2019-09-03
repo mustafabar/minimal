@@ -1,6 +1,7 @@
 #include "base_mpi.h"
 #include "ewald.h"
 #include "parallelfmm.h"
+#include <fstream>
 using namespace exafmm;
 
 static const real_t Celec = 332.0716;
@@ -11,7 +12,7 @@ BaseMPI * baseMPI;
 ParallelFMM * FMM;
 Ewald * ewald;
 
-int wrap(vec4 & X, const real_t & cycle) {
+int wrap2(vec4 & X, const real_t & cycle) {
   int iwrap = 0;
   for (int d=0; d<3; d++) {
     if(X[d] < 0) {
@@ -26,7 +27,7 @@ int wrap(vec4 & X, const real_t & cycle) {
   return iwrap;
 }
 
-void unwrap(vec4 & X, const real_t & cycle, const int & iwrap) {
+void unwrap2(vec4 & X, const real_t & cycle, const int & iwrap) {
   for (int d=0; d<3; d++) {
     if((iwrap >> d) & 1) X[d] += (X[d] > (cycle/2) ? -cycle : cycle);
   }
@@ -89,7 +90,7 @@ extern "C" void fmm_partition_(int & nglobal, int * icpumap, double * x, double 
       FMM->Jbodies[b][1] = x[3*i+1];
       FMM->Jbodies[b][2] = x[3*i+2];
       FMM->Jbodies[b][3] = q[i];
-      int iwrap = wrap(FMM->Jbodies[b], cycle);
+      int iwrap = wrap2(FMM->Jbodies[b], cycle);
       FMM->Index[b] = i | (iwrap << shift);
       FMM->Ibodies[b][0] = xold[3*i+0];
       FMM->Ibodies[b][1] = xold[3*i+1];
@@ -109,7 +110,7 @@ extern "C" void fmm_partition_(int & nglobal, int * icpumap, double * x, double 
   for (int b=0; b<FMM->numBodies; b++) {
     int i = FMM->Index[b] & mask;
     int iwrap = unsigned(FMM->Index[b]) >> shift;
-    unwrap(FMM->Jbodies[b], cycle, iwrap);
+    unwrap2(FMM->Jbodies[b], cycle, iwrap);
     x[3*i+0] = FMM->Jbodies[b][0];
     x[3*i+1] = FMM->Jbodies[b][1];
     x[3*i+2] = FMM->Jbodies[b][2];
@@ -138,7 +139,7 @@ extern "C" void fmm_coulomb_(int & nglobal, int * icpumap,
       FMM->Jbodies[b][2] = x[3*i+2];
       FMM->Jbodies[b][3] = q[i] == 0 ? EPS : q[i];
       FMM->Ibodies[b] = 0;
-      int iwrap = wrap(FMM->Jbodies[b], cycle);
+      int iwrap = wrap2(FMM->Jbodies[b], cycle);
       FMM->Index[b] = i | (iwrap << shift);
       b++;
     }
@@ -191,7 +192,7 @@ extern "C" void ewald_coulomb_(int & nglobal, int * icpumap, double * x, double 
       FMM->Jbodies[b][1] = x[3*i+1];
       FMM->Jbodies[b][2] = x[3*i+2];
       FMM->Jbodies[b][3] = q[i];
-      int iwrap = wrap(FMM->Jbodies[b], cycle);
+      int iwrap = wrap2(FMM->Jbodies[b], cycle);
       FMM->Index[b] = i | (iwrap << shift);
       FMM->Ibodies[b] = 0;
       b++;
@@ -268,7 +269,7 @@ extern "C" void fmm_vanderwaals_(int & nglobal, int * icpumap, int * atype,
       FMM->Jbodies[b][1] = x[3*i+1];
       FMM->Jbodies[b][2] = x[3*i+2];
       FMM->Jbodies[b][3] = atype[i] - .5;
-      int iwrap = wrap(FMM->Jbodies[b], cycle);
+      int iwrap = wrap2(FMM->Jbodies[b], cycle);
       FMM->Index[b] = i | (iwrap << shift);
       FMM->Ibodies[b] = 0;
       b++;
@@ -395,7 +396,7 @@ int main(int argc, char ** argv) {
   int nglobal = 2991;
   int images = 6;
   int ksize = 14;
-  int nat = 16;
+  int nat = 2;
   int verbose = 1;
   real_t cycle = 10 * M_PI;
   real_t alpha = 10 / cycle;
@@ -436,13 +437,39 @@ int main(int argc, char ** argv) {
     } else {
       natex[i] = i-1;
     }
-    atype[i] = 1;
+    atype[i] = 2 - ((i % 3) == 0);
   }
   for (int i=0; i<nat*nat; i++) {
     rscale[i] = 1;
     gscale[i] = 0.0001;
     fgscale[i] = gscale[i];
   }
+
+  ksize = 13;
+  cycle = 31.1149;
+  alpha = 0.35126591448392;
+  cuton = 10.818015058191;
+  cutoff = 11.3873844146729;
+  rscale[0] = 0.1007443196;
+  rscale[1] = 0.3172922689;
+  rscale[2] = 0.3172922689;
+  rscale[3] = 6.2495773825;
+  gscale[0] = 0.6084000000;
+  gscale[1] = 0.3345827252;
+  gscale[2] = 0.3345827252;
+  gscale[3] = 0.1840000000;
+  fgscale[0] = 0.3677570643;
+  fgscale[1] = 0.6369630721;
+  fgscale[2] = 0.6369630721;
+  fgscale[3] = 6.8995334303;
+  std::ifstream file("initial.dat");
+  std::string line;
+  for (int i=0; i<nglobal; i++) {
+    std::getline(file, line);
+    std::istringstream iss(line);
+    iss >> x[3*i+0] >> x[3*i+1] >> x[3*i+2] >> q[i];   
+  }
+  file.close();
 
   fmm_init_(nglobal, images, verbose);  
   print("Coulomb");
