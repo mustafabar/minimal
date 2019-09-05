@@ -365,8 +365,8 @@ contains
     f(1:3*nglobal)=0.0
     f2(1:3*nglobal)=0.0
     call fmm_coulomb(nglobal,icpumap,x,q,p,f,pcycle)
-    !call ewald_coulomb(nglobal,icpumap,x,q,p2,f2,ksize,alpha,sigma,cutoff,pcycle)
-    !call verify(nglobal,icpumap,p,p2,f,f2,pl2err,fl2err,enerf,enere,grmsf,grmse)
+    call ewald_coulomb(nglobal,icpumap,x,q,p2,f2,ksize,alpha,sigma,cutoff,pcycle)
+    call verify(nglobal,icpumap,p,p2,f,f2,pl2err,fl2err,enerf,enere,grmsf,grmse)
     ftotf=0.0
     ftote=0.0
     do i = 1,nglobal
@@ -394,9 +394,61 @@ contains
     evdw=evdw*0.5
     call bonded_terms(icpumap,atype,x,f,nbonds,ntheta,&
          ib,jb,it,jt,kt,rbond,cbond,aangle,cangle,eb,et)
-    print*,eb,et,efmm,evdw
+    etot=eb+et+efmm+evdw
     return
   end subroutine energy
+
+  subroutine force_testing(nglobal,nat,nbonds,ntheta,ksize,&
+       alpha,sigma,cutoff,cuton,pcycle,xold,&
+       x,p,p2,f,f2,q,gscale,fgscale,rscale,rbond,cbond,aangle,cangle,&
+       ib,jb,it,jt,kt,atype,icpumap,numex,natex)
+
+    implicit none
+    integer nglobal,nat,nbonds,ntheta,ksize,i,j,istart,iend
+    real(8) alpha,sigma,cutoff,cuton,etot,pcycle
+    real(8) xsave,e0,step,step2,eplus,eminus,nforce
+    real(8) pl2err,fl2err,ftotf,ftote
+    integer,allocatable,dimension(:) :: ib,jb,it,jt,kt,atype,icpumap,numex,natex
+    real(8),allocatable,dimension(:) :: xold,x,p,p2,f,f2,q,gscale,fgscale,rscale
+    real(8),allocatable,dimension(:,:) :: rbond,cbond
+    real(8),allocatable,dimension(:,:,:) :: aangle,cangle
+    real(8),allocatable,dimension(:) :: f_analytic
+    call energy(nglobal,nat,nbonds,ntheta,ksize,&
+         alpha,sigma,cutoff,cuton,pcycle,xold,&
+         x,p,p2,f,f2,q,gscale,fgscale,rscale,rbond,cbond,aangle,cangle,&
+         ib,jb,it,jt,kt,atype,icpumap,numex,natex,etot,&
+         pl2err,fl2err,ftotf,ftote)
+    e0=etot
+    allocate(f_analytic(3*nglobal))
+    f_analytic(1:3*nglobal)=f(1:3*nglobal)
+    istart=1
+    iend=10
+    step=0.0001
+    step2=1.0/(2.0*step)
+    write(*,*)'   I      J             Numeric           Analytic             Difference'
+    do i = istart,iend
+       do j = 1,3
+          xsave=x(3*(i-1)+j) ! save it
+          x(3*(i-1)+j)=x(3*(i-1)+j)-step
+          call energy(nglobal,nat,nbonds,ntheta,ksize,&
+               alpha,sigma,cutoff,cuton,pcycle,xold,&
+               x,p,p2,f,f2,q,gscale,fgscale,rscale,rbond,cbond,aangle,cangle,&
+               ib,jb,it,jt,kt,atype,icpumap,numex,natex,eminus,&
+               pl2err,fl2err,ftotf,ftote)
+          x(3*(i-1)+j)=x(3*(i-1)+j)+2.0*step
+          call energy(nglobal,nat,nbonds,ntheta,ksize,&
+               alpha,sigma,cutoff,cuton,pcycle,xold,&
+               x,p,p2,f,f2,q,gscale,fgscale,rscale,rbond,cbond,aangle,cangle,&
+               ib,jb,it,jt,kt,atype,icpumap,numex,natex,eplus,&
+               pl2err,fl2err,ftotf,ftote)
+          nforce=step2*(eplus-eminus)
+          x(3*(i-1)+j)=xsave  ! restore
+          write(*,'(2i7,3f20.9)')i,j,nforce,f_analytic(3*(i-1)+j),nforce-f_analytic(3*(i-1)+j)
+       enddo
+    enddo
+    deallocate(f_analytic)
+    return
+  end subroutine force_testing
 
   subroutine print_energy(time,nglobal,f,v,mass,atype,icpumap,etot,pl2err,fl2err,ftotf,ftote)
     use mpi
@@ -530,6 +582,34 @@ contains
 
   end subroutine run_dynamics
 
+  subroutine pdb_frame(unit,time,nglobal,x,nres,icpumap)
+    use mpi
+    implicit none
+    integer nglobal,nres,ipt,i,unit,ierr,mpirank
+    real(8) time
+    integer,allocatable,dimension(:) :: icpumap
+    real(8),allocatable,dimension(:) :: x
+    call mpi_comm_rank(mpi_comm_world,mpirank,ierr)
+    call bcast3(nglobal,icpumap,x)
+    if (mpirank /= 0) return
+    write(unit,'(''REMARK frame at time:'',f14.4,'' ps'')')time
+    ipt=0
+    do i = 1,nres
+       ipt=ipt+1
+       write(unit,'(a6,i5,2x,a3,1x,a3,1x,a1,i4,3x,3f8.3,2f6.2,11x,a1)')&
+            'HETATM',ipt,'OH2','HOH','w',i,x(3*ipt-2),x(3*ipt-1),x(3*ipt),1.0,1.0,'O'
+       ipt=ipt+1
+       write(unit,'(a6,i5,2x,a3,1x,a3,1x,a1,i4,3x,3f8.3,2f6.2,11x,a1)')&
+            'HETATM',ipt,'HO1','HOH','w',i,x(3*ipt-2),x(3*ipt-1),x(3*ipt),1.0,1.0,'H'
+       ipt=ipt+1
+       write(unit,'(a6,i5,2x,a3,1x,a3,1x,a1,i4,3x,3f8.3,2f6.2,11x,a1)')&
+            'HETATM',ipt,'HO2','HOH','w',i,x(3*ipt-2),x(3*ipt-1),x(3*ipt),1.0,1.0,'H'
+    enddo
+    write(unit,'(''END'')')
+    return
+
+  end subroutine pdb_frame
+
   subroutine image_center(nglobal,x,nres,ires,pcycle,icpumap)
     implicit none
     integer nglobal,nres,flag,istart,iend,nsel,i,j
@@ -630,6 +710,7 @@ program main
   use iso_c_binding
   implicit none
   include 'mpif.h'
+  logical test_force
   character(len=128) path,infile,outfile,nstp
   integer dynsteps,accuracy
   integer i,itry,nitr,itr,ierr,expansions,images,ista,iend,istat,ksize,lnam,mpirank,mpisize
@@ -648,7 +729,9 @@ program main
   call mpi_comm_size(mpi_comm_world,mpisize,ierr)
   call mpi_comm_rank(mpi_comm_world,mpirank,ierr)
   nglobal = 1000
-  images = 6
+  expansions = 10
+  images = 3
+  theta = 0.3
   verbose = 0
   pcycle = 2 * nglobal ** (1. / 6)
   cutoff = 3 * nglobal ** (1. / 6)
@@ -688,9 +771,9 @@ program main
      call random_number(q)
      average = 0
      do i = 1,nglobal
-        x(3*i-2) = x(3*i-2) * pcycle
-        x(3*i-1) = x(3*i-1) * pcycle
-        x(3*i-0) = x(3*i-0) * pcycle
+        x(3*i-2) = x(3*i-2) * pcycle - pcycle / 2
+        x(3*i-1) = x(3*i-1) * pcycle - pcycle / 2
+        x(3*i-0) = x(3*i-0) * pcycle - pcycle / 2
         p(i) = 0
         p2(i) = 0
         f(3*i-2) = 0
@@ -721,9 +804,6 @@ program main
         fgscale(i) = gscale(i)
      enddo
   endif charmmio
-  open(unit=3,file='initial.dat',status='unknown')
-  write(3,'(4f28.18)')(x(3*i-2),x(3*i-1),x(3*i-0),q(i),i=1,nglobal)
-
   if (mpirank == 0) print*,'I/O done'
   ista = 1
   iend = nglobal
@@ -734,13 +814,10 @@ program main
   if (mpirank == 0) print*,'FMM init'
   path = trim(path)//c_null_char
   call fmm_init(nglobal,images,verbose)
+  !call fmm_init(expansions,images,theta,verbose,nglobal,path)
   if (mpirank == 0) print*,'FMM partition'
   call fmm_partition(nglobal,icpumap,x,q,v,pcycle)
 
-  if (mpirank == 0) then
-     print "(a,i2,a)",'--- Accuracy regression loop ',itry,' -'
-     print*,'FMM Coulomb'
-  endif
   do i = 1,nglobal
      p(i) = 0
      f(3*i-2) = 0
@@ -756,6 +833,7 @@ program main
      f2(3*i-0) = 0
   enddo
   call ewald_coulomb(nglobal,icpumap,x,q,p2,f2,ksize,alpha,sigma,cutoff,pcycle)
+  !  call direct_coulomb(nglobal,icpumap,x,q,p2,f2,pcycle)
   if(mpirank == 0) print*,'Coulomb exclusion'
   call coulomb_exclusion(nglobal,icpumap,x,q,p,f,pcycle,numex,natex)
   call coulomb_exclusion(nglobal,icpumap,x,q,p2,f2,pcycle,numex,natex)
@@ -802,24 +880,34 @@ program main
   endif
 
   ! run dynamics if third command line argument specified
-  call get_command_argument(4,nstp,lnam,istat)
-  read(nstp,*)dynsteps
-  if(mpirank == 0) write(*,*)'will run dynamics for ',dynsteps,' steps'
-  ! for pure water systems there is no need for nbadd14() :-)
-  printfrq=1
-  imcentfrq=10
-  call run_dynamics(dynsteps,imcentfrq,printfrq,&
-       nglobal,nat,nbonds,ntheta,ksize,&
-       alpha,sigma,cutoff,cuton,pcycle,&
-       xc,p,p2,f,f2,q,v,mass,gscale,fgscale,rscale,rbond,cbond,aangle,cangle,&
-       ib,jb,it,jt,kt,atype,icpumap,numex,natex,nres,ires,time)
-  call charmm_cor_write(nglobal,x,q,pcycle,trim(outfile),&
-       numex,natex,nat,atype,rscale,gscale,fgscale,nbonds,ntheta,ib,jb,it,jt,kt,&
-       rbond,cbond,aangle,cangle,mass,xc,v,time)
+  if (command_argument_count() > 3) then
+     call get_command_argument(4,nstp,lnam,istat)
+     read(nstp,*)dynsteps
+     if(mpirank == 0) write(*,*)'will run dynamics for ',dynsteps,' steps'
+     ! for pure water systems there is no need for nbadd14() :-)
+     test_force=.false.
+     printfrq=1
+     imcentfrq=10
+     if (test_force) then
+        call force_testing(nglobal,nat,nbonds,ntheta,ksize,&
+             alpha,sigma,cutoff,cuton,pcycle,v,&
+             xc,p,p2,f,f2,q,gscale,fgscale,rscale,rbond,cbond,aangle,cangle,&
+             ib,jb,it,jt,kt,atype,icpumap,numex,natex)
+     else
+        call run_dynamics(dynsteps,imcentfrq,printfrq,&
+             nglobal,nat,nbonds,ntheta,ksize,&
+             alpha,sigma,cutoff,cuton,pcycle,&
+             xc,p,p2,f,f2,q,v,mass,gscale,fgscale,rscale,rbond,cbond,aangle,cangle,&
+             ib,jb,it,jt,kt,atype,icpumap,numex,natex,nres,ires,time)
+     endif
+     call charmm_cor_write(nglobal,x,q,pcycle,trim(outfile),&
+          numex,natex,nat,atype,rscale,gscale,fgscale,nbonds,ntheta,ib,jb,it,jt,kt,&
+          rbond,cbond,aangle,cangle,mass,xc,v,time)
+  endif
 
   deallocate( x,q,v,p,f,p2,f2,icpumap )
   deallocate( ires,numex,natex,rscale,gscale,fgscale,atype )
-  
+
 ! from the end of run_dynamics():
 !    deallocate(xnew,xold,fac1,fac2)
 !    deallocate(ib,jb,it,jt,kt,rbond,cbond,mass,aangle,cangle,x)

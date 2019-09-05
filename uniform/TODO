@@ -1,5 +1,4 @@
-Match charmm and test_charmm input
-Debug VdW in test_charmm
+Fix exclusion
 Check energy drift
 add smoothing
 Compare energy drift
