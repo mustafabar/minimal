@@ -394,7 +394,7 @@ contains
     evdw=evdw*0.5
     call bonded_terms(icpumap,atype,x,f,nbonds,ntheta,&
          ib,jb,it,jt,kt,rbond,cbond,aangle,cangle,eb,et)
-    print*,eb,et,efmm,evdw
+    etot=eb+et+efmm+evdw
     return
   end subroutine energy
 
@@ -648,7 +648,7 @@ program main
   call mpi_comm_size(mpi_comm_world,mpisize,ierr)
   call mpi_comm_rank(mpi_comm_world,mpirank,ierr)
   nglobal = 1000
-  images = 6
+  images = 3
   verbose = 0
   pcycle = 2 * nglobal ** (1. / 6)
   cutoff = 3 * nglobal ** (1. / 6)
@@ -688,9 +688,9 @@ program main
      call random_number(q)
      average = 0
      do i = 1,nglobal
-        x(3*i-2) = x(3*i-2) * pcycle
-        x(3*i-1) = x(3*i-1) * pcycle
-        x(3*i-0) = x(3*i-0) * pcycle
+        x(3*i-2) = x(3*i-2) * pcycle - pcycle / 2
+        x(3*i-1) = x(3*i-1) * pcycle - pcycle / 2
+        x(3*i-0) = x(3*i-0) * pcycle - pcycle / 2
         p(i) = 0
         p2(i) = 0
         f(3*i-2) = 0
@@ -737,10 +737,6 @@ program main
   if (mpirank == 0) print*,'FMM partition'
   call fmm_partition(nglobal,icpumap,x,q,v,pcycle)
 
-  if (mpirank == 0) then
-     print "(a,i2,a)",'--- Accuracy regression loop ',itry,' -'
-     print*,'FMM Coulomb'
-  endif
   do i = 1,nglobal
      p(i) = 0
      f(3*i-2) = 0
@@ -819,7 +815,7 @@ program main
 
   deallocate( x,q,v,p,f,p2,f2,icpumap )
   deallocate( ires,numex,natex,rscale,gscale,fgscale,atype )
-  
+
 ! from the end of run_dynamics():
 !    deallocate(xnew,xold,fac1,fac2)
 !    deallocate(ib,jb,it,jt,kt,rbond,cbond,mass,aangle,cangle,x)

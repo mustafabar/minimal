@@ -20,7 +20,7 @@ charmm:
 
 test_charmm:
 	make libcharmm.a
-	mpiifort test_charmm2.f90 -fopenmp -L. -lcharmm2 -lstdc++ -lgomp -lmpi_cxx -ltbb
+	mpiifort test_charmm.f90 -fopenmp -L. -lcharmm2 -lstdc++ -lgomp -lmpi_cxx -ltbb
 	mpirun -n 1 ./a.out ./ water_32.fmm water.out 0
 #	mpirun -n 1 ./a.out
 
