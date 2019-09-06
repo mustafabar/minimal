@@ -53,9 +53,8 @@ extern "C" void fmm_partition_(int & nglobal, double * x, double * q, double * x
   for_3d FMM->RGlob[d] = FMM->R0 * FMM->numPartition[FMM->maxGlobLevel][d];
   FMM->getGlobIndex(iX,0,FMM->maxGlobLevel);
   for_3d FMM->X0[d] = 2 * FMM->R0 * (iX[d] + .5);
-  int nlocal = nglobal;
-  FMM->numBodies = nlocal;
-  FMM->Jbodies.resize(nlocal);
+  FMM->numBodies = nglobal;
+  FMM->Jbodies.resize(nglobal);
   for (int i=0,b=0; i<nglobal; i++) {
     FMM->Jbodies[b][0] = x[3*i+0];
     FMM->Jbodies[b][1] = x[3*i+1];
@@ -88,9 +87,8 @@ extern "C" void fmm_partition_(int & nglobal, double * x, double * q, double * x
 }
 
 extern "C" void fmm_coulomb_(int & nglobal, double * x, double * q, double * p, double * f, double & cycle) {
-  int nlocal = nglobal;
-  FMM->numBodies = nlocal;
-  FMM->Jbodies.resize(nlocal);
+  FMM->numBodies = nglobal;
+  FMM->Jbodies.resize(nglobal);
   for (int i=0,b=0; i<nglobal; i++) {
     FMM->Jbodies[b][0] = x[3*i+0];
     FMM->Jbodies[b][1] = x[3*i+1];
@@ -119,9 +117,8 @@ extern "C" void fmm_coulomb_(int & nglobal, double * x, double * q, double * p, 
 extern "C" void ewald_coulomb_(int & nglobal, double * x, double * q, double * p, double * f,
                                int & ksize, double & alpha, double & sigma, double & cutoff, double & cycle) {
   ewald = new Ewald(ksize, alpha, sigma, cutoff, cycle);
-  int nlocal = nglobal;
-  FMM->numBodies = nlocal;
-  FMM->Jbodies.resize(nlocal);
+  FMM->numBodies = nglobal;
+  FMM->Jbodies.resize(nglobal);
   for (int i=0,b=0; i<nglobal; i++) {
     FMM->Jbodies[b][0] = x[3*i+0];
     FMM->Jbodies[b][1] = x[3*i+1];
@@ -185,9 +182,8 @@ extern "C" void fmm_vanderwaals_(int & nglobal, int * atype,
                                  double * x, double * p, double * f,
                                  double & cuton, double & cutoff, double & cycle,
                                  int & nat, double * rscale, double * gscale, double * fgscale) {
-  int nlocal = nglobal;
-  FMM->numBodies = nlocal;
-  FMM->Jbodies.resize(nlocal);
+  FMM->numBodies = nglobal;
+  FMM->Jbodies.resize(nglobal);
   for (int i=0,b=0; i<nglobal; i++) {
     FMM->Jbodies[b][0] = x[3*i+0];
     FMM->Jbodies[b][1] = x[3*i+1];
