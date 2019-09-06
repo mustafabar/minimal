@@ -9,7 +9,7 @@ static const int shift = 29;
 static const int mask = ~(0x7U << shift);
 
 BaseMPI * baseMPI;
-ParallelFMM * FMM;
+SerialFMM * FMM;
 Ewald * ewald;
 
 int wrap2(vec4 & X, const real_t & cycle) {
@@ -49,7 +49,7 @@ extern "C" void fmm_init_(int & nglobal, int & images, int & verbose) {
   const int ncrit = 32;
   const int maxLevel = numBodies >= ncrit ? 1 + int(log(numBodies / ncrit)/M_LN2/3) : 0;
   const int numImages = images;
-  FMM = new ParallelFMM(numBodies, maxLevel, numImages);
+  FMM = new SerialFMM(numBodies, maxLevel, numImages);
   VERBOSE = verbose & (FMM->MPIRANK == 0);
   if (numImages > 0 && int(log2(FMM->MPISIZE)) % 3 != 0) {
     if (FMM->MPIRANK==0) printf("Warning: MPISIZE must be a power of 8 for periodic domain to be square\n");
@@ -98,7 +98,7 @@ extern "C" void fmm_partition_(int & nglobal, int * icpumap, double * x, double 
       b++;
     }
   }
-  FMM->partitionComm();
+  //FMM->partitionComm();
   stop("Partition");
   start("Grow tree");
   FMM->sortBodies();
@@ -145,11 +145,12 @@ extern "C" void fmm_coulomb_(int & nglobal, int * icpumap,
     }
   }
   FMM->sortBodies();
-  start("Comm LET bodies");
-  FMM->P2PSend();
-  FMM->P2PRecv();
-  stop("Comm LET bodies");
+  //start("Comm LET bodies");
+  //FMM->P2PSend();
+  //FMM->P2PRecv();
+  //stop("Comm LET bodies");
   FMM->upwardPass();
+  /*
   start("Comm LET cells");
   for (int lev=FMM->maxLevel; lev>0; lev--) {
     MPI_Barrier(MPI_COMM_WORLD);
@@ -160,8 +161,9 @@ extern "C" void fmm_coulomb_(int & nglobal, int * icpumap,
   stop("Comm LET cells");
   FMM->globM2M();
   FMM->globM2L();
+  */
   FMM->periodicM2L();
-  FMM->globL2L();
+  //FMM->globL2L();
   FMM->downwardPass();
   vec3 localDipole = FMM->getDipole();
   vec3 globalDipole = baseMPI->allreduceVec3(localDipole);
@@ -276,10 +278,12 @@ extern "C" void fmm_vanderwaals_(int & nglobal, int * icpumap, int * atype,
     }
   }
   FMM->sortBodies();
+  /*
   start("Comm LET bodies");
   FMM->P2PSend();
   FMM->P2PRecv();
   stop("Comm LET bodies");
+  */
   FMM->vanDerWaals(cuton, cutoff, nat, rscale, gscale, fgscale);
   for (int b=0; b<FMM->numBodies; b++) {
     int i = FMM->Index[b] & mask;
