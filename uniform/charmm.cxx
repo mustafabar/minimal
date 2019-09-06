@@ -43,14 +43,10 @@ extern "C" void fmm_finalize_() {
   delete FMM;
 }
 
-extern "C" void fmm_partition_(int & numBodies, double * x, double * q, double * xold, double & cycle) {
+extern "C" void fmm_build_tree_(int & numBodies, double * x, double * q, double * xold, double & cycle) {
   start("Partition");
-  const int gatherLevel = 1;
-  FMM->partitioner(gatherLevel);
-  int iX[3] = {0, 0, 0};
-  FMM->R0 = 0.5 * cycle / FMM->numPartition[FMM->maxGlobLevel][0];
-  FMM->getGlobIndex(iX,0,FMM->maxGlobLevel);
-  for_3d FMM->X0[d] = 2 * FMM->R0 * (iX[d] + .5);
+  FMM->R0 = 0.5 * cycle;
+  for_3d FMM->X0[d] = FMM->R0;
   FMM->numBodies = numBodies;
   FMM->Jbodies.resize(numBodies);
   for (int i=0,b=0; i<numBodies; i++) {
@@ -380,7 +376,7 @@ int main(int argc, char ** argv) {
   fmm_init_(numBodies, images, verbose);  
   print("Coulomb");
   start("Total FMM");
-  fmm_partition_(numBodies, &x[0], &q[0], &xold[0], cycle);
+  fmm_build_tree_(numBodies, &x[0], &q[0], &xold[0], cycle);
   fmm_coulomb_(numBodies, &x[0], &q[0], &p[0], &f[0], cycle);
   stop("Total FMM");
   start("Total Ewald");

@@ -317,7 +317,7 @@ contains
        xsave(i) = x(i)
        vsave(i) = xold(i)
     enddo
-    call fmm_partition(natom,x,q,xold,pcycle)
+    call fmm_build_tree(natom,x,q,xold,pcycle)
     p(1:natom)=0.0
     p2(1:natom)=0.0
     f(1:3*natom)=0.0
@@ -647,12 +647,12 @@ program main
   print*,'FMM init'
   path = trim(path)//c_null_char
   call fmm_init(natom,images,verbose)
-  print*,'FMM partition'
+  print*,'FMM build tree'
   do i = 1,3*natom
      xsave(i) = x(i)
      vsave(i) = v(i)
   enddo
-  call fmm_partition(natom,x,q,v,pcycle)
+  call fmm_build_tree(natom,x,q,v,pcycle)
   
   do i = 1,natom
      p(i) = 0

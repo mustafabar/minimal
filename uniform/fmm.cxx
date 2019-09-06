@@ -28,20 +28,14 @@ int main(int argc, char ** argv) {
 
   print("FMM Profiling");
   start("Total FMM");
-  start("Partition");
-  FMM.partitioner(gatherLevel);
-  stop("Partition");
-
-  int iX[3] = {0, 0, 0};
   FMM.R0 = 0.5 * cycle;
-  FMM.getGlobIndex(iX,0,FMM.maxGlobLevel);
-  for_3d FMM.X0[d] = 2 * FMM.R0 * (iX[d] + .5);
+  for_3d FMM.X0[d] = FMM.R0;
   srand48(0);
   real_t average = 0;
   for (int i=0; i<FMM.numBodies; i++) {
-    FMM.Jbodies[i][0] = 2 * FMM.R0 * (drand48() + iX[0]);
-    FMM.Jbodies[i][1] = 2 * FMM.R0 * (drand48() + iX[1]);
-    FMM.Jbodies[i][2] = 2 * FMM.R0 * (drand48() + iX[2]);
+    FMM.Jbodies[i][0] = 2 * FMM.R0 * drand48();
+    FMM.Jbodies[i][1] = 2 * FMM.R0 * drand48();
+    FMM.Jbodies[i][2] = 2 * FMM.R0 * drand48();
     FMM.Jbodies[i][3] = drand48();
     average += FMM.Jbodies[i][3];
   }

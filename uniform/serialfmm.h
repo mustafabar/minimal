@@ -10,15 +10,11 @@ namespace exafmm {
 
   public:
     static vec3 Xperiodic;
-    ivec3 numPartition[10];
     int maxLevel;
-    int maxGlobLevel;
     int numBodies;
     int numImages;
     int numCells;
     int numLeafs;
-    int numGlobCells;
-    int globLevelOffset[10];
     int MPISIZE;
     int MPIRANK;    
     vec3 X0;
@@ -99,17 +95,6 @@ namespace exafmm {
       Jbodies.resize(2*numBodies);
       Multipole.resize(27*numCells);
       Local.resize(numCells);
-    }
-
-    inline void getGlobIndex(int *iX, int index, int level) const {
-      iX[0] = index % numPartition[level][0];
-      iX[1] = index / numPartition[level][0] % numPartition[level][1];
-      iX[2] = index / numPartition[level][0] / numPartition[level][1];
-    }
-
-    void partitioner(int level) {
-      maxGlobLevel = 1;
-      for( int d=0; d<3; d++ ) numPartition[d] = 1;
     }
 
     void sortBodies() {
@@ -196,14 +181,12 @@ namespace exafmm {
 
     void downwardPass() {
       start("M2L");
-      ivec3 iXc;
       int DM2LC = 1;
-      getGlobIndex(iXc,MPIRANK,maxGlobLevel);
       for (int lev=1; lev<=maxLevel; lev++) {
 	if (lev==maxLevel) DM2LC = DP2P;
 	int levelOffset = ((1 << 3 * lev) - 1) / 7;
 	ivec3 nunit = 1 << lev;
-	ivec3 nxmin = -iXc * (nunit >> 1);
+	ivec3 nxmin = 0;
 	ivec3 nxmax = (nunit >> 1) + nxmin - 1;
 	if (numImages != 0) {
 	  nxmin -= (nunit >> 1);
@@ -278,9 +261,8 @@ namespace exafmm {
       stop("L2P");
 
       start("P2P");
-      getGlobIndex(iXc,MPIRANK,maxGlobLevel);
       ivec3 nunit = 1 << maxLevel;
-      ivec3 nxmin = -iXc * nunit;
+      ivec3 nxmin = 0;
       ivec3 nxmax = nunit + nxmin - 1;
       if (numImages != 0) {
 	nxmin -= nunit;
@@ -302,7 +284,7 @@ namespace exafmm {
 	      int rankOffset = 13 * numLeafs;
 	      j += rankOffset;
 	      rankOffset = 13 * numLeafs;
-	      jXp = (jX + iXc * nunit + nunit) / nunit;
+	      jXp = (jX + nunit) / nunit;
 	      vec3 periodic;
 	      for_3d periodic[d] = (jXp[d] - 1) * 2 * R0;
 	      P2P(Ibodies,Leafs[i+rankOffset].begin,Leafs[i+rankOffset].end,
@@ -351,10 +333,8 @@ namespace exafmm {
     }
 
     void ewaldRealPart(real_t alpha, real_t cutoff) {
-      ivec3 iXc;
-      getGlobIndex(iXc,MPIRANK,maxGlobLevel);
       ivec3 nunit = 1 << maxLevel;
-      ivec3 nxmin = -iXc * nunit;
+      ivec3 nxmin = 0;
       ivec3 nxmax = nunit + nxmin - 1;
       if (numImages != 0) {
 	nxmin -= nunit;
@@ -376,7 +356,7 @@ namespace exafmm {
 	      int rankOffset = 13 * numLeafs;
 	      j += rankOffset;
 	      rankOffset = 13 * numLeafs;
-	      jXp = (jX + iXc * nunit + nunit) / nunit;
+	      jXp = (jX + nunit) / nunit;
 	      vec3 periodic;
 	      for_3d periodic[d] = (jXp[d] - 1) * 2 * R0;
 	      EwaldP2P(Ibodies,Leafs[i+rankOffset].begin,Leafs[i+rankOffset].end,
@@ -390,10 +370,8 @@ namespace exafmm {
 
     void vanDerWaals(real_t cuton, real_t cutoff, int numTypes,
                      real_t * rscale, real_t * gscale, real_t * fgscale) {
-      ivec3 iXc;
-      getGlobIndex(iXc,MPIRANK,maxGlobLevel);
       ivec3 nunit = 1 << maxLevel;
-      ivec3 nxmin = -iXc * nunit;
+      ivec3 nxmin = 0;
       ivec3 nxmax = nunit + nxmin - 1;
       if (numImages != 0) {
 	nxmin -= nunit;
@@ -415,7 +393,7 @@ namespace exafmm {
 	      int rankOffset = 13 * numLeafs;
 	      j += rankOffset;
 	      rankOffset = 13 * numLeafs;
-	      jXp = (jX + iXc * nunit + nunit) / nunit;
+	      jXp = (jX + nunit) / nunit;
 	      vec3 periodic;
 	      for_3d periodic[d] = (jXp[d] - 1) * 2 * R0;
 	      VdWP2P(Ibodies,Leafs[i+rankOffset].begin,Leafs[i+rankOffset].end,
