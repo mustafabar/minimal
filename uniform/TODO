@@ -1,5 +1,4 @@
-remove variables with glob*
-remove rankOffset
+remove rank*
 Check energy drift
 add smoothing
 Compare energy drift

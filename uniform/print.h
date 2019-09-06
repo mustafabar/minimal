@@ -10,7 +10,6 @@ namespace exafmm {
   bool VERBOSE = true;                          //!< Print to screen
   static const int stringLength = 20;           //!< Length of formatted string
   static const int decimal = 7;                 //!< Decimal precision
-  static const int wait = 100;                  //!< Waiting time between output of different ranks
 
   void print(std::string s) {
     if (!VERBOSE) return;
