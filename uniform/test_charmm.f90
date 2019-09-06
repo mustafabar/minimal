@@ -264,8 +264,8 @@ contains
     use mpi
     implicit none
     integer nglobal,i,ierr
-    real(8) potSum,potSum2,potDifGlob,potSumGlob,potSumGlob2,potNrmGlob2
-    real(8) accDif,accNrm,accNrm2,accDifGlob,accNrmGlob,accNrmGlob2
+    real(8) potDif,potSum,potSum2,potNrm2
+    real(8) accDif,accNrm,accNrm2
     real(8) pl2err,fl2err,enerf,enere,grmsf,grmse
     real(8),allocatable,dimension(:) :: p,p2,f,f2
     potSum = 0
@@ -290,24 +290,14 @@ contains
        accNrm = accNrm + f(3*i-2) * f(3*i-2) + f(3*i-1) * f(3*i-1) + f(3*i-0) * f(3*i-0)
        accNrm2 = accNrm2 + f2(3*i-2) * f2(3*i-2) + f2(3*i-1) * f2(3*i-1) + f2(3*i-0) * f2(3*i-0)
     enddo
-    potSumGlob = 0
-    potSumGlob2 = 0
-    accDifGlob = 0
-    accNrmGlob = 0
-    accNrmGlob2 = 0
-    call mpi_reduce(potSum,potSumGlob,1,mpi_real8,mpi_sum,0,mpi_comm_world,ierr)
-    call mpi_reduce(potSum2,potSumGlob2,1,mpi_real8,mpi_sum,0,mpi_comm_world,ierr)
-    call mpi_reduce(accDif,accDifGlob,1,mpi_real8,mpi_sum,0,mpi_comm_world,ierr)
-    call mpi_reduce(accNrm,accNrmGlob,1,mpi_real8,mpi_sum,0,mpi_comm_world,ierr)
-    call mpi_reduce(accNrm2,accNrmGlob2,1,mpi_real8,mpi_sum,0,mpi_comm_world,ierr)
-    potDifGlob = (potSumGlob - potSumGlob2) * (potSumGlob - potSumGlob2)
-    potNrmGlob2 = potSumGlob2 * potSumGlob2
-    pl2err = sqrt(potDifGlob/potNrmGlob2)
-    fl2err = sqrt(accDifGlob/accNrmGlob2)
-    enerf = potSumGlob*0.5
-    enere = potSumGlob2*0.5
-    grmsf = sqrt(accNrmGlob/3.0/nglobal)
-    grmse = sqrt(accNrmGlob2/3.0/nglobal)
+    potDif = (potSum - potSum2) * (potSum - potSum2)
+    potNrm2 = potSum2 * potSum2
+    pl2err = sqrt(potDif/potNrm2)
+    fl2err = sqrt(accDif/accNrm2)
+    enerf = potSum*0.5
+    enere = potSum2*0.5
+    grmsf = sqrt(accNrm/3.0/nglobal)
+    grmse = sqrt(accNrm2/3.0/nglobal)
   end subroutine verify
 
   subroutine energy(nglobal,nat,nbonds,ntheta,ksize,&
@@ -372,8 +362,8 @@ contains
     use mpi
     implicit none
     integer nglobal,i,ierr,mpirank
-    real(8) time,temp,kboltz,ekinetic,ekineticGlob,grms,grmsGlob
-    real(8) etot,etotGlob,ftotf,ftotfGlob,ftote,ftoteGlob
+    real(8) time,temp,kboltz,ekinetic,grms
+    real(8) etot,ftotf,ftote
     real(8) pl2err,fl2err
     integer,allocatable,dimension(:) :: atype
     real(8),allocatable,dimension(:) :: f,v,mass
@@ -384,22 +374,17 @@ contains
        ekinetic=ekinetic+mass(atype(i))*(v(3*i-2)**2+v(3*i-1)**2+v(3*i-0)**2)
        grms=grms+f(3*i-2)**2+f(3*i-1)**2+f(3*i-0)**2
     enddo
-    call mpi_reduce(ekinetic,ekineticGlob,1,mpi_real8,mpi_sum,0,mpi_comm_world,ierr)
-    call mpi_reduce(grms,grmsGlob,1,mpi_real8,mpi_sum,0,mpi_comm_world,ierr)
-    call mpi_reduce(etot,etotGlob,1,mpi_real8,mpi_sum,0,mpi_comm_world,ierr)
-    call mpi_reduce(ftotf,ftotfGlob,1,mpi_real8,mpi_sum,0,mpi_comm_world,ierr)
-    call mpi_reduce(ftote,ftoteGlob,1,mpi_real8,mpi_sum,0,mpi_comm_world,ierr)
-    grmsGlob=sqrt(grmsGlob/3.0/real(nglobal))
-    temp=ekineticGlob/3.0/nglobal/kboltz
-    ekineticGlob=ekineticGlob/2.0
-    ftotfGlob = ftotfGlob/nglobal
-    ftoteGlob = ftoteGlob/nglobal
+    grms=sqrt(grms/3.0/real(nglobal))
+    temp=ekinetic/3.0/nglobal/kboltz
+    ekinetic=ekinetic/2.0
+    ftotf = ftotf/nglobal
+    ftote = ftote/nglobal
     call mpi_comm_rank(mpi_comm_world,mpirank,ierr)
     if(mpirank == 0) then
        write(*,'(''time:'',f9.3,'' Etotal:'',g14.5,'' Ekin:'',g14.5,'' Epot:'',g14.5,'' T:'',g12.3,'' Grms:'',g12.5)')&
-            time,etotGlob+ekineticGlob,ekineticGlob,etotGlob,temp,grmsGlob
+            time,etot+ekinetic,ekinetic,etot,temp,grms
        write(2,'(f9.3,f14.5,f14.5,g14.5,g14.5,g14.5,g14.5)')&
-            time,etotGlob,ekineticGlob,pl2err,fl2err,ftotfGlob,ftoteGlob
+            time,etot,ekinetic,pl2err,fl2err,ftotf,ftote
     endif
     return
   end subroutine print_energy
