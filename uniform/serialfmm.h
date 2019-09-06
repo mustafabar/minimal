@@ -530,11 +530,7 @@ namespace exafmm {
 	      ivec3 jXp = (jX + nunit) % nunit;
 	      int j = getKey(jXp,maxLevel,false);
 	      jXp = (jX + nunit) / nunit;
-#if EXAFMM_SERIAL
 	      int rankOffset = 13 * numLeafs;
-#else
-	      int rankOffset = (jXp[0] + 3 * jXp[1] + 9 * jXp[2]) * numLeafs;
-#endif
 	      j += rankOffset;
 	      rankOffset = 13 * numLeafs;
 	      jXp = (jX + iXc * nunit + nunitGlob) / nunitGlob;
@@ -574,11 +570,7 @@ namespace exafmm {
 	      ivec3 jXp = (jX + nunit) % nunit;
 	      int j = getKey(jXp,maxLevel,false);
 	      jXp = (jX + nunit) / nunit;
-#if EXAFMM_SERIAL
 	      int rankOffset = 13 * numLeafs;
-#else
-	      int rankOffset = (jXp[0] + 3 * jXp[1] + 9 * jXp[2]) * numLeafs;
-#endif
 	      j += rankOffset;
 	      rankOffset = 13 * numLeafs;
 	      jXp = (jX + iXc * nunit + nunitGlob) / nunitGlob;

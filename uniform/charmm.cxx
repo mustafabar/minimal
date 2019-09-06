@@ -47,10 +47,7 @@ extern "C" void fmm_init_(int & nglobal, int & images, int & verbose) {
   const int maxLevel = numBodies >= ncrit ? 1 + int(log(numBodies / ncrit)/M_LN2/3) : 0;
   const int numImages = images;
   FMM = new SerialFMM(numBodies, maxLevel, numImages);
-  VERBOSE = verbose & (FMM->MPIRANK == 0);
-  if (numImages > 0 && int(log2(FMM->MPISIZE)) % 3 != 0) {
-    if (FMM->MPIRANK==0) printf("Warning: MPISIZE must be a power of 8 for periodic domain to be square\n");
-  }
+  VERBOSE = verbose;
 }
 
 extern "C" void fmm_finalize_() {
@@ -65,7 +62,7 @@ extern "C" void fmm_partition_(int & nglobal, int * icpumap, double * x, double 
   int iX[3] = {0, 0, 0};
   FMM->R0 = 0.5 * cycle / FMM->numPartition[FMM->maxGlobLevel][0];
   for_3d FMM->RGlob[d] = FMM->R0 * FMM->numPartition[FMM->maxGlobLevel][d];
-  FMM->getGlobIndex(iX,FMM->MPIRANK,FMM->maxGlobLevel);
+  FMM->getGlobIndex(iX,0,FMM->maxGlobLevel);
   for_3d FMM->X0[d] = 2 * FMM->R0 * (iX[d] + .5);
 
   int ista = 0;
@@ -93,7 +90,6 @@ extern "C" void fmm_partition_(int & nglobal, int * icpumap, double * x, double 
       b++;
     }
   }
-  //FMM->partitionComm();
   stop("Partition");
   start("Grow tree");
   FMM->sortBodies();
