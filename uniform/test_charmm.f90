@@ -347,7 +347,7 @@ contains
 
   subroutine energy(nglobal,nat,nbonds,ntheta,ksize,&
        alpha,sigma,cutoff,cuton,pcycle,xold,&
-       x,p,p2,f,f2,q,gscale,fgscale,rscale,rbond,cbond,aangle,cangle,&
+       x,p,p2,f,f2,q,xsave,vsave,gscale,fgscale,rscale,rbond,cbond,aangle,cangle,&
        ib,jb,it,jt,kt,atype,icpumap,numex,natex,etot,&
        pl2err,fl2err,ftotf,ftote)
     implicit none
@@ -355,10 +355,14 @@ contains
     real(8) alpha,sigma,cutoff,cuton,etot,eb,et,efmm,evdw,pcycle
     real(8) pl2err,fl2err,enerf,enere,grmsf,grmse,ftotf,ftote
     integer,allocatable,dimension(:) :: ib,jb,it,jt,kt,atype,icpumap,numex,natex
-    real(8),allocatable,dimension(:) :: xold,x,p,p2,f,f2,q,gscale,fgscale,rscale
+    real(8),allocatable,dimension(:) :: xold,x,p,p2,f,f2,q,xsave,vsave,gscale,fgscale,rscale
     real(8),allocatable,dimension(:,:) :: rbond,cbond
     real(8),allocatable,dimension(:,:,:) :: aangle,cangle
 
+    do i = 1,3*nglobal
+       xsave(i) = x(i)
+       vsave(i) = xold(i)
+    enddo
     call fmm_partition(nglobal,icpumap,x,q,xold,pcycle)
     p(1:nglobal)=0.0
     p2(1:nglobal)=0.0
@@ -392,6 +396,10 @@ contains
        evdw=evdw+p(i)
     enddo
     evdw=evdw*0.5
+    do i = 1,3*nglobal
+       x(i) = xsave(i)
+       xold(i) = vsave(i)
+    enddo
     call bonded_terms(icpumap,atype,x,f,nbonds,ntheta,&
          ib,jb,it,jt,kt,rbond,cbond,aangle,cangle,eb,et)
     etot=eb+et+efmm+evdw
@@ -438,7 +446,7 @@ contains
   subroutine run_dynamics(dynsteps,imcentfrq,printfrq,&
        nglobal,nat,nbonds,ntheta,ksize,&
        alpha,sigma,cutoff,cuton,pcycle,&
-       x,p,p2,f,f2,q,v,mass,gscale,fgscale,rscale,rbond,cbond,aangle,cangle,&
+       x,p,p2,f,f2,q,v,xsave,vsave,mass,gscale,fgscale,rscale,rbond,cbond,aangle,cangle,&
        ib,jb,it,jt,kt,atype,icpumap,numex,natex,nres,ires,time)
     use mpi
     implicit none
@@ -447,7 +455,7 @@ contains
     real(8) alpha,sigma,cutoff,cuton,etot,pcycle,tstep,tstep2,time
     real(8) pl2err,fl2err,ftotf,ftote
     real(8),parameter :: timfac=4.88882129D-02
-    real(8),allocatable,dimension(:) :: x,v,mass,p,p2,f,f2,q,gscale,fgscale,rscale,xold
+    real(8),allocatable,dimension(:) :: x,v,mass,p,p2,f,f2,q,gscale,fgscale,rscale,xold,xsave,vsave
     real(8),allocatable,dimension(:,:) :: rbond,cbond
     real(8),allocatable,dimension(:,:,:) :: aangle,cangle
     integer,allocatable,dimension(:) :: ib,jb,it,jt,kt,atype,icpumap,numex,natex,ires
@@ -466,7 +474,7 @@ contains
 
     call energy(nglobal,nat,nbonds,ntheta,ksize,&
          alpha,sigma,cutoff,cuton,pcycle,xold,&
-         x,p,p2,f,f2,q,gscale,fgscale,rscale,rbond,cbond,aangle,cangle,&
+         x,p,p2,f,f2,q,xsave,vsave,gscale,fgscale,rscale,rbond,cbond,aangle,cangle,&
          ib,jb,it,jt,kt,atype,icpumap,numex,natex,etot,&
          pl2err,fl2err,ftotf,ftote)
 
@@ -493,7 +501,7 @@ contains
 
        call energy(nglobal,nat,nbonds,ntheta,ksize,&
             alpha,sigma,cutoff,cuton,pcycle,xold,&
-            x,p,p2,f,f2,q,gscale,fgscale,rscale,rbond,cbond,aangle,cangle,&
+            x,p,p2,f,f2,q,xsave,vsave,gscale,fgscale,rscale,rbond,cbond,aangle,cangle,&
             ib,jb,it,jt,kt,atype,icpumap,numex,natex,etot,&
             pl2err,fl2err,ftotf,ftote)
 
@@ -639,7 +647,7 @@ program main
   integer,dimension (128) :: iseed
   integer,allocatable,dimension(:) :: icpumap,numex,natex,atype,ib,jb,it,jt,kt,ires
   real(8),parameter :: pi=3.14159265358979312d0
-  real(8),allocatable,dimension(:) :: x,q,p,p2,f,f2,xc,v,mass
+  real(8),allocatable,dimension(:) :: x,q,p,p2,f,f2,xc,v,mass,xsave,vsave
   real(8),allocatable,dimension(:) :: rscale,gscale,fgscale
   real(8),allocatable,dimension(:,:) :: rbond,cbond
   real(8),allocatable,dimension(:,:,:) :: aangle,cangle
@@ -673,7 +681,7 @@ program main
      ksize = int(4 / pi * alpha * pcycle)
      sigma = .25 / pi
      allocate( p(nglobal),f(3*nglobal),icpumap(nglobal) )
-     allocate( p2(nglobal),f2(3*nglobal) )
+     allocate( p2(nglobal),f2(3*nglobal),xsave(3*nglobal),vsave(3*nglobal) )
   else
      allocate( x(3*nglobal),q(nglobal),v(3*nglobal) )
      allocate( p(nglobal),p2(nglobal),f(3*nglobal),f2(3*nglobal) )
@@ -735,8 +743,12 @@ program main
   path = trim(path)//c_null_char
   call fmm_init(nglobal,images,verbose)
   if (mpirank == 0) print*,'FMM partition'
+  do i = 1,3*nglobal
+     xsave(i) = x(i)
+     vsave(i) = v(i)
+  enddo
   call fmm_partition(nglobal,icpumap,x,q,v,pcycle)
-
+  
   do i = 1,nglobal
      p(i) = 0
      f(3*i-2) = 0
@@ -797,6 +809,11 @@ program main
      print "(a,f15.4)",'GRMS (Direct)        : ',grmse
   endif
 
+  do i = 1,3*nglobal
+     x(i) = xsave(i)
+     v(i) = vsave(i)
+  enddo
+
   ! run dynamics if third command line argument specified
   call get_command_argument(4,nstp,lnam,istat)
   read(nstp,*)dynsteps
@@ -807,7 +824,7 @@ program main
   call run_dynamics(dynsteps,imcentfrq,printfrq,&
        nglobal,nat,nbonds,ntheta,ksize,&
        alpha,sigma,cutoff,cuton,pcycle,&
-       xc,p,p2,f,f2,q,v,mass,gscale,fgscale,rscale,rbond,cbond,aangle,cangle,&
+       xc,p,p2,f,f2,q,v,xsave,vsave,mass,gscale,fgscale,rscale,rbond,cbond,aangle,cangle,&
        ib,jb,it,jt,kt,atype,icpumap,numex,natex,nres,ires,time)
   call charmm_cor_write(nglobal,x,q,pcycle,trim(outfile),&
        numex,natex,nat,atype,rscale,gscale,fgscale,nbonds,ntheta,ib,jb,it,jt,kt,&
