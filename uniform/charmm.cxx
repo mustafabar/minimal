@@ -476,14 +476,10 @@ int main(int argc, char ** argv) {
   start("Total FMM");
   fmm_partition_(nglobal, &icpumap[0], &x[0], &q[0], &xold[0], cycle);
   fmm_coulomb_(nglobal, &icpumap[0], &x[0], &q[0], &p[0], &f[0], cycle);
-  //coulomb_exclusion_(nglobal, &icpumap[0], &x[0], &q[0], &p[0], &f[0],
-  //                   cycle, &numex[0], &natex[0]);
   stop("Total FMM");
   start("Total Ewald");
   ewald_coulomb_(nglobal, &icpumap[0], &x[0], &q[0], &p2[0], &f2[0],
                  ksize, alpha, sigma, cutoff, cycle);
-  //coulomb_exclusion_(nglobal, &icpumap[0], &x[0], &q[0], &p2[0], &f2[0],
-  //                   cycle, &numex[0], &natex[0]);
   stop("Total Ewald");
   // verify
   double potSum=0, potSum2=0, accDif=0, accNrm=0;
