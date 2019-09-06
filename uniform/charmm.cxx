@@ -31,16 +31,6 @@ void unwrap2(vec4 & X, const real_t & cycle, const int & iwrap) {
   }
 }
 
-void splitRange(int & begin, int & end, int iSplit, int numSplit) {
-  assert(end > begin);
-  int size = end - begin;
-  int increment = size / numSplit;
-  int remainder = size % numSplit;
-  begin += iSplit * increment + std::min(iSplit,remainder);
-  end = begin + increment;
-  if (remainder > iSplit) end++;
-}
-
 extern "C" void fmm_init_(int & nglobal, int & images, int & verbose) {
   const int numBodies = nglobal;
   const int ncrit = 32;
@@ -249,12 +239,6 @@ extern "C" void fmm_vanderwaals_(int & nglobal, int * icpumap, int * atype,
     }
   }
   FMM->sortBodies();
-  /*
-  start("Comm LET bodies");
-  FMM->P2PSend();
-  FMM->P2PRecv();
-  stop("Comm LET bodies");
-  */
   FMM->vanDerWaals(cuton, cutoff, nat, rscale, gscale, fgscale);
   for (int b=0; b<FMM->numBodies; b++) {
     int i = FMM->Index[b] & mask;

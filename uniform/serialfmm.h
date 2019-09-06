@@ -57,95 +57,6 @@ namespace exafmm {
     std::vector<fcvecP> recvMultipole;
 
     
-  private:
-    void checkPartition(ivec3 &maxPartition) {
-      int partitionSize = 1;
-      for_3d partitionSize *= maxPartition[d];
-      assert( MPISIZE == partitionSize );
-      int mpisize = MPISIZE;
-      while (mpisize > 0) {
-	assert( mpisize % 8 == 0 || mpisize == 1 );
-	mpisize /= 8;
-      }
-      ivec3 checkLevel, partition;
-      partition = maxPartition;
-      for( int d=0; d<3; d++ ) {
-	int lev = 1;
-	while( partition[d] != 1 ) {
-	  int ndiv = 2;
-	  if( (partition[d] % 3) == 0 ) ndiv = 3;
-	  partition[d] /= ndiv;
-	  lev++;
-	}
-	checkLevel[d] = lev - 1;
-      }
-      maxGlobLevel = std::max(std::max(checkLevel[0],checkLevel[1]),checkLevel[2]);
-      assert(maxGlobLevel < 10);
-      numPartition[0] = 1;
-      partition = maxPartition;
-      for( int lev=1; lev<=maxGlobLevel; lev++ ) {
-	for( int d=0; d<3; d++ ) {
-	  int ndiv = 2;
-	  if( (partition[d] % 3) == 0 ) ndiv = 3;
-	  if( checkLevel[d] < maxGlobLevel && lev == 1 ) ndiv = 1;
-	  numPartition[lev][d] = ndiv * numPartition[lev-1][d];
-	  partition[d] /= ndiv;
-	}
-      }
-    }
-
-    void setSendCounts() {
-      ivec3 leafsType, bodiesType;
-      for_3d leafsType[d] = (1 << (d * maxLevel)) * std::pow(DP2P,3-d);
-      bodiesType = leafsType * float(numBodies) / numLeafs * 4;
-      int i = 0;
-      ivec3 iX;
-      bodiesDispl[0] = leafsDispl[0] = 0;
-      for( iX[2]=-1; iX[2]<=1; iX[2]++ ) {
-	for( iX[1]=-1; iX[1]<=1; iX[1]++ ) {
-	  for( iX[0]=-1; iX[0]<=1; iX[0]++ ) {
-	    if( iX[0] != 0 || iX[1] != 0 || iX[2] != 0 ) {
-	      int zeros = 0;
-	      for_3d zeros += iX[d] == 0;
-	      bodiesCount[i] = bodiesType[zeros];
-	      leafsCount[i] = leafsType[zeros];
-	      if( i > 0 ) {
-		bodiesDispl[i] = bodiesDispl[i-1] + bodiesCount[i-1];
-		leafsDispl[i] = leafsDispl[i-1] + leafsCount[i-1];
-	      }
-	      i++;
-	    }
-	  }
-	}
-      }
-      assert( numSendBodies >= bodiesDispl[25] + bodiesCount[25] );
-      assert( bodiesDispl[25] + bodiesCount[25] > 0 );
-      assert( numSendLeafs == leafsDispl[25] + leafsCount[25] );
-      int sumSendCells = 0;
-      for( int lev=1; lev<=maxLevel; lev++ ) {
-	int multipoleType[3] = {8, 4*(1<<lev), 2*(1<<(2*lev))};
-	multipoleDispl[lev][0] = 0;
-	i = 0;
-	for( iX[2]=-1; iX[2]<=1; iX[2]++ ) {
-	  for( iX[1]=-1; iX[1]<=1; iX[1]++ ) {
-	    for( iX[0]=-1; iX[0]<=1; iX[0]++ ) {
-	      if( iX[0] != 0 || iX[1] != 0 || iX[2] != 0 ) {
-		int zeros = 0;
-		for_3d zeros += iX[d] == 0;
-		multipoleCount[lev][i] = multipoleType[zeros];
-		sumSendCells += multipoleCount[lev][i];
-		if( i > 0 ) {
-		  multipoleDispl[lev][i] = multipoleDispl[lev][i-1] + multipoleCount[lev][i-1];
-		}
-		i++;
-	      }
-	    }
-	  }
-	}
-      }
-      assert( numSendCells == sumSendCells );
-    }
-
   protected:
     inline void getIndex(int i, ivec3 &iX, real_t diameter) const {
       for_3d iX[d] = int((Jbodies[i][d] + R0 - X0[d]) / diameter);
@@ -160,11 +71,6 @@ namespace exafmm {
         d = (d+1) % 3;
         if (d == 0) level++;
       }
-    }
-
-    inline void setGlobIndex(int i, ivec3 &iX) const {
-      for_3d iX[d] = int(Jbodies[i][d] / (2 * R0));
-      iX %= numPartition[maxGlobLevel];
     }
 
     inline int getKey(ivec3 &iX, int level, bool levelOffset=true) const {
@@ -243,29 +149,8 @@ namespace exafmm {
     }
 
     void partitioner(int level) {
-      int mpisize = MPISIZE;
-      ivec3 maxPartition = 1;
-      int dim = 0;
-      while( mpisize != 1 ) {
-	int ndiv = 2;
-	if( (mpisize % 3) == 0 ) ndiv = 3;
-	maxPartition[dim] *= ndiv;
-	mpisize /= ndiv;
-	dim = (dim + 1) % 3;
-      }
-      checkPartition(maxPartition);
-      numGlobCells = 0;
-      for( int lev=0; lev<=maxGlobLevel; lev++ ) {
-	globLevelOffset[lev] = numGlobCells;
-	numGlobCells += numPartition[lev][0] * numPartition[lev][1] * numPartition[lev][2];
-      }
-      getGlobIndex(IX[maxGlobLevel],MPIRANK,maxGlobLevel);
-      for( int lev=maxGlobLevel; lev>0; lev-- ) {
-	IX[lev-1] = IX[lev] * numPartition[lev-1] / numPartition[lev];
-      }
-      setSendCounts();
-      gatherLevel = level;
-      if(gatherLevel > maxGlobLevel) gatherLevel = maxGlobLevel;
+      maxGlobLevel = 1;
+      for( int d=0; d<3; d++ ) numPartition[d] = 1;
     }
 
     void sortBodies() {
