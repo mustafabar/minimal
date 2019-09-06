@@ -4,9 +4,7 @@
 namespace exafmm {
   class SerialFMM : public Kernel {
   protected:
-    const int DP2P = 2; // Use 1 for parallel
-    ivec3 IX[10];
-    int gatherLevel;
+    const int DP2P = 2;
 
   public:
     static vec3 Xperiodic;
@@ -15,8 +13,6 @@ namespace exafmm {
     int numImages;
     int numCells;
     int numLeafs;
-    int MPISIZE;
-    int MPIRANK;    
     vec3 X0;
     real_t R0;
     std::vector<int> Index;
@@ -82,7 +78,7 @@ namespace exafmm {
     }
 
   public:
-    SerialFMM(int N, int L, int Im) : MPISIZE(1), MPIRANK(0) {
+    SerialFMM(int N, int L, int Im) {
       maxLevel = L;
       numBodies = N;
       numImages = Im;

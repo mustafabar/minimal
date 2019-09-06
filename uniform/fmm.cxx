@@ -17,7 +17,6 @@ int main(int argc, char ** argv) {
   const int numBodies = args.numBodies;
   const int ncrit = args.ncrit;
   const int maxLevel = numBodies >= ncrit ? 1 + int(log(numBodies / ncrit)/M_LN2/3) : 0;
-  const int gatherLevel = 1;
   const int numImages = args.images;
 
   SerialFMM FMM(numBodies, maxLevel, numImages);
