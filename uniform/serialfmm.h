@@ -31,8 +31,6 @@ namespace exafmm {
     std::vector<vec4> Jbodies;
     std::vector<cvecP> Multipole;
     std::vector<cvecP> Local;
-    std::vector<cvecP> globMultipole;
-    std::vector<cvecP> globLocal;
     
   protected:
     inline void getIndex(int i, ivec3 &iX, real_t diameter) const {

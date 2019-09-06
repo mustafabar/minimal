@@ -31,8 +31,7 @@ void unwrap2(vec4 & X, const real_t & cycle, const int & iwrap) {
   }
 }
 
-extern "C" void fmm_init_(int & nglobal, int & images, int & verbose) {
-  const int numBodies = nglobal;
+extern "C" void fmm_init_(int & numBodies, int & images, int & verbose) {
   const int ncrit = 32;
   const int maxLevel = numBodies >= ncrit ? 1 + int(log(numBodies / ncrit)/M_LN2/3) : 0;
   const int numImages = images;
@@ -44,7 +43,7 @@ extern "C" void fmm_finalize_() {
   delete FMM;
 }
 
-extern "C" void fmm_partition_(int & nglobal, double * x, double * q, double * xold, double & cycle) {
+extern "C" void fmm_partition_(int & numBodies, double * x, double * q, double * xold, double & cycle) {
   start("Partition");
   const int gatherLevel = 1;
   FMM->partitioner(gatherLevel);
@@ -53,9 +52,9 @@ extern "C" void fmm_partition_(int & nglobal, double * x, double * q, double * x
   for_3d FMM->RGlob[d] = FMM->R0 * FMM->numPartition[FMM->maxGlobLevel][d];
   FMM->getGlobIndex(iX,0,FMM->maxGlobLevel);
   for_3d FMM->X0[d] = 2 * FMM->R0 * (iX[d] + .5);
-  FMM->numBodies = nglobal;
-  FMM->Jbodies.resize(nglobal);
-  for (int i=0,b=0; i<nglobal; i++) {
+  FMM->numBodies = numBodies;
+  FMM->Jbodies.resize(numBodies);
+  for (int i=0,b=0; i<numBodies; i++) {
     FMM->Jbodies[b][0] = x[3*i+0];
     FMM->Jbodies[b][1] = x[3*i+1];
     FMM->Jbodies[b][2] = x[3*i+2];
@@ -86,10 +85,10 @@ extern "C" void fmm_partition_(int & nglobal, double * x, double * q, double * x
   }
 }
 
-extern "C" void fmm_coulomb_(int & nglobal, double * x, double * q, double * p, double * f, double & cycle) {
-  FMM->numBodies = nglobal;
-  FMM->Jbodies.resize(nglobal);
-  for (int i=0,b=0; i<nglobal; i++) {
+extern "C" void fmm_coulomb_(int & numBodies, double * x, double * q, double * p, double * f, double & cycle) {
+  FMM->numBodies = numBodies;
+  FMM->Jbodies.resize(numBodies);
+  for (int i=0,b=0; i<numBodies; i++) {
     FMM->Jbodies[b][0] = x[3*i+0];
     FMM->Jbodies[b][1] = x[3*i+1];
     FMM->Jbodies[b][2] = x[3*i+2];
@@ -114,12 +113,12 @@ extern "C" void fmm_coulomb_(int & nglobal, double * x, double * q, double * p, 
   }
 }
 
-extern "C" void ewald_coulomb_(int & nglobal, double * x, double * q, double * p, double * f,
+extern "C" void ewald_coulomb_(int & numBodies, double * x, double * q, double * p, double * f,
                                int & ksize, double & alpha, double & sigma, double & cutoff, double & cycle) {
   ewald = new Ewald(ksize, alpha, sigma, cutoff, cycle);
-  FMM->numBodies = nglobal;
-  FMM->Jbodies.resize(nglobal);
-  for (int i=0,b=0; i<nglobal; i++) {
+  FMM->numBodies = numBodies;
+  FMM->Jbodies.resize(numBodies);
+  for (int i=0,b=0; i<numBodies; i++) {
     FMM->Jbodies[b][0] = x[3*i+0];
     FMM->Jbodies[b][1] = x[3*i+1];
     FMM->Jbodies[b][2] = x[3*i+2];
@@ -152,10 +151,10 @@ extern "C" void ewald_coulomb_(int & nglobal, double * x, double * q, double * p
   delete ewald;
 }
 
-extern "C" void coulomb_exclusion_(int & nglobal,
+extern "C" void coulomb_exclusion_(int & numBodies,
                                    double * x, double * q, double * p, double * f,
                                    double & cycle, int * numex, int * natex) {
-  for (int i=0, ic=0; i<nglobal; i++) {
+  for (int i=0, ic=0; i<numBodies; i++) {
     real_t pp = 0, fx = 0, fy = 0, fz = 0;
     for (int jc=0; jc<numex[i]; jc++, ic++) {
       int j = natex[ic]-1;
@@ -178,13 +177,13 @@ extern "C" void coulomb_exclusion_(int & nglobal,
   }
 }
 
-extern "C" void fmm_vanderwaals_(int & nglobal, int * atype,
+extern "C" void fmm_vanderwaals_(int & numBodies, int * atype,
                                  double * x, double * p, double * f,
                                  double & cuton, double & cutoff, double & cycle,
                                  int & nat, double * rscale, double * gscale, double * fgscale) {
-  FMM->numBodies = nglobal;
-  FMM->Jbodies.resize(nglobal);
-  for (int i=0,b=0; i<nglobal; i++) {
+  FMM->numBodies = numBodies;
+  FMM->Jbodies.resize(numBodies);
+  for (int i=0,b=0; i<numBodies; i++) {
     FMM->Jbodies[b][0] = x[3*i+0];
     FMM->Jbodies[b][1] = x[3*i+1];
     FMM->Jbodies[b][2] = x[3*i+2];
@@ -205,14 +204,14 @@ extern "C" void fmm_vanderwaals_(int & nglobal, int * atype,
   }
 }
 
-extern "C" void direct_vanderwaals_(int & nglobal, int * atype,
+extern "C" void direct_vanderwaals_(int & numBodies, int * atype,
                                     double * x, double * p, double * f,
                                     double & cuton, double & cutoff, double & cycle,
                                     int & nat, double * rscale, double * gscale, double * fgscale) {
-  for (int i=0; i<nglobal; i++) {
+  for (int i=0; i<numBodies; i++) {
     int atypei = atype[i]-1;
     real_t pp = 0, fx = 0, fy = 0, fz = 0;
-    for (int j=0; j<nglobal; j++) {
+    for (int j=0; j<numBodies; j++) {
       vec3 dX;
       for (int d=0; d<3; d++) dX[d] = x[3*i+d] - x[3*j+d];
       wrap(dX, cycle);
@@ -254,12 +253,12 @@ extern "C" void direct_vanderwaals_(int & nglobal, int * atype,
   }
 }
 
-extern "C" void vanderwaals_exclusion_(int & nglobal, int * atype,
+extern "C" void vanderwaals_exclusion_(int & numBodies, int * atype,
                                        double * x, double * p, double * f,
                                        double & cuton, double & cutoff, double & cycle,
                                        int & numTypes, double * rscale, double * gscale,
                                        double * fgscale, int * numex, int * natex) {
-  for (int i=0, ic=0; i<nglobal; i++) {
+  for (int i=0, ic=0; i<numBodies; i++) {
     int atypei = atype[i]-1;
     for (int jc=0; jc<numex[i]; jc++, ic++) {
       int j = natex[ic]-1;
@@ -302,7 +301,7 @@ extern "C" void vanderwaals_exclusion_(int & nglobal, int * atype,
 
 #ifndef LIBRARY
 int main(int argc, char ** argv) {
-  int nglobal = 2991;
+  int numBodies = 2991;
   int images = 6;
   int ksize = 14;
   int nat = 2;
@@ -313,32 +312,32 @@ int main(int argc, char ** argv) {
   real_t cuton = 9.5;
   real_t cutoff = 10;
 
-  std::vector<double> x(3*nglobal);
-  std::vector<double> q(nglobal);
-  std::vector<double> xold(3*nglobal);
-  std::vector<double> p(nglobal, 0);
-  std::vector<double> f(3*nglobal, 0);
-  std::vector<double> p2(nglobal, 0);
-  std::vector<double> f2(3*nglobal, 0);
-  std::vector<int> atype(nglobal);
-  std::vector<int> numex(nglobal);
-  std::vector<int> natex(nglobal);
+  std::vector<double> x(3*numBodies);
+  std::vector<double> q(numBodies);
+  std::vector<double> xold(3*numBodies);
+  std::vector<double> p(numBodies, 0);
+  std::vector<double> f(3*numBodies, 0);
+  std::vector<double> p2(numBodies, 0);
+  std::vector<double> f2(3*numBodies, 0);
+  std::vector<int> atype(numBodies);
+  std::vector<int> numex(numBodies);
+  std::vector<int> natex(numBodies);
   std::vector<double> rscale(nat*nat);
   std::vector<double> gscale(nat*nat);
   std::vector<double> fgscale(nat*nat);
 
   double average = 0;
-  for (int i=0; i<nglobal; i++) {
+  for (int i=0; i<numBodies; i++) {
     for_3d x[3*i+d] = drand48() * cycle;
     for_3d xold[3*i+d] = drand48() * cycle;
     q[i] = drand48();
     average += q[i];
   }
-  average /= nglobal;
-  for (int i=0; i<nglobal; i++)	{
+  average /= numBodies;
+  for (int i=0; i<numBodies; i++)	{
     q[i] -= average;
   }
-  for (int i=0; i<nglobal; i++)	{
+  for (int i=0; i<numBodies; i++)	{
     numex[i] = 2;
     if (i % 2 == 0) {
       natex[i] = i+1;
@@ -372,26 +371,26 @@ int main(int argc, char ** argv) {
   fgscale[3] = 6.8995334303;
   std::ifstream file("initial.dat");
   std::string line;
-  for (int i=0; i<nglobal; i++) {
+  for (int i=0; i<numBodies; i++) {
     std::getline(file, line);
     std::istringstream iss(line);
     iss >> x[3*i+0] >> x[3*i+1] >> x[3*i+2] >> q[i];   
   }
   file.close();
 
-  fmm_init_(nglobal, images, verbose);  
+  fmm_init_(numBodies, images, verbose);  
   print("Coulomb");
   start("Total FMM");
-  fmm_partition_(nglobal, &x[0], &q[0], &xold[0], cycle);
-  fmm_coulomb_(nglobal, &x[0], &q[0], &p[0], &f[0], cycle);
+  fmm_partition_(numBodies, &x[0], &q[0], &xold[0], cycle);
+  fmm_coulomb_(numBodies, &x[0], &q[0], &p[0], &f[0], cycle);
   stop("Total FMM");
   start("Total Ewald");
-  ewald_coulomb_(nglobal, &x[0], &q[0], &p2[0], &f2[0],
+  ewald_coulomb_(numBodies, &x[0], &q[0], &p2[0], &f2[0],
                  ksize, alpha, sigma, cutoff, cycle);
   stop("Total Ewald");
   // verify
   double potSum=0, potSum2=0, accDif=0, accNrm=0;
-  for (int i=0; i<nglobal; i++) {
+  for (int i=0; i<numBodies; i++) {
     potSum += p[i];
     potSum2 += p2[i];
     accDif += (f[3*i+0] - f2[3*i+0]) * (f[3*i+0] - f2[3*i+0])
@@ -416,17 +415,17 @@ int main(int argc, char ** argv) {
   
   print("Van der Waals");
   start("FMM Van der Waals");
-  fmm_vanderwaals_(nglobal, &atype[0], &x[0], &p[0], &f[0],
+  fmm_vanderwaals_(numBodies, &atype[0], &x[0], &p[0], &f[0],
                    cuton, cutoff, cycle, nat, &rscale[0], &gscale[0], &fgscale[0]);
   stop("FMM Van der Waals");
   start("Direct Van der Waals");
-  direct_vanderwaals_(nglobal, &atype[0], &x[0], &p2[0], &f2[0],
+  direct_vanderwaals_(numBodies, &atype[0], &x[0], &p2[0], &f2[0],
                       cuton, cutoff, cycle, nat, &rscale[0], &gscale[0], &fgscale[0]);
   stop("Direct Van der Waals");
 
   // verify
   potSum=0, potSum2=0, accDif=0, accNrm=0;
-  for (int i=0; i<nglobal; i++) {
+  for (int i=0; i<numBodies; i++) {
     potSum += p[i];
     potSum2 += p2[i];
     accDif += (f[3*i+0] - f2[3*i+0]) * (f[3*i+0] - f2[3*i+0])
