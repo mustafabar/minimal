@@ -23,7 +23,6 @@ namespace exafmm {
     int MPIRANK;    
     vec3 X0;
     real_t R0;
-    vec3 RGlob;
     std::vector<int> Index;
     std::vector<int> Rank;
     std::vector<Range> Leafs;
@@ -305,7 +304,7 @@ namespace exafmm {
 	      rankOffset = 13 * numLeafs;
 	      jXp = (jX + iXc * nunit + nunit) / nunit;
 	      vec3 periodic;
-	      for_3d periodic[d] = (jXp[d] - 1) * 2 * RGlob[d];
+	      for_3d periodic[d] = (jXp[d] - 1) * 2 * R0;
 	      P2P(Ibodies,Leafs[i+rankOffset].begin,Leafs[i+rankOffset].end,
                   Jbodies,Leafs[j].begin,Leafs[j].end,periodic);
 	    }
@@ -320,7 +319,7 @@ namespace exafmm {
       M = Multipole[13*numCells];
       cvecP L = complex_t(0);
       for( int lev=1; lev<numImages; lev++ ) {
-	vec3 diameter = RGlob * 2 * std::pow(3.,lev-1);
+	vec3 diameter = R0 * 2 * std::pow(3.,lev-1);
 	ivec3 jX;
 	for( jX[2]=-4; jX[2]<=4; jX[2]++ ) {
 	  for( jX[1]=-4; jX[1]<=4; jX[1]++ ) {
@@ -379,7 +378,7 @@ namespace exafmm {
 	      rankOffset = 13 * numLeafs;
 	      jXp = (jX + iXc * nunit + nunit) / nunit;
 	      vec3 periodic;
-	      for_3d periodic[d] = (jXp[d] - 1) * 2 * RGlob[d];
+	      for_3d periodic[d] = (jXp[d] - 1) * 2 * R0;
 	      EwaldP2P(Ibodies,Leafs[i+rankOffset].begin,Leafs[i+rankOffset].end,
                        Jbodies,Leafs[j].begin,Leafs[j].end,periodic,
                        alpha,cutoff);
@@ -418,7 +417,7 @@ namespace exafmm {
 	      rankOffset = 13 * numLeafs;
 	      jXp = (jX + iXc * nunit + nunit) / nunit;
 	      vec3 periodic;
-	      for_3d periodic[d] = (jXp[d] - 1) * 2 * RGlob[d];
+	      for_3d periodic[d] = (jXp[d] - 1) * 2 * R0;
 	      VdWP2P(Ibodies,Leafs[i+rankOffset].begin,Leafs[i+rankOffset].end,
                      Jbodies,Leafs[j].begin,Leafs[j].end,periodic,
                      cuton,cutoff,numTypes,rscale,gscale,fgscale);
@@ -431,13 +430,13 @@ namespace exafmm {
     vec3 getDipole() {
       vec3 dipole = 0;
       for (int i=0; i<numBodies; i++) {
-        for_3d dipole[d] += (Jbodies[i][d] - RGlob[d]) * Jbodies[i][3];
+        for_3d dipole[d] += (Jbodies[i][d] - R0) * Jbodies[i][3];
       }
       return dipole;
     }
 
     void dipoleCorrection(vec3 dipole, int numBodiesGlob) {
-      vec3 cycle = RGlob * 2;
+      vec3 cycle = R0 * 2;
       real_t coef = 4 * M_PI / (3 * cycle[0] * cycle[1] * cycle[2]);
       for (int i=0; i<numBodies; i++) {
         Ibodies[i][0] -= coef * norm(dipole) / numBodiesGlob / Jbodies[i][3];

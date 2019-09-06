@@ -34,7 +34,6 @@ int main(int argc, char ** argv) {
 
   int iX[3] = {0, 0, 0};
   FMM.R0 = 0.5 * cycle;
-  for_3d FMM.RGlob[d] = FMM.R0;
   FMM.getGlobIndex(iX,0,FMM.maxGlobLevel);
   for_3d FMM.X0[d] = 2 * FMM.R0 * (iX[d] + .5);
   srand48(0);
