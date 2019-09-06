@@ -175,22 +175,7 @@ contains
     return
   end subroutine charmm_cor_read
 
-  subroutine bcast3(nglobal,icpumap,recv)
-    use mpi
-    implicit none
-    integer i,nglobal,ierr
-    integer,allocatable,dimension(:) :: icpumap
-    real(8),allocatable,dimension(:) :: send,recv
-    allocate(send(3*nglobal))
-    send(1:3*nglobal)=0.0
-    do i=1,nglobal
-       if(icpumap(i) == 1) send(3*i-2:3*i) = recv(3*i-2:3*i)
-    enddo
-    call mpi_allreduce(send,recv,3*nglobal,mpi_real8,mpi_sum,mpi_comm_world,ierr)
-    deallocate(send)
-  end subroutine bcast3
-
-  subroutine bonded_terms(icpumap,atype,x,f,nbonds,ntheta,&
+  subroutine bonded_terms(atype,x,f,nbonds,ntheta,&
        ib,jb,it,jt,kt,rbond,cbond,aangle,cangle,eb,et)
     implicit none
     integer i,ii,jj,kk,nbonds,ntheta
@@ -198,7 +183,7 @@ contains
     real(8) dx1,dy1,dz1,dx2,dy2,dz2,r1,r2,r1r,r2r
     real(8) dx1r,dy1r,dz1r,dx2r,dy2r,dz2r,cst,at,da
     real(8) dxi,dyi,dzi,st2r,str,dtx1,dtx2,dty1,dty2,dtz1,dtz2
-    integer,allocatable,dimension(:) :: ib,jb,it,jt,kt,icpumap,atype
+    integer,allocatable,dimension(:) :: ib,jb,it,jt,kt,atype
     real(8),allocatable,dimension(:) :: x,f
     real(8),allocatable,dimension(:,:) :: rbond,cbond
     real(8),allocatable,dimension(:,:,:) :: aangle,cangle
@@ -206,9 +191,6 @@ contains
     do i = 1,nbonds
        ii=ib(i)
        jj=jb(i)
-       if (icpumap(ii) /= 1 .and. icpumap(jj) /= 1) cycle
-       if (icpumap(ii) == 0) print*,"missing i = ",ii
-       if (icpumap(jj) == 0) print*,"missing j = ",jj
        dx=x(3*ii-2)-x(3*jj-2)
        dy=x(3*ii-1)-x(3*jj-1)
        dz=x(3*ii-0)-x(3*jj-0)
@@ -219,28 +201,20 @@ contains
        dxi=dx*dfr
        dyi=dy*dfr
        dzi=dz*dfr
-       if (icpumap(ii) == 1) then
-          eb=eb+df*db/2
-          f(3*ii-2)=f(3*ii-2)+dxi
-          f(3*ii-1)=f(3*ii-1)+dyi
-          f(3*ii-0)=f(3*ii-0)+dzi
-       endif
-       if (icpumap(jj) == 1) then
-          eb=eb+df*db/2
-          f(3*jj-2)=f(3*jj-2)-dxi
-          f(3*jj-1)=f(3*jj-1)-dyi
-          f(3*jj-0)=f(3*jj-0)-dzi
-       endif
+       eb=eb+df*db/2
+       f(3*ii-2)=f(3*ii-2)+dxi
+       f(3*ii-1)=f(3*ii-1)+dyi
+       f(3*ii-0)=f(3*ii-0)+dzi
+       eb=eb+df*db/2
+       f(3*jj-2)=f(3*jj-2)-dxi
+       f(3*jj-1)=f(3*jj-1)-dyi
+       f(3*jj-0)=f(3*jj-0)-dzi
     enddo
     et = 0.0
     do i = 1,ntheta
        ii=it(i)
        jj=jt(i)
        kk=kt(i)
-       if (icpumap(ii) /= 1 .and. icpumap(jj) /= 1 .and. icpumap(kk) /= 1) cycle
-       if (icpumap(ii) == 0) print*,"missing i = ",ii
-       if (icpumap(jj) == 0) print*,"missing j = ",jj
-       if (icpumap(kk) == 0) print*,"missing k = ",kk
        dx1=x(3*ii-2)-x(3*jj-2)
        dy1=x(3*ii-1)-x(3*jj-1)
        dz1=x(3*ii-0)-x(3*jj-0)
@@ -270,28 +244,22 @@ contains
        dty2=dfr*r2r*(dy1r-cst*dy2r)
        dtz1=dfr*r1r*(dz2r-cst*dz1r)
        dtz2=dfr*r2r*(dz1r-cst*dz2r)
-       if (icpumap(ii) == 1) then
-          et=et+df*da/3
-          f(3*ii-2)=f(3*ii-2)+dtx1
-          f(3*ii-1)=f(3*ii-1)+dty1
-          f(3*ii-0)=f(3*ii-0)+dtz1
-       endif
-       if (icpumap(jj) == 1) then
-          et=et+df*da/3
-          f(3*jj-2)=f(3*jj-2)-dtx1-dtx2
-          f(3*jj-1)=f(3*jj-1)-dty1-dty2
-          f(3*jj-0)=f(3*jj-0)-dtz1-dtz2
-       endif
-       if (icpumap(kk) == 1) then
-          et=et+df*da/3
-          f(3*kk-2)=f(3*kk-2)+dtx2
-          f(3*kk-1)=f(3*kk-1)+dty2
-          f(3*kk-0)=f(3*kk-0)+dtz2
-       endif
+       et=et+df*da/3
+       f(3*ii-2)=f(3*ii-2)+dtx1
+       f(3*ii-1)=f(3*ii-1)+dty1
+       f(3*ii-0)=f(3*ii-0)+dtz1
+       et=et+df*da/3
+       f(3*jj-2)=f(3*jj-2)-dtx1-dtx2
+       f(3*jj-1)=f(3*jj-1)-dty1-dty2
+       f(3*jj-0)=f(3*jj-0)-dtz1-dtz2
+       et=et+df*da/3
+       f(3*kk-2)=f(3*kk-2)+dtx2
+       f(3*kk-1)=f(3*kk-1)+dty2
+       f(3*kk-0)=f(3*kk-0)+dtz2
     enddo
   end subroutine bonded_terms
 
-  subroutine verify(nglobal,icpumap,p,p2,f,f2,&
+  subroutine verify(nglobal,p,p2,f,f2,&
     pl2err,fl2err,enerf,enere,grmsf,grmse)
     use mpi
     implicit none
@@ -299,7 +267,6 @@ contains
     real(8) potSum,potSum2,potDifGlob,potSumGlob,potSumGlob2,potNrmGlob2
     real(8) accDif,accNrm,accNrm2,accDifGlob,accNrmGlob,accNrmGlob2
     real(8) pl2err,fl2err,enerf,enere,grmsf,grmse
-    integer,allocatable,dimension(:) :: icpumap
     real(8),allocatable,dimension(:) :: p,p2,f,f2
     potSum = 0
     potSum2 = 0
@@ -307,23 +274,21 @@ contains
     accNrm = 0
     accNrm2 = 0
     do i = 1,nglobal
-       if (icpumap(i) == 1) then
-          p(i) = p(i)
-          f(3*i-2) = f(3*i-2)
-          f(3*i-1) = f(3*i-1)
-          f(3*i-0) = f(3*i-0)
-          p2(i) = p2(i)
-          f2(3*i-2) = f2(3*i-2)
-          f2(3*i-1) = f2(3*i-1)
-          f2(3*i-0) = f2(3*i-0)
-          potSum = potSum + p(i)
-          potSum2 = potSum2 + p2(i)
-          accDif = accDif  + (f(3*i-2) - f2(3*i-2)) * (f(3*i-2) - f2(3*i-2))&
-               + (f(3*i-1) - f2(3*i-1)) * (f(3*i-1) - f2(3*i-1))&
-               + (f(3*i-0) - f2(3*i-0)) * (f(3*i-0) - f2(3*i-0))
-          accNrm = accNrm + f(3*i-2) * f(3*i-2) + f(3*i-1) * f(3*i-1) + f(3*i-0) * f(3*i-0)
-          accNrm2 = accNrm2 + f2(3*i-2) * f2(3*i-2) + f2(3*i-1) * f2(3*i-1) + f2(3*i-0) * f2(3*i-0)
-       endif
+       p(i) = p(i)
+       f(3*i-2) = f(3*i-2)
+       f(3*i-1) = f(3*i-1)
+       f(3*i-0) = f(3*i-0)
+       p2(i) = p2(i)
+       f2(3*i-2) = f2(3*i-2)
+       f2(3*i-1) = f2(3*i-1)
+       f2(3*i-0) = f2(3*i-0)
+       potSum = potSum + p(i)
+       potSum2 = potSum2 + p2(i)
+       accDif = accDif  + (f(3*i-2) - f2(3*i-2)) * (f(3*i-2) - f2(3*i-2))&
+            + (f(3*i-1) - f2(3*i-1)) * (f(3*i-1) - f2(3*i-1))&
+            + (f(3*i-0) - f2(3*i-0)) * (f(3*i-0) - f2(3*i-0))
+       accNrm = accNrm + f(3*i-2) * f(3*i-2) + f(3*i-1) * f(3*i-1) + f(3*i-0) * f(3*i-0)
+       accNrm2 = accNrm2 + f2(3*i-2) * f2(3*i-2) + f2(3*i-1) * f2(3*i-1) + f2(3*i-0) * f2(3*i-0)
     enddo
     potSumGlob = 0
     potSumGlob2 = 0
@@ -348,13 +313,13 @@ contains
   subroutine energy(nglobal,nat,nbonds,ntheta,ksize,&
        alpha,sigma,cutoff,cuton,pcycle,xold,&
        x,p,p2,f,f2,q,xsave,vsave,gscale,fgscale,rscale,rbond,cbond,aangle,cangle,&
-       ib,jb,it,jt,kt,atype,icpumap,numex,natex,etot,&
+       ib,jb,it,jt,kt,atype,numex,natex,etot,&
        pl2err,fl2err,ftotf,ftote)
     implicit none
     integer nglobal,nat,nbonds,ntheta,ksize,i
     real(8) alpha,sigma,cutoff,cuton,etot,eb,et,efmm,evdw,pcycle
     real(8) pl2err,fl2err,enerf,enere,grmsf,grmse,ftotf,ftote
-    integer,allocatable,dimension(:) :: ib,jb,it,jt,kt,atype,icpumap,numex,natex
+    integer,allocatable,dimension(:) :: ib,jb,it,jt,kt,atype,numex,natex
     real(8),allocatable,dimension(:) :: xold,x,p,p2,f,f2,q,xsave,vsave,gscale,fgscale,rscale
     real(8),allocatable,dimension(:,:) :: rbond,cbond
     real(8),allocatable,dimension(:,:,:) :: aangle,cangle
@@ -363,36 +328,33 @@ contains
        xsave(i) = x(i)
        vsave(i) = xold(i)
     enddo
-    call fmm_partition(nglobal,icpumap,x,q,xold,pcycle)
+    call fmm_partition(nglobal,x,q,xold,pcycle)
     p(1:nglobal)=0.0
     p2(1:nglobal)=0.0
     f(1:3*nglobal)=0.0
     f2(1:3*nglobal)=0.0
-    call fmm_coulomb(nglobal,icpumap,x,q,p,f,pcycle)
-    !call ewald_coulomb(nglobal,icpumap,x,q,p2,f2,ksize,alpha,sigma,cutoff,pcycle)
-    !call verify(nglobal,icpumap,p,p2,f,f2,pl2err,fl2err,enerf,enere,grmsf,grmse)
+    call fmm_coulomb(nglobal,x,q,p,f,pcycle)
+    !call ewald_coulomb(nglobal,x,q,p2,f2,ksize,alpha,sigma,cutoff,pcycle)
+    !call verify(nglobal,p,p2,f,f2,pl2err,fl2err,enerf,enere,grmsf,grmse)
     ftotf=0.0
     ftote=0.0
     do i = 1,nglobal
-       if (icpumap(i) /= 1) cycle
        ftotf = ftotf+ f(3*i-2)+ f(3*i-1)+ f(3*i)
        ftote = ftote+f2(3*i-2)+f2(3*i-1)+f2(3*i)
     enddo
-    call coulomb_exclusion(nglobal,icpumap,x,q,p,f,pcycle,numex,natex)
+    call coulomb_exclusion(nglobal,x,q,p,f,pcycle,numex,natex)
     efmm=0.0
     do i=1,nglobal
-       if (icpumap(i) /= 1) cycle
        efmm=efmm+p(i)
     enddo
     efmm=efmm*0.5
     p(1:nglobal)=0.0
-    call fmm_vanderwaals(nglobal,icpumap,atype,x,p,f,cuton,cutoff,&
+    call fmm_vanderwaals(nglobal,atype,x,p,f,cuton,cutoff,&
          pcycle,nat,rscale,gscale,fgscale)
-    call vanderwaals_exclusion(nglobal,icpumap,atype,x,p,f,cuton,cutoff,&
+    call vanderwaals_exclusion(nglobal,atype,x,p,f,cuton,cutoff,&
          pcycle,nat,rscale,gscale,fgscale,numex,natex)
     evdw=0.0
     do i = 1,nglobal
-       if (icpumap(i) /= 1) cycle
        evdw=evdw+p(i)
     enddo
     evdw=evdw*0.5
@@ -400,26 +362,25 @@ contains
        x(i) = xsave(i)
        xold(i) = vsave(i)
     enddo
-    call bonded_terms(icpumap,atype,x,f,nbonds,ntheta,&
+    call bonded_terms(atype,x,f,nbonds,ntheta,&
          ib,jb,it,jt,kt,rbond,cbond,aangle,cangle,eb,et)
     etot=eb+et+efmm+evdw
     return
   end subroutine energy
 
-  subroutine print_energy(time,nglobal,f,v,mass,atype,icpumap,etot,pl2err,fl2err,ftotf,ftote)
+  subroutine print_energy(time,nglobal,f,v,mass,atype,etot,pl2err,fl2err,ftotf,ftote)
     use mpi
     implicit none
     integer nglobal,i,ierr,mpirank
     real(8) time,temp,kboltz,ekinetic,ekineticGlob,grms,grmsGlob
     real(8) etot,etotGlob,ftotf,ftotfGlob,ftote,ftoteGlob
     real(8) pl2err,fl2err
-    integer,allocatable,dimension(:) :: atype,icpumap
+    integer,allocatable,dimension(:) :: atype
     real(8),allocatable,dimension(:) :: f,v,mass
     kboltz=1.987191d-03 !from CHARMM
     ekinetic=0.0
     grms=0.0
     do i=1,nglobal
-       if(icpumap(i) /= 1) cycle
        ekinetic=ekinetic+mass(atype(i))*(v(3*i-2)**2+v(3*i-1)**2+v(3*i-0)**2)
        grms=grms+f(3*i-2)**2+f(3*i-1)**2+f(3*i-0)**2
     enddo
@@ -447,7 +408,7 @@ contains
        nglobal,nat,nbonds,ntheta,ksize,&
        alpha,sigma,cutoff,cuton,pcycle,&
        x,p,p2,f,f2,q,v,xsave,vsave,mass,gscale,fgscale,rscale,rbond,cbond,aangle,cangle,&
-       ib,jb,it,jt,kt,atype,icpumap,numex,natex,nres,ires,time)
+       ib,jb,it,jt,kt,atype,numex,natex,nres,ires,time)
     use mpi
     implicit none
     integer dynsteps,nglobal,nat,nbonds,ntheta,ksize,imcentfrq,printfrq,nres
@@ -458,7 +419,7 @@ contains
     real(8),allocatable,dimension(:) :: x,v,mass,p,p2,f,f2,q,gscale,fgscale,rscale,xold,xsave,vsave
     real(8),allocatable,dimension(:,:) :: rbond,cbond
     real(8),allocatable,dimension(:,:,:) :: aangle,cangle
-    integer,allocatable,dimension(:) :: ib,jb,it,jt,kt,atype,icpumap,numex,natex,ires
+    integer,allocatable,dimension(:) :: ib,jb,it,jt,kt,atype,numex,natex,ires
     real(8),allocatable,dimension(:) :: xnew,fac1,fac2
 
     call mpi_comm_rank(mpi_comm_world,mpirank,ierr)
@@ -475,16 +436,15 @@ contains
     call energy(nglobal,nat,nbonds,ntheta,ksize,&
          alpha,sigma,cutoff,cuton,pcycle,xold,&
          x,p,p2,f,f2,q,xsave,vsave,gscale,fgscale,rscale,rbond,cbond,aangle,cangle,&
-         ib,jb,it,jt,kt,atype,icpumap,numex,natex,etot,&
+         ib,jb,it,jt,kt,atype,numex,natex,etot,&
          pl2err,fl2err,ftotf,ftote)
 
-    call print_energy(time,nglobal,f,v,mass,atype,icpumap,etot,pl2err,fl2err,ftotf,ftote)
+    call print_energy(time,nglobal,f,v,mass,atype,etot,pl2err,fl2err,ftotf,ftote)
 
     ! precompute some constants and recalculate xold
     do i=1,nglobal
        fac1(i) = tstep2/mass(atype(i))
        fac2(i) = 0.5/tstep
-       if(icpumap(i) /= 1)cycle
        xold(3*i-2) = v(3*i-2)*tstep-f(3*i-2)*fac1(i)*0.5
        xold(3*i-1) = v(3*i-1)*tstep-f(3*i-1)*fac1(i)*0.5
        xold(3*i-0) = v(3*i-0)*tstep-f(3*i-0)*fac1(i)*0.5
@@ -493,7 +453,6 @@ contains
     mainloop: do istep = 1,dynsteps
 
        do i = 1,nglobal
-          if(icpumap(i) /= 1)cycle
           x(3*i-2) = x(3*i-2) + xold(3*i-2)
           x(3*i-1) = x(3*i-1) + xold(3*i-1)
           x(3*i-0) = x(3*i-0) + xold(3*i-0)
@@ -502,47 +461,44 @@ contains
        call energy(nglobal,nat,nbonds,ntheta,ksize,&
             alpha,sigma,cutoff,cuton,pcycle,xold,&
             x,p,p2,f,f2,q,xsave,vsave,gscale,fgscale,rscale,rbond,cbond,aangle,cangle,&
-            ib,jb,it,jt,kt,atype,icpumap,numex,natex,etot,&
+            ib,jb,it,jt,kt,atype,numex,natex,etot,&
             pl2err,fl2err,ftotf,ftote)
 
        do i = 1,nglobal
-          if(icpumap(i) /= 1)cycle
           xnew(3*i-2) = xold(3*i-2) - fac1(i)*f(3*i-2)
           xnew(3*i-1) = xold(3*i-1) - fac1(i)*f(3*i-1)
           xnew(3*i-0) = xold(3*i-0) - fac1(i)*f(3*i-0)
        enddo
 
        do i = 1,nglobal
-          if(icpumap(i) /= 1)cycle
           v(3*i-2) = (xnew(3*i-2) + xold(3*i-2))*fac2(i)
           v(3*i-1) = (xnew(3*i-1) + xold(3*i-1))*fac2(i)
           v(3*i-0) = (xnew(3*i-0) + xold(3*i-0))*fac2(i)
        enddo
 
        do i = 1,nglobal
-          if(icpumap(i) /= 1)cycle
           xold(3*i-2) = xnew(3*i-2)
           xold(3*i-1) = xnew(3*i-1)
           xold(3*i-0) = xnew(3*i-0)
        enddo
 
-       if (mod(istep,imcentfrq) == 0) call image_center(nglobal,x,nres,ires,pcycle,icpumap)
+       if (mod(istep,imcentfrq) == 0) call image_center(nglobal,x,nres,ires,pcycle)
 
        time=time+tstep*timfac ! for printing only
        if (mod(istep,printfrq) == 0) then
-          call print_energy(time,nglobal,f,v,mass,atype,icpumap,etot,&
+          call print_energy(time,nglobal,f,v,mass,atype,etot,&
                pl2err,fl2err,ftotf,ftote)
-          !call pdb_frame(1,time,nglobal,x,nres,icpumap)
+          !call pdb_frame(1,time,nglobal,x,nres)
        endif
     enddo mainloop
 
   end subroutine run_dynamics
 
-  subroutine image_center(nglobal,x,nres,ires,pcycle,icpumap)
+  subroutine image_center(nglobal,x,nres,ires,pcycle)
     implicit none
     integer nglobal,nres,flag,istart,iend,nsel,i,j
     real(8) pcycle,xmin,xmax,ymin,ymax,zmin,zmax,xcen,ycen,zcen
-    integer,allocatable,dimension(:) :: ires,icpumap
+    integer,allocatable,dimension(:) :: ires
     real(8),allocatable,dimension(:) :: x
 
 !!! only simple translations, so velocities stay the same! "?"
@@ -566,10 +522,7 @@ contains
 !!! if one of the atoms is in my processor, I need to move
 !!! the whole residue!! No extra communication needed :-)
 !!!
-       flag=0
-       do j = istart,iend
-          if(icpumap(j) == 1)flag=1
-       enddo
+       flag=1
        if (flag == 0) cycle residues
 !!!
        xcen=0.0
@@ -680,12 +633,12 @@ program main
      alpha = 4 / cutoff
      ksize = int(4 / pi * alpha * pcycle)
      sigma = .25 / pi
-     allocate( p(nglobal),f(3*nglobal),icpumap(nglobal) )
+     allocate( p(nglobal),f(3*nglobal) )
      allocate( p2(nglobal),f2(3*nglobal),xsave(3*nglobal),vsave(3*nglobal) )
   else
      allocate( x(3*nglobal),q(nglobal),v(3*nglobal) )
      allocate( p(nglobal),p2(nglobal),f(3*nglobal),f2(3*nglobal) )
-     allocate( xc(3*nglobal),ires(nglobal),icpumap(nglobal) )
+     allocate( xc(3*nglobal),ires(nglobal) )
      allocate( numex(nglobal),natex(nglobal),atype(nglobal) )
      allocate( rscale(nat*nat),gscale(nat*nat),fgscale(nat*nat) )
      do i = 1,128
@@ -707,7 +660,6 @@ program main
         f2(3*i-2) = 0
         f2(3*i-1) = 0
         f2(3*i-0) = 0
-        icpumap(i) = 0
         average = average + q(i)
      enddo
      average = average / nglobal
@@ -735,10 +687,6 @@ program main
   if (mpirank == 0) print*,'I/O done'
   ista = 1
   iend = nglobal
-  call split_range(ista,iend,mpirank,mpisize)
-  do i = ista,iend
-     icpumap(i) = 1
-  enddo
   if (mpirank == 0) print*,'FMM init'
   path = trim(path)//c_null_char
   call fmm_init(nglobal,images,verbose)
@@ -747,7 +695,7 @@ program main
      xsave(i) = x(i)
      vsave(i) = v(i)
   enddo
-  call fmm_partition(nglobal,icpumap,x,q,v,pcycle)
+  call fmm_partition(nglobal,x,q,v,pcycle)
   
   do i = 1,nglobal
      p(i) = 0
@@ -755,7 +703,7 @@ program main
      f(3*i-1) = 0
      f(3*i-0) = 0
   enddo
-  call fmm_coulomb(nglobal,icpumap,x,q,p,f,pcycle)
+  call fmm_coulomb(nglobal,x,q,p,f,pcycle)
   if (mpirank == 0) print*,'Ewald Coulomb'
   do i = 1,nglobal
      p2(i) = 0
@@ -763,11 +711,11 @@ program main
      f2(3*i-1) = 0
      f2(3*i-0) = 0
   enddo
-  call ewald_coulomb(nglobal,icpumap,x,q,p2,f2,ksize,alpha,sigma,cutoff,pcycle)
+  call ewald_coulomb(nglobal,x,q,p2,f2,ksize,alpha,sigma,cutoff,pcycle)
   if(mpirank == 0) print*,'Coulomb exclusion'
-  call coulomb_exclusion(nglobal,icpumap,x,q,p,f,pcycle,numex,natex)
-  call coulomb_exclusion(nglobal,icpumap,x,q,p2,f2,pcycle,numex,natex)
-  call verify(nglobal,icpumap,p,p2,f,f2,pl2err,fl2err,enerf,enere,grmsf,grmse)
+  call coulomb_exclusion(nglobal,x,q,p,f,pcycle,numex,natex)
+  call coulomb_exclusion(nglobal,x,q,p2,f2,pcycle,numex,natex)
+  call verify(nglobal,p,p2,f,f2,pl2err,fl2err,enerf,enere,grmsf,grmse)
   if (mpirank == 0) then
      print "(a)",'--- Coulomb FMM vs. Ewald -------'
      print "(a,f9.6)",'Rel. L2 Error (pot)  : ',pl2err
@@ -789,16 +737,16 @@ program main
      f2(3*i-1) = 0
      f2(3*i-0) = 0
   enddo
-  call fmm_vanderwaals(nglobal,icpumap,atype,x,p,f,cuton,cutoff,&
+  call fmm_vanderwaals(nglobal,atype,x,p,f,cuton,cutoff,&
        pcycle,nat,rscale,gscale,fgscale)
-  call vanderwaals_exclusion(nglobal,icpumap,atype,x,p,f,cuton,cutoff,&
+  call vanderwaals_exclusion(nglobal,atype,x,p,f,cuton,cutoff,&
        pcycle,nat,rscale,gscale,fgscale,numex,natex)
-  call direct_vanderwaals(nglobal,icpumap,atype,x,p2,f2,cuton,cutoff,&
+  call direct_vanderwaals(nglobal,atype,x,p2,f2,cuton,cutoff,&
        pcycle,nat,rscale,gscale,fgscale)
-  call vanderwaals_exclusion(nglobal,icpumap,atype,x,p2,f2,cuton,cutoff,&
+  call vanderwaals_exclusion(nglobal,atype,x,p2,f2,cuton,cutoff,&
        pcycle,nat,rscale,gscale,fgscale,numex,natex)
 
-  call verify(nglobal,icpumap,p,p2,f,f2,pl2err,fl2err,enerf,enere,grmsf,grmse)
+  call verify(nglobal,p,p2,f,f2,pl2err,fl2err,enerf,enere,grmsf,grmse)
   if (mpirank == 0) then
      print "(a)",'--- VdW FMM vs. Direct ----------'
      print "(a,f9.6)",'Rel. L2 Error (pot)  : ',pl2err
@@ -825,12 +773,12 @@ program main
        nglobal,nat,nbonds,ntheta,ksize,&
        alpha,sigma,cutoff,cuton,pcycle,&
        xc,p,p2,f,f2,q,v,xsave,vsave,mass,gscale,fgscale,rscale,rbond,cbond,aangle,cangle,&
-       ib,jb,it,jt,kt,atype,icpumap,numex,natex,nres,ires,time)
+       ib,jb,it,jt,kt,atype,numex,natex,nres,ires,time)
   call charmm_cor_write(nglobal,x,q,pcycle,trim(outfile),&
        numex,natex,nat,atype,rscale,gscale,fgscale,nbonds,ntheta,ib,jb,it,jt,kt,&
        rbond,cbond,aangle,cangle,mass,xc,v,time)
 
-  deallocate( x,q,v,p,f,p2,f2,icpumap )
+  deallocate( x,q,v,p,f,p2,f2 )
   deallocate( ires,numex,natex,rscale,gscale,fgscale,atype )
 
 ! from the end of run_dynamics():

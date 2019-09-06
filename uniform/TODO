@@ -1,8 +1,8 @@
-remove variables with glob*
-remove MPI*
+remove ista,iend
+remove nlocal
 remove send*, recv*
+remove variables with glob*
 remove rankOffset
-remove parallel
 Check energy drift
 add smoothing
 Compare energy drift
