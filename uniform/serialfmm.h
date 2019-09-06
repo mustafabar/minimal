@@ -5,19 +5,8 @@ namespace exafmm {
   class SerialFMM : public Kernel {
   protected:
     const int DP2P = 2; // Use 1 for parallel
-    int bodiesDispl[26];
-    int bodiesCount[26];
-    int sendBodiesDispl[1024];
-    int sendBodiesCount[1024];
-    int recvBodiesDispl[1024];
-    int recvBodiesCount[1024];
-    int multipoleDispl[10][26];
-    int multipoleCount[10][26];
-    int leafsDispl[26];
-    int leafsCount[26];
     ivec3 IX[10];
     int gatherLevel;
-    MPI_Comm MPI_COMM_LOCAL, MPI_COMM_GLOBAL;
 
   public:
     static vec3 Xperiodic;
@@ -30,9 +19,6 @@ namespace exafmm {
     int numLeafs;
     int numGlobCells;
     int globLevelOffset[10];
-    int numSendBodies;
-    int numSendCells;
-    int numSendLeafs;
     int MPISIZE;
     int MPIRANK;    
     vec3 X0;
@@ -40,22 +26,13 @@ namespace exafmm {
     vec3 RGlob;
     std::vector<int> Index;
     std::vector<int> Rank;
-    std::vector<int> sendIndex;
-    std::vector<int> recvIndex;
     std::vector<Range> Leafs;
-    std::vector<Range> sendLeafs;
-    std::vector<Range> recvLeafs;
     std::vector<vec4> Ibodies;
     std::vector<vec4> Jbodies;
     std::vector<cvecP> Multipole;
     std::vector<cvecP> Local;
     std::vector<cvecP> globMultipole;
     std::vector<cvecP> globLocal;
-    std::vector<fvec4> sendJbodies;
-    std::vector<fvec4> recvJbodies;
-    std::vector<fcvecP> sendMultipole;
-    std::vector<fcvecP> recvMultipole;
-
     
   protected:
     inline void getIndex(int i, ivec3 &iX, real_t diameter) const {
@@ -81,10 +58,6 @@ namespace exafmm {
         iX >>= 1;
       }
       return id;
-    }
-
-    inline int getGlobKey(ivec3 &iX, int level) const {
-      return iX[0] + (iX[1] + iX[2] * numPartition[level][1]) * numPartition[level][0];
     }
 
     void getCenter(vec3 &dX, int index, int level) const {
@@ -122,24 +95,13 @@ namespace exafmm {
       numImages = Im;
       numCells = ((1 << 3 * (L + 1)) - 1) / 7;
       numLeafs = 1 << 3 * L;
-      numSendCells = 64 * L + 48 * ((1 << (L + 1)) - 2) + 12 * (((1 << (2 * L + 2)) - 1) / 3 - 1);
-      numSendLeafs = 8 * std::pow(DP2P,3) + 12 * (1 << L) * std::pow(DP2P,2) + 6 * (1 << (2 * L)) * DP2P;
-      numSendBodies = numSendLeafs * float(numBodies) / numLeafs * 4;
       Index.resize(2*numBodies);
       Rank.resize(2*numBodies);
-      sendIndex.resize(2*numBodies);
-      recvIndex.resize(2*numBodies);
       Leafs.resize(27*numLeafs);
-      sendLeafs.resize(numSendLeafs);
-      recvLeafs.resize(numSendLeafs);
       Ibodies.resize(2*numBodies);
-      Jbodies.resize(2*numBodies+numSendBodies);
+      Jbodies.resize(2*numBodies);
       Multipole.resize(27*numCells);
       Local.resize(numCells);
-      sendJbodies.resize(2*numBodies+numSendBodies);
-      recvJbodies.resize(2*numBodies+numSendBodies);
-      sendMultipole.resize(numSendCells);
-      recvMultipole.resize(numSendCells);
     }
 
     inline void getGlobIndex(int *iX, int index, int level) const {
@@ -161,10 +123,12 @@ namespace exafmm {
 	getIndex(i,iX,diameter);
 	key[i] = getKey(iX,maxLevel);
       }
-      sort(Jbodies,sendJbodies,Index,sendIndex,key);
+      std::vector<int> Index2(numBodies);
+      std::vector<fvec4> Jbodies2(numBodies);
+      sort(Jbodies,Jbodies2,Index,Index2,key);
       for( int i=0; i<numBodies; i++ ) {
-	Index[i] = sendIndex[i];
-	for_4d Jbodies[i][d] = sendJbodies[i][d];
+	Index[i] = Index2[i];
+	for_4d Jbodies[i][d] = Jbodies2[i][d];
       }
     }
 
@@ -241,13 +205,12 @@ namespace exafmm {
       for (int lev=1; lev<=maxLevel; lev++) {
 	if (lev==maxLevel) DM2LC = DP2P;
 	int levelOffset = ((1 << 3 * lev) - 1) / 7;
-	int nunit = 1 << lev;
-	ivec3 nunitGlob = numPartition[maxGlobLevel] * nunit;
+	ivec3 nunit = 1 << lev;
 	ivec3 nxmin = -iXc * (nunit >> 1);
-	ivec3 nxmax = (nunitGlob >> 1) + nxmin - 1;
+	ivec3 nxmax = (nunit >> 1) + nxmin - 1;
 	if (numImages != 0) {
-	  nxmin -= (nunitGlob >> 1);
-	  nxmax += (nunitGlob >> 1);
+	  nxmin -= (nunit >> 1);
+	  nxmax += (nunit >> 1);
 	}
 	real_t diameter = 2 * R0 / (1 << lev);
 #pragma omp parallel for
@@ -319,13 +282,12 @@ namespace exafmm {
 
       start("P2P");
       getGlobIndex(iXc,MPIRANK,maxGlobLevel);
-      int nunit = 1 << maxLevel;
-      ivec3 nunitGlob = numPartition[maxGlobLevel] * nunit;
+      ivec3 nunit = 1 << maxLevel;
       ivec3 nxmin = -iXc * nunit;
-      ivec3 nxmax = nunitGlob + nxmin - 1;
+      ivec3 nxmax = nunit + nxmin - 1;
       if (numImages != 0) {
-	nxmin -= nunitGlob;
-	nxmax += nunitGlob;
+	nxmin -= nunit;
+	nxmax += nunit;
       }
 #pragma omp parallel for
       for (int i=0; i<numLeafs; i++) {
@@ -343,7 +305,7 @@ namespace exafmm {
 	      int rankOffset = 13 * numLeafs;
 	      j += rankOffset;
 	      rankOffset = 13 * numLeafs;
-	      jXp = (jX + iXc * nunit + nunitGlob) / nunitGlob;
+	      jXp = (jX + iXc * nunit + nunit) / nunit;
 	      vec3 periodic;
 	      for_3d periodic[d] = (jXp[d] - 1) * 2 * RGlob[d];
 	      P2P(Ibodies,Leafs[i+rankOffset].begin,Leafs[i+rankOffset].end,
@@ -394,13 +356,12 @@ namespace exafmm {
     void ewaldRealPart(real_t alpha, real_t cutoff) {
       ivec3 iXc;
       getGlobIndex(iXc,MPIRANK,maxGlobLevel);
-      int nunit = 1 << maxLevel;
-      ivec3 nunitGlob = numPartition[maxGlobLevel] * nunit;
+      ivec3 nunit = 1 << maxLevel;
       ivec3 nxmin = -iXc * nunit;
-      ivec3 nxmax = nunitGlob + nxmin - 1;
+      ivec3 nxmax = nunit + nxmin - 1;
       if (numImages != 0) {
-	nxmin -= nunitGlob;
-	nxmax += nunitGlob;
+	nxmin -= nunit;
+	nxmax += nunit;
       }
 #pragma omp parallel for
       for (int i=0; i<numLeafs; i++) {
@@ -418,7 +379,7 @@ namespace exafmm {
 	      int rankOffset = 13 * numLeafs;
 	      j += rankOffset;
 	      rankOffset = 13 * numLeafs;
-	      jXp = (jX + iXc * nunit + nunitGlob) / nunitGlob;
+	      jXp = (jX + iXc * nunit + nunit) / nunit;
 	      vec3 periodic;
 	      for_3d periodic[d] = (jXp[d] - 1) * 2 * RGlob[d];
 	      EwaldP2P(Ibodies,Leafs[i+rankOffset].begin,Leafs[i+rankOffset].end,
@@ -434,13 +395,12 @@ namespace exafmm {
                      real_t * rscale, real_t * gscale, real_t * fgscale) {
       ivec3 iXc;
       getGlobIndex(iXc,MPIRANK,maxGlobLevel);
-      int nunit = 1 << maxLevel;
-      ivec3 nunitGlob = numPartition[maxGlobLevel] * nunit;
+      ivec3 nunit = 1 << maxLevel;
       ivec3 nxmin = -iXc * nunit;
-      ivec3 nxmax = nunitGlob + nxmin - 1;
+      ivec3 nxmax = nunit + nxmin - 1;
       if (numImages != 0) {
-	nxmin -= nunitGlob;
-	nxmax += nunitGlob;
+	nxmin -= nunit;
+	nxmax += nunit;
       }
 #pragma omp parallel for
       for (int i=0; i<numLeafs; i++) {
@@ -458,7 +418,7 @@ namespace exafmm {
 	      int rankOffset = 13 * numLeafs;
 	      j += rankOffset;
 	      rankOffset = 13 * numLeafs;
-	      jXp = (jX + iXc * nunit + nunitGlob) / nunitGlob;
+	      jXp = (jX + iXc * nunit + nunit) / nunit;
 	      vec3 periodic;
 	      for_3d periodic[d] = (jXp[d] - 1) * 2 * RGlob[d];
 	      VdWP2P(Ibodies,Leafs[i+rankOffset].begin,Leafs[i+rankOffset].end,
