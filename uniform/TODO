@@ -1,3 +1,4 @@
+remove variables with glob*
 remove parallel
 Check energy drift
 add smoothing

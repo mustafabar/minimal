@@ -266,15 +266,6 @@ namespace exafmm {
       setSendCounts();
       gatherLevel = level;
       if(gatherLevel > maxGlobLevel) gatherLevel = maxGlobLevel;
-#if EXAFMM_SERIAL
-#else
-      ivec3 numChild = numPartition[maxGlobLevel] / numPartition[gatherLevel];
-      ivec3 iX = IX[maxGlobLevel] % numChild;
-      int key = iX[0] + (iX[1] + iX[2] * numChild[1]) * numChild[0];
-      int color = getGlobKey(IX[gatherLevel],gatherLevel);
-      MPI_Comm_split(MPI_COMM_WORLD, color, key, &MPI_COMM_LOCAL);
-      MPI_Comm_split(MPI_COMM_WORLD, key, color, &MPI_COMM_GLOBAL);
-#endif
     }
 
     void sortBodies() {
@@ -391,11 +382,7 @@ namespace exafmm {
 		  ivec3 jXp = (jX + nunit) % nunit;
 		  int j = getKey(jXp,lev);
 		  jXp = (jX + nunit) / nunit;
-#if EXAFMM_SERIAL
 		  int rankOffset = 13 * numCells;
-#else
-		  int rankOffset = (jXp[0] + 3 * jXp[1] + 9 * jXp[2]) * numCells;
-#endif
 		  j += rankOffset;
 		  vec3 dX;
                   for_3d dX[d]= (iX[d] - jX[d]) * diameter;
@@ -468,11 +455,7 @@ namespace exafmm {
 	      ivec3 jXp = (jX + nunit) % nunit;
 	      int j = getKey(jXp,maxLevel,false);
 	      jXp = (jX + nunit) / nunit;
-#if EXAFMM_SERIAL
 	      int rankOffset = 13 * numLeafs;
-#else
-	      int rankOffset = (jXp[0] + 3 * jXp[1] + 9 * jXp[2]) * numLeafs;
-#endif
 	      j += rankOffset;
 	      rankOffset = 13 * numLeafs;
 	      jXp = (jX + iXc * nunit + nunitGlob) / nunitGlob;
@@ -489,11 +472,7 @@ namespace exafmm {
 
     void periodicM2L() {
       cvecP M;
-#if EXAFMM_SERIAL
       M = Multipole[13*numCells];
-#else
-      M = globMultipole[0];
-#endif
       cvecP L = complex_t(0);
       for( int lev=1; lev<numImages; lev++ ) {
 	vec3 diameter = RGlob * 2 * std::pow(3.,lev-1);
@@ -524,11 +503,7 @@ namespace exafmm {
 	}
 	M = M3;
       }
-#if EXAFMM_SERIAL
       Local[0] += L;
-#else
-      globLocal[0] += L;
-#endif
     }
 
     void ewaldRealPart(real_t alpha, real_t cutoff) {

@@ -1,6 +1,5 @@
-#include "base_mpi.h"
 #include "ewald.h"
-#include "parallelfmm.h"
+#include "serialfmm.h"
 #include <fstream>
 using namespace exafmm;
 
@@ -8,7 +7,6 @@ static const real_t Celec = 332.0716;
 static const int shift = 29;
 static const int mask = ~(0x7U << shift);
 
-BaseMPI * baseMPI;
 SerialFMM * FMM;
 Ewald * ewald;
 
@@ -44,8 +42,7 @@ void splitRange(int & begin, int & end, int iSplit, int numSplit) {
 }
 
 extern "C" void fmm_init_(int & nglobal, int & images, int & verbose) {
-  baseMPI = new BaseMPI;
-  const int numBodies = nglobal / baseMPI->mpisize;
+  const int numBodies = nglobal;
   const int ncrit = 32;
   const int maxLevel = numBodies >= ncrit ? 1 + int(log(numBodies / ncrit)/M_LN2/3) : 0;
   const int numImages = images;
@@ -57,7 +54,6 @@ extern "C" void fmm_init_(int & nglobal, int & images, int & verbose) {
 }
 
 extern "C" void fmm_finalize_() {
-  delete baseMPI;
   delete FMM;
 }
 
@@ -74,7 +70,6 @@ extern "C" void fmm_partition_(int & nglobal, int * icpumap, double * x, double 
 
   int ista = 0;
   int iend = nglobal;
-  splitRange(ista, iend, baseMPI->mpirank, baseMPI->mpisize);
   for (int i=ista; i<iend; i++) {
     icpumap[i] = 1;
   }
@@ -145,30 +140,11 @@ extern "C" void fmm_coulomb_(int & nglobal, int * icpumap,
     }
   }
   FMM->sortBodies();
-  //start("Comm LET bodies");
-  //FMM->P2PSend();
-  //FMM->P2PRecv();
-  //stop("Comm LET bodies");
   FMM->upwardPass();
-  /*
-  start("Comm LET cells");
-  for (int lev=FMM->maxLevel; lev>0; lev--) {
-    MPI_Barrier(MPI_COMM_WORLD);
-    FMM->M2LSend(lev);
-    FMM->M2LRecv(lev);
-  }
-  FMM->rootGather();
-  stop("Comm LET cells");
-  FMM->globM2M();
-  FMM->globM2L();
-  */
   FMM->periodicM2L();
-  //FMM->globL2L();
   FMM->downwardPass();
-  vec3 localDipole = FMM->getDipole();
-  vec3 globalDipole = baseMPI->allreduceVec3(localDipole);
-  int globalNumBodies = baseMPI->allreduceInt(FMM->numBodies);
-  FMM->dipoleCorrection(globalDipole, globalNumBodies);
+  vec3 dipole = FMM->getDipole();
+  FMM->dipoleCorrection(dipole, FMM->numBodies);
   for (int b=0; b<FMM->numBodies; b++) { 
     int i = FMM->Index[b] & mask;
     p[i]     += FMM->Ibodies[b][0] * FMM->Jbodies[b][3] * Celec;
@@ -209,7 +185,6 @@ extern "C" void ewald_coulomb_(int & nglobal, int * icpumap, double * x, double 
   start("Ewald wave part");
   Waves waves = ewald->initWaves();
   ewald->dft(waves,FMM->Jbodies);
-  waves = baseMPI->allreduceWaves(waves);
   ewald->wavePart(waves);
   ewald->idft(waves,FMM->Ibodies,FMM->Jbodies);
   stop("Ewald wave part");
@@ -500,15 +475,10 @@ int main(int argc, char ** argv) {
     }
   }
   print("FMM vs. direct");
-  double potSumGlob, potSumGlob2, accDifGlob, accNrmGlob;
-  MPI_Reduce(&potSum,  &potSumGlob,  1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-  MPI_Reduce(&potSum2, &potSumGlob2, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-  MPI_Reduce(&accDif,  &accDifGlob,  1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-  MPI_Reduce(&accNrm,  &accNrmGlob,  1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-  double potDifGlob = (potSumGlob - potSumGlob2) * (potSumGlob - potSumGlob2);
-  double potNrmGlob = potSumGlob * potSumGlob;
-  double potRel = std::sqrt(potDifGlob/potNrmGlob);
-  double accRel = std::sqrt(accDifGlob/accNrmGlob);
+  double potDif = (potSum - potSum2) * (potSum - potSum2);
+  double potNrm = potSum * potSum;
+  double potRel = std::sqrt(potDif/potNrm);
+  double accRel = std::sqrt(accDif/accNrm);
   print("Rel. L2 Error (pot)",potRel);
   print("Rel. L2 Error (acc)",accRel);
 
@@ -542,15 +512,10 @@ int main(int argc, char ** argv) {
     }
   }
   print("FMM vs. direct");
-  potSumGlob, potSumGlob2, accDifGlob, accNrmGlob;
-  MPI_Reduce(&potSum,  &potSumGlob,  1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-  MPI_Reduce(&potSum2, &potSumGlob2, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-  MPI_Reduce(&accDif,  &accDifGlob,  1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-  MPI_Reduce(&accNrm,  &accNrmGlob,  1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-  potDifGlob = (potSumGlob - potSumGlob2) * (potSumGlob - potSumGlob2);
-  potNrmGlob = potSumGlob * potSumGlob;
-  potRel = std::sqrt(potDifGlob/potNrmGlob);
-  accRel = std::sqrt(accDifGlob/accNrmGlob);
+  potDif = (potSum - potSum2) * (potSum - potSum2);
+  potNrm = potSum * potSum;
+  potRel = std::sqrt(potDif/potNrm);
+  accRel = std::sqrt(accDif/accNrm);
   print("Rel. L2 Error (pot)",potRel);
   print("Rel. L2 Error (acc)",accRel);
   fmm_finalize_();
