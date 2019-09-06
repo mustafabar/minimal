@@ -15,12 +15,12 @@ charmm:
 
 test_charmm:
 	make libcharmm.a
-	mpiifort test_charmm.f90 -fopenmp -L. -lcharmm -lstdc++ -lgomp -lmpi_cxx
+	ifort test_charmm.f90 -fopenmp -L. -lcharmm -lstdc++ -lgomp -lmpi_cxx
 	mpirun -n 1 ./a.out ./ water_32.fmm water.out 10
 
 libcharmm.a:
-	mpiicpc -I. -Wfatal-errors -fopenmp -mavx -O3 -c -o charmm.o charmm.cxx -DLIBRARY
-	ar ruv libcharmm.a charmm.o
+	icpc -I. -Wfatal-errors -fopenmp -mavx -O3 -c -o charmm.o charmm.cxx -DLIBRARY
+	ar rv libcharmm.a charmm.o
 	ranlib libcharmm.a
 
 clean:

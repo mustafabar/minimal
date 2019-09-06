@@ -261,7 +261,6 @@ contains
 
   subroutine verify(natom,p,p2,f,f2,&
     pl2err,fl2err,enerf,enere,grmsf,grmse)
-    use mpi
     implicit none
     integer natom,i,ierr
     real(8) potDif,potSum,potSum2,potNrm2
@@ -359,9 +358,8 @@ contains
   end subroutine energy
 
   subroutine print_energy(time,natom,f,v,mass,atype,etot,pl2err,fl2err,ftotf,ftote)
-    use mpi
     implicit none
-    integer natom,i,ierr,mpirank
+    integer natom,i,ierr
     real(8) time,temp,kboltz,ekinetic,grms
     real(8) etot,ftotf,ftote
     real(8) pl2err,fl2err
@@ -379,7 +377,6 @@ contains
     ekinetic=ekinetic/2.0
     ftotf = ftotf/natom
     ftote = ftote/natom
-    call mpi_comm_rank(mpi_comm_world,mpirank,ierr)
     write(*,'(''time:'',f9.3,'' Etotal:'',g14.5,'' Ekin:'',g14.5,'' Epot:'',g14.5,'' T:'',g12.3,'' Grms:'',g12.5)')&
          time,etot+ekinetic,ekinetic,etot,temp,grms
     write(2,'(f9.3,f14.5,f14.5,g14.5,g14.5,g14.5,g14.5)')&
@@ -392,10 +389,9 @@ contains
        alpha,sigma,cutoff,cuton,pcycle,&
        x,p,p2,f,f2,q,v,xsave,vsave,mass,gscale,fgscale,rscale,rbond,cbond,aangle,cangle,&
        ib,jb,it,jt,kt,atype,numex,natex,nres,ires,time)
-    use mpi
     implicit none
     integer dynsteps,natom,nat,nbonds,ntheta,ksize,imcentfrq,printfrq,nres
-    integer i,istep,ierr,mpirank
+    integer i,istep,ierr
     real(8) alpha,sigma,cutoff,cuton,etot,pcycle,tstep,tstep2,time
     real(8) pl2err,fl2err,ftotf,ftote
     real(8),parameter :: timfac=4.88882129D-02
@@ -405,7 +401,6 @@ contains
     integer,allocatable,dimension(:) :: ib,jb,it,jt,kt,atype,numex,natex,ires
     real(8),allocatable,dimension(:) :: xnew,fac1,fac2
 
-    call mpi_comm_rank(mpi_comm_world,mpirank,ierr)
     open(unit=1,file='water.pdb',status='unknown')
     open(unit=2,file='verify.dat',status='unknown')
 
@@ -558,10 +553,9 @@ program main
   use charmm_io
   use iso_c_binding
   implicit none
-  include 'mpif.h'
   character(len=128) path,infile,outfile,nstp
   integer dynsteps,accuracy
-  integer i,itry,nitr,itr,ierr,expansions,images,istat,ksize,lnam,mpirank
+  integer i,itry,nitr,itr,ierr,expansions,images,istat,ksize,lnam
   integer nat,natom,verbose,nbonds,ntheta,imcentfrq,printfrq,nres
   real(8) alpha,sigma,cuton,cutoff,average,pcycle,theta,time,tic,toc
   real(8) pl2err,fl2err,enerf,enere,grmsf,grmse
@@ -573,8 +567,6 @@ program main
   real(8),allocatable,dimension(:,:) :: rbond,cbond
   real(8),allocatable,dimension(:,:,:) :: aangle,cangle
 
-  call mpi_init(ierr)
-  call mpi_comm_rank(mpi_comm_world,mpirank,ierr)
   natom = 1000
   images = 3
   verbose = 0
@@ -743,5 +735,4 @@ program main
   deallocate( ires,numex,natex,rscale,gscale,fgscale,atype )
 
   call fmm_finalize()
-  call mpi_finalize(ierr)
 end program main
