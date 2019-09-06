@@ -259,11 +259,11 @@ contains
     enddo
   end subroutine bonded_terms
 
-  subroutine verify(nglobal,p,p2,f,f2,&
+  subroutine verify(natom,p,p2,f,f2,&
     pl2err,fl2err,enerf,enere,grmsf,grmse)
     use mpi
     implicit none
-    integer nglobal,i,ierr
+    integer natom,i,ierr
     real(8) potDif,potSum,potSum2,potNrm2
     real(8) accDif,accNrm,accNrm2
     real(8) pl2err,fl2err,enerf,enere,grmsf,grmse
@@ -273,7 +273,7 @@ contains
     accDif = 0
     accNrm = 0
     accNrm2 = 0
-    do i = 1,nglobal
+    do i = 1,natom
        p(i) = p(i)
        f(3*i-2) = f(3*i-2)
        f(3*i-1) = f(3*i-1)
@@ -296,17 +296,17 @@ contains
     fl2err = sqrt(accDif/accNrm2)
     enerf = potSum*0.5
     enere = potSum2*0.5
-    grmsf = sqrt(accNrm/3.0/nglobal)
-    grmse = sqrt(accNrm2/3.0/nglobal)
+    grmsf = sqrt(accNrm/3.0/natom)
+    grmse = sqrt(accNrm2/3.0/natom)
   end subroutine verify
 
-  subroutine energy(nglobal,nat,nbonds,ntheta,ksize,&
+  subroutine energy(natom,nat,nbonds,ntheta,ksize,&
        alpha,sigma,cutoff,cuton,pcycle,xold,&
        x,p,p2,f,f2,q,xsave,vsave,gscale,fgscale,rscale,rbond,cbond,aangle,cangle,&
        ib,jb,it,jt,kt,atype,numex,natex,etot,&
        pl2err,fl2err,ftotf,ftote)
     implicit none
-    integer nglobal,nat,nbonds,ntheta,ksize,i
+    integer natom,nat,nbonds,ntheta,ksize,i
     real(8) alpha,sigma,cutoff,cuton,etot,eb,et,efmm,evdw,pcycle
     real(8) pl2err,fl2err,enerf,enere,grmsf,grmse,ftotf,ftote
     integer,allocatable,dimension(:) :: ib,jb,it,jt,kt,atype,numex,natex
@@ -314,41 +314,41 @@ contains
     real(8),allocatable,dimension(:,:) :: rbond,cbond
     real(8),allocatable,dimension(:,:,:) :: aangle,cangle
 
-    do i = 1,3*nglobal
+    do i = 1,3*natom
        xsave(i) = x(i)
        vsave(i) = xold(i)
     enddo
-    call fmm_partition(nglobal,x,q,xold,pcycle)
-    p(1:nglobal)=0.0
-    p2(1:nglobal)=0.0
-    f(1:3*nglobal)=0.0
-    f2(1:3*nglobal)=0.0
-    call fmm_coulomb(nglobal,x,q,p,f,pcycle)
-    !call ewald_coulomb(nglobal,x,q,p2,f2,ksize,alpha,sigma,cutoff,pcycle)
-    !call verify(nglobal,p,p2,f,f2,pl2err,fl2err,enerf,enere,grmsf,grmse)
+    call fmm_partition(natom,x,q,xold,pcycle)
+    p(1:natom)=0.0
+    p2(1:natom)=0.0
+    f(1:3*natom)=0.0
+    f2(1:3*natom)=0.0
+    call fmm_coulomb(natom,x,q,p,f,pcycle)
+    !call ewald_coulomb(natom,x,q,p2,f2,ksize,alpha,sigma,cutoff,pcycle)
+    !call verify(natom,p,p2,f,f2,pl2err,fl2err,enerf,enere,grmsf,grmse)
     ftotf=0.0
     ftote=0.0
-    do i = 1,nglobal
+    do i = 1,natom
        ftotf = ftotf+ f(3*i-2)+ f(3*i-1)+ f(3*i)
        ftote = ftote+f2(3*i-2)+f2(3*i-1)+f2(3*i)
     enddo
-    call coulomb_exclusion(nglobal,x,q,p,f,pcycle,numex,natex)
+    call coulomb_exclusion(natom,x,q,p,f,pcycle,numex,natex)
     efmm=0.0
-    do i=1,nglobal
+    do i=1,natom
        efmm=efmm+p(i)
     enddo
     efmm=efmm*0.5
-    p(1:nglobal)=0.0
-    call fmm_vanderwaals(nglobal,atype,x,p,f,cuton,cutoff,&
+    p(1:natom)=0.0
+    call fmm_vanderwaals(natom,atype,x,p,f,cuton,cutoff,&
          pcycle,nat,rscale,gscale,fgscale)
-    call vanderwaals_exclusion(nglobal,atype,x,p,f,cuton,cutoff,&
+    call vanderwaals_exclusion(natom,atype,x,p,f,cuton,cutoff,&
          pcycle,nat,rscale,gscale,fgscale,numex,natex)
     evdw=0.0
-    do i = 1,nglobal
+    do i = 1,natom
        evdw=evdw+p(i)
     enddo
     evdw=evdw*0.5
-    do i = 1,3*nglobal
+    do i = 1,3*natom
        x(i) = xsave(i)
        xold(i) = vsave(i)
     enddo
@@ -358,10 +358,10 @@ contains
     return
   end subroutine energy
 
-  subroutine print_energy(time,nglobal,f,v,mass,atype,etot,pl2err,fl2err,ftotf,ftote)
+  subroutine print_energy(time,natom,f,v,mass,atype,etot,pl2err,fl2err,ftotf,ftote)
     use mpi
     implicit none
-    integer nglobal,i,ierr,mpirank
+    integer natom,i,ierr,mpirank
     real(8) time,temp,kboltz,ekinetic,grms
     real(8) etot,ftotf,ftote
     real(8) pl2err,fl2err
@@ -370,15 +370,15 @@ contains
     kboltz=1.987191d-03 !from CHARMM
     ekinetic=0.0
     grms=0.0
-    do i=1,nglobal
+    do i=1,natom
        ekinetic=ekinetic+mass(atype(i))*(v(3*i-2)**2+v(3*i-1)**2+v(3*i-0)**2)
        grms=grms+f(3*i-2)**2+f(3*i-1)**2+f(3*i-0)**2
     enddo
-    grms=sqrt(grms/3.0/real(nglobal))
-    temp=ekinetic/3.0/nglobal/kboltz
+    grms=sqrt(grms/3.0/real(natom))
+    temp=ekinetic/3.0/natom/kboltz
     ekinetic=ekinetic/2.0
-    ftotf = ftotf/nglobal
-    ftote = ftote/nglobal
+    ftotf = ftotf/natom
+    ftote = ftote/natom
     call mpi_comm_rank(mpi_comm_world,mpirank,ierr)
     if(mpirank == 0) then
        write(*,'(''time:'',f9.3,'' Etotal:'',g14.5,'' Ekin:'',g14.5,'' Epot:'',g14.5,'' T:'',g12.3,'' Grms:'',g12.5)')&
@@ -390,13 +390,13 @@ contains
   end subroutine print_energy
 
   subroutine run_dynamics(dynsteps,imcentfrq,printfrq,&
-       nglobal,nat,nbonds,ntheta,ksize,&
+       natom,nat,nbonds,ntheta,ksize,&
        alpha,sigma,cutoff,cuton,pcycle,&
        x,p,p2,f,f2,q,v,xsave,vsave,mass,gscale,fgscale,rscale,rbond,cbond,aangle,cangle,&
        ib,jb,it,jt,kt,atype,numex,natex,nres,ires,time)
     use mpi
     implicit none
-    integer dynsteps,nglobal,nat,nbonds,ntheta,ksize,imcentfrq,printfrq,nres
+    integer dynsteps,natom,nat,nbonds,ntheta,ksize,imcentfrq,printfrq,nres
     integer i,istep,ierr,mpirank
     real(8) alpha,sigma,cutoff,cuton,etot,pcycle,tstep,tstep2,time
     real(8) pl2err,fl2err,ftotf,ftote
@@ -416,18 +416,18 @@ contains
     tstep = 0.001/timfac !ps -> akma
     tstep2 = tstep**2
 
-    allocate(xnew(3*nglobal),xold(3*nglobal),fac1(nglobal),fac2(nglobal))
+    allocate(xnew(3*natom),xold(3*natom),fac1(natom),fac2(natom))
 
-    call energy(nglobal,nat,nbonds,ntheta,ksize,&
+    call energy(natom,nat,nbonds,ntheta,ksize,&
          alpha,sigma,cutoff,cuton,pcycle,xold,&
          x,p,p2,f,f2,q,xsave,vsave,gscale,fgscale,rscale,rbond,cbond,aangle,cangle,&
          ib,jb,it,jt,kt,atype,numex,natex,etot,&
          pl2err,fl2err,ftotf,ftote)
 
-    call print_energy(time,nglobal,f,v,mass,atype,etot,pl2err,fl2err,ftotf,ftote)
+    call print_energy(time,natom,f,v,mass,atype,etot,pl2err,fl2err,ftotf,ftote)
 
     ! precompute some constants and recalculate xold
-    do i=1,nglobal
+    do i=1,natom
        fac1(i) = tstep2/mass(atype(i))
        fac2(i) = 0.5/tstep
        xold(3*i-2) = v(3*i-2)*tstep-f(3*i-2)*fac1(i)*0.5
@@ -437,51 +437,51 @@ contains
 
     mainloop: do istep = 1,dynsteps
 
-       do i = 1,nglobal
+       do i = 1,natom
           x(3*i-2) = x(3*i-2) + xold(3*i-2)
           x(3*i-1) = x(3*i-1) + xold(3*i-1)
           x(3*i-0) = x(3*i-0) + xold(3*i-0)
        enddo
 
-       call energy(nglobal,nat,nbonds,ntheta,ksize,&
+       call energy(natom,nat,nbonds,ntheta,ksize,&
             alpha,sigma,cutoff,cuton,pcycle,xold,&
             x,p,p2,f,f2,q,xsave,vsave,gscale,fgscale,rscale,rbond,cbond,aangle,cangle,&
             ib,jb,it,jt,kt,atype,numex,natex,etot,&
             pl2err,fl2err,ftotf,ftote)
 
-       do i = 1,nglobal
+       do i = 1,natom
           xnew(3*i-2) = xold(3*i-2) - fac1(i)*f(3*i-2)
           xnew(3*i-1) = xold(3*i-1) - fac1(i)*f(3*i-1)
           xnew(3*i-0) = xold(3*i-0) - fac1(i)*f(3*i-0)
        enddo
 
-       do i = 1,nglobal
+       do i = 1,natom
           v(3*i-2) = (xnew(3*i-2) + xold(3*i-2))*fac2(i)
           v(3*i-1) = (xnew(3*i-1) + xold(3*i-1))*fac2(i)
           v(3*i-0) = (xnew(3*i-0) + xold(3*i-0))*fac2(i)
        enddo
 
-       do i = 1,nglobal
+       do i = 1,natom
           xold(3*i-2) = xnew(3*i-2)
           xold(3*i-1) = xnew(3*i-1)
           xold(3*i-0) = xnew(3*i-0)
        enddo
 
-       if (mod(istep,imcentfrq) == 0) call image_center(nglobal,x,nres,ires,pcycle)
+       if (mod(istep,imcentfrq) == 0) call image_center(natom,x,nres,ires,pcycle)
 
        time=time+tstep*timfac ! for printing only
        if (mod(istep,printfrq) == 0) then
-          call print_energy(time,nglobal,f,v,mass,atype,etot,&
+          call print_energy(time,natom,f,v,mass,atype,etot,&
                pl2err,fl2err,ftotf,ftote)
-          !call pdb_frame(1,time,nglobal,x,nres)
+          !call pdb_frame(1,time,natom,x,nres)
        endif
     enddo mainloop
 
   end subroutine run_dynamics
 
-  subroutine image_center(nglobal,x,nres,ires,pcycle)
+  subroutine image_center(natom,x,nres,ires,pcycle)
     implicit none
-    integer nglobal,nres,flag,istart,iend,nsel,i,j
+    integer natom,nres,flag,istart,iend,nsel,i,j
     real(8) pcycle,xmin,xmax,ymin,ymax,zmin,zmax,xcen,ycen,zcen
     integer,allocatable,dimension(:) :: ires
     real(8),allocatable,dimension(:) :: x
@@ -498,7 +498,7 @@ contains
     residues: do i = 1,nres
        istart=ires(i)
        if(i == nres) then
-          iend=nglobal
+          iend=natom
        else
           iend=ires(i+1)-1
        endif
@@ -579,7 +579,7 @@ program main
   character(len=128) path,infile,outfile,nstp
   integer dynsteps,accuracy
   integer i,itry,nitr,itr,ierr,expansions,images,ista,iend,istat,ksize,lnam,mpirank,mpisize
-  integer nat,nglobal,verbose,nbonds,ntheta,imcentfrq,printfrq,nres
+  integer nat,natom,verbose,nbonds,ntheta,imcentfrq,printfrq,nres
   real(8) alpha,sigma,cuton,cutoff,average,pcycle,theta,time,tic,toc
   real(8) pl2err,fl2err,enerf,enere,grmsf,grmse
   integer,dimension (128) :: iseed
@@ -593,11 +593,11 @@ program main
   call mpi_init(ierr)
   call mpi_comm_size(mpi_comm_world,mpisize,ierr)
   call mpi_comm_rank(mpi_comm_world,mpirank,ierr)
-  nglobal = 1000
+  natom = 1000
   images = 3
   verbose = 0
-  pcycle = 2 * nglobal ** (1. / 6)
-  cutoff = 3 * nglobal ** (1. / 6)
+  pcycle = 2 * natom ** (1. / 6)
+  cutoff = 3 * natom ** (1. / 6)
   cuton = 0.95 * cutoff
   alpha = 4 / cutoff
   ksize = int(4 / pi * alpha * pcycle)
@@ -610,21 +610,21 @@ program main
      call get_command_argument(3,outfile,lnam,istat)
      infile = trim(path) // trim(infile)
      outfile = trim(path) // trim(outfile)
-     call charmm_cor_read(nglobal,x,q,pcycle,infile,numex,natex,nat,atype,&
+     call charmm_cor_read(natom,x,q,pcycle,infile,numex,natex,nat,atype,&
           rscale,gscale,fgscale,nbonds,ntheta,ib,jb,it,jt,kt,rbond,cbond,&
           aangle,cangle,mass,xc,v,nres,ires,time)
-     cutoff = 3 * nglobal ** (1. / 6)
+     cutoff = 3 * natom ** (1. / 6)
      cuton = 0.95 * cutoff
      alpha = 4 / cutoff
      ksize = int(4 / pi * alpha * pcycle)
      sigma = .25 / pi
-     allocate( p(nglobal),f(3*nglobal) )
-     allocate( p2(nglobal),f2(3*nglobal),xsave(3*nglobal),vsave(3*nglobal) )
+     allocate( p(natom),f(3*natom) )
+     allocate( p2(natom),f2(3*natom),xsave(3*natom),vsave(3*natom) )
   else
-     allocate( x(3*nglobal),q(nglobal),v(3*nglobal) )
-     allocate( p(nglobal),p2(nglobal),f(3*nglobal),f2(3*nglobal) )
-     allocate( xc(3*nglobal),ires(nglobal) )
-     allocate( numex(nglobal),natex(nglobal),atype(nglobal) )
+     allocate( x(3*natom),q(natom),v(3*natom) )
+     allocate( p(natom),p2(natom),f(3*natom),f2(3*natom) )
+     allocate( xc(3*natom),ires(natom) )
+     allocate( numex(natom),natex(natom),atype(natom) )
      allocate( rscale(nat*nat),gscale(nat*nat),fgscale(nat*nat) )
      do i = 1,128
         iseed(i) = 0
@@ -633,7 +633,7 @@ program main
      call random_number(x)
      call random_number(q)
      average = 0
-     do i = 1,nglobal
+     do i = 1,natom
         x(3*i-2) = x(3*i-2) * pcycle - pcycle / 2
         x(3*i-1) = x(3*i-1) * pcycle - pcycle / 2
         x(3*i-0) = x(3*i-0) * pcycle - pcycle / 2
@@ -647,11 +647,11 @@ program main
         f2(3*i-0) = 0
         average = average + q(i)
      enddo
-     average = average / nglobal
-     do i = 1,nglobal
+     average = average / natom
+     do i = 1,natom
         q(i) = q(i) - average
      enddo
-     do i = 1,nglobal
+     do i = 1,natom
         numex(i) = 1
         if(mod(i,2) == 1)then
            natex(i) = i+1
@@ -667,40 +667,40 @@ program main
      enddo
   endif charmmio
   open(unit=3,file='initial.dat',status='unknown')
-  write(3,'(4f28.18)')(x(3*i-2),x(3*i-1),x(3*i-0),q(i),i=1,nglobal)
+  write(3,'(4f28.18)')(x(3*i-2),x(3*i-1),x(3*i-0),q(i),i=1,natom)
 
   if (mpirank == 0) print*,'I/O done'
   ista = 1
-  iend = nglobal
+  iend = natom
   if (mpirank == 0) print*,'FMM init'
   path = trim(path)//c_null_char
-  call fmm_init(nglobal,images,verbose)
+  call fmm_init(natom,images,verbose)
   if (mpirank == 0) print*,'FMM partition'
-  do i = 1,3*nglobal
+  do i = 1,3*natom
      xsave(i) = x(i)
      vsave(i) = v(i)
   enddo
-  call fmm_partition(nglobal,x,q,v,pcycle)
+  call fmm_partition(natom,x,q,v,pcycle)
   
-  do i = 1,nglobal
+  do i = 1,natom
      p(i) = 0
      f(3*i-2) = 0
      f(3*i-1) = 0
      f(3*i-0) = 0
   enddo
-  call fmm_coulomb(nglobal,x,q,p,f,pcycle)
+  call fmm_coulomb(natom,x,q,p,f,pcycle)
   if (mpirank == 0) print*,'Ewald Coulomb'
-  do i = 1,nglobal
+  do i = 1,natom
      p2(i) = 0
      f2(3*i-2) = 0
      f2(3*i-1) = 0
      f2(3*i-0) = 0
   enddo
-  call ewald_coulomb(nglobal,x,q,p2,f2,ksize,alpha,sigma,cutoff,pcycle)
+  call ewald_coulomb(natom,x,q,p2,f2,ksize,alpha,sigma,cutoff,pcycle)
   if(mpirank == 0) print*,'Coulomb exclusion'
-  call coulomb_exclusion(nglobal,x,q,p,f,pcycle,numex,natex)
-  call coulomb_exclusion(nglobal,x,q,p2,f2,pcycle,numex,natex)
-  call verify(nglobal,p,p2,f,f2,pl2err,fl2err,enerf,enere,grmsf,grmse)
+  call coulomb_exclusion(natom,x,q,p,f,pcycle,numex,natex)
+  call coulomb_exclusion(natom,x,q,p2,f2,pcycle,numex,natex)
+  call verify(natom,p,p2,f,f2,pl2err,fl2err,enerf,enere,grmsf,grmse)
   if (mpirank == 0) then
      print "(a)",'--- Coulomb FMM vs. Ewald -------'
      print "(a,f9.6)",'Rel. L2 Error (pot)  : ',pl2err
@@ -712,7 +712,7 @@ program main
      print "(a)",'--- Accuracy regression ---------'
   endif
 
-  do i = 1,nglobal
+  do i = 1,natom
      p(i) = 0
      p2(i) = 0
      f(3*i-2) = 0
@@ -722,16 +722,16 @@ program main
      f2(3*i-1) = 0
      f2(3*i-0) = 0
   enddo
-  call fmm_vanderwaals(nglobal,atype,x,p,f,cuton,cutoff,&
+  call fmm_vanderwaals(natom,atype,x,p,f,cuton,cutoff,&
        pcycle,nat,rscale,gscale,fgscale)
-  call vanderwaals_exclusion(nglobal,atype,x,p,f,cuton,cutoff,&
+  call vanderwaals_exclusion(natom,atype,x,p,f,cuton,cutoff,&
        pcycle,nat,rscale,gscale,fgscale,numex,natex)
-  call direct_vanderwaals(nglobal,atype,x,p2,f2,cuton,cutoff,&
+  call direct_vanderwaals(natom,atype,x,p2,f2,cuton,cutoff,&
        pcycle,nat,rscale,gscale,fgscale)
-  call vanderwaals_exclusion(nglobal,atype,x,p2,f2,cuton,cutoff,&
+  call vanderwaals_exclusion(natom,atype,x,p2,f2,cuton,cutoff,&
        pcycle,nat,rscale,gscale,fgscale,numex,natex)
 
-  call verify(nglobal,p,p2,f,f2,pl2err,fl2err,enerf,enere,grmsf,grmse)
+  call verify(natom,p,p2,f,f2,pl2err,fl2err,enerf,enere,grmsf,grmse)
   if (mpirank == 0) then
      print "(a)",'--- VdW FMM vs. Direct ----------'
      print "(a,f9.6)",'Rel. L2 Error (pot)  : ',pl2err
@@ -742,7 +742,7 @@ program main
      print "(a,f15.4)",'GRMS (Direct)        : ',grmse
   endif
 
-  do i = 1,3*nglobal
+  do i = 1,3*natom
      x(i) = xsave(i)
      v(i) = vsave(i)
   enddo
@@ -755,11 +755,11 @@ program main
   printfrq=1
   imcentfrq=10
   call run_dynamics(dynsteps,imcentfrq,printfrq,&
-       nglobal,nat,nbonds,ntheta,ksize,&
+       natom,nat,nbonds,ntheta,ksize,&
        alpha,sigma,cutoff,cuton,pcycle,&
        xc,p,p2,f,f2,q,v,xsave,vsave,mass,gscale,fgscale,rscale,rbond,cbond,aangle,cangle,&
        ib,jb,it,jt,kt,atype,numex,natex,nres,ires,time)
-  call charmm_cor_write(nglobal,x,q,pcycle,trim(outfile),&
+  call charmm_cor_write(natom,x,q,pcycle,trim(outfile),&
        numex,natex,nat,atype,rscale,gscale,fgscale,nbonds,ntheta,ib,jb,it,jt,kt,&
        rbond,cbond,aangle,cangle,mass,xc,v,time)
 
