@@ -98,7 +98,7 @@ extern "C" void fmm_coulomb_(int & numBodies, double * x, double * q, double * p
   FMM->periodicM2L();
   FMM->downwardPass();
   vec3 dipole = FMM->getDipole();
-  FMM->dipoleCorrection(dipole, FMM->numBodies);
+  FMM->dipoleCorrection(dipole);
   for (int b=0; b<FMM->numBodies; b++) { 
     int i = FMM->Index[b] & mask;
     p[i]     += FMM->Ibodies[b][0] * FMM->Jbodies[b][3] * Celec;

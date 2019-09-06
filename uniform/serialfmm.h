@@ -16,7 +16,6 @@ namespace exafmm {
     vec3 X0;
     real_t R0;
     std::vector<int> Index;
-    std::vector<int> Rank;
     std::vector<Range> Leafs;
     std::vector<vec4> Ibodies;
     std::vector<vec4> Jbodies;
@@ -84,11 +83,10 @@ namespace exafmm {
       numImages = Im;
       numCells = ((1 << 3 * (L + 1)) - 1) / 7;
       numLeafs = 1 << 3 * L;
-      Index.resize(2*numBodies);
-      Rank.resize(2*numBodies);
+      Index.resize(numBodies);
       Leafs.resize(27*numLeafs);
-      Ibodies.resize(2*numBodies);
-      Jbodies.resize(2*numBodies);
+      Ibodies.resize(numBodies);
+      Jbodies.resize(numBodies);
       Multipole.resize(27*numCells);
       Local.resize(numCells);
     }
@@ -409,11 +407,11 @@ namespace exafmm {
       return dipole;
     }
 
-    void dipoleCorrection(vec3 dipole, int numBodiesGlob) {
+    void dipoleCorrection(vec3 dipole) {
       vec3 cycle = R0 * 2;
       real_t coef = 4 * M_PI / (3 * cycle[0] * cycle[1] * cycle[2]);
       for (int i=0; i<numBodies; i++) {
-        Ibodies[i][0] -= coef * norm(dipole) / numBodiesGlob / Jbodies[i][3];
+        Ibodies[i][0] -= coef * norm(dipole) / numBodies / Jbodies[i][3];
         for (int d=0; d<3; d++) {
           Ibodies[i][d+1] -= coef * dipole[d];
         }

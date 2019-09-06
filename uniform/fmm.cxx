@@ -53,7 +53,7 @@ int main(int argc, char ** argv) {
   stop("Total FMM");
 
   vec3 dipole = FMM.getDipole();
-  FMM.dipoleCorrection(dipole, FMM.numBodies);
+  FMM.dipoleCorrection(dipole);
 
   start("Total Ewald");
   std::vector<vec4> Ibodies(FMM.numBodies);
