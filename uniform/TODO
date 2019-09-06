@@ -1,4 +1,3 @@
-remove ista,iend
 remove nlocal
 remove send*, recv*
 remove variables with glob*

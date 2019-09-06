@@ -380,12 +380,10 @@ contains
     ftotf = ftotf/natom
     ftote = ftote/natom
     call mpi_comm_rank(mpi_comm_world,mpirank,ierr)
-    if(mpirank == 0) then
-       write(*,'(''time:'',f9.3,'' Etotal:'',g14.5,'' Ekin:'',g14.5,'' Epot:'',g14.5,'' T:'',g12.3,'' Grms:'',g12.5)')&
-            time,etot+ekinetic,ekinetic,etot,temp,grms
-       write(2,'(f9.3,f14.5,f14.5,g14.5,g14.5,g14.5,g14.5)')&
-            time,etot,ekinetic,pl2err,fl2err,ftotf,ftote
-    endif
+    write(*,'(''time:'',f9.3,'' Etotal:'',g14.5,'' Ekin:'',g14.5,'' Epot:'',g14.5,'' T:'',g12.3,'' Grms:'',g12.5)')&
+         time,etot+ekinetic,ekinetic,etot,temp,grms
+    write(2,'(f9.3,f14.5,f14.5,g14.5,g14.5,g14.5,g14.5)')&
+         time,etot,ekinetic,pl2err,fl2err,ftotf,ftote
     return
   end subroutine print_energy
 
@@ -408,10 +406,8 @@ contains
     real(8),allocatable,dimension(:) :: xnew,fac1,fac2
 
     call mpi_comm_rank(mpi_comm_world,mpirank,ierr)
-    if(mpirank == 0)then
-       open(unit=1,file='water.pdb',status='unknown')
-       open(unit=2,file='verify.dat',status='unknown')
-    endif
+    open(unit=1,file='water.pdb',status='unknown')
+    open(unit=2,file='verify.dat',status='unknown')
 
     tstep = 0.001/timfac !ps -> akma
     tstep2 = tstep**2
@@ -558,19 +554,6 @@ contains
 
 end module charmm_io
 
-subroutine split_range(ista,iend,isplit,nsplit)
-  implicit none
-  integer ista,iend,isplit,nsplit
-  integer increment,remainder,size
-  size = iend - ista + 1
-  increment = size / nsplit
-  remainder = mod(size,nsplit)
-  ista = ista + isplit * increment + min(isplit,remainder)
-  iend = ista + increment - 1
-  if(remainder > isplit) iend = iend + 1
-  return
-end subroutine split_range
-
 program main
   use charmm_io
   use iso_c_binding
@@ -578,7 +561,7 @@ program main
   include 'mpif.h'
   character(len=128) path,infile,outfile,nstp
   integer dynsteps,accuracy
-  integer i,itry,nitr,itr,ierr,expansions,images,ista,iend,istat,ksize,lnam,mpirank,mpisize
+  integer i,itry,nitr,itr,ierr,expansions,images,istat,ksize,lnam,mpirank
   integer nat,natom,verbose,nbonds,ntheta,imcentfrq,printfrq,nres
   real(8) alpha,sigma,cuton,cutoff,average,pcycle,theta,time,tic,toc
   real(8) pl2err,fl2err,enerf,enere,grmsf,grmse
@@ -591,7 +574,6 @@ program main
   real(8),allocatable,dimension(:,:,:) :: aangle,cangle
 
   call mpi_init(ierr)
-  call mpi_comm_size(mpi_comm_world,mpisize,ierr)
   call mpi_comm_rank(mpi_comm_world,mpirank,ierr)
   natom = 1000
   images = 3
@@ -669,13 +651,11 @@ program main
   open(unit=3,file='initial.dat',status='unknown')
   write(3,'(4f28.18)')(x(3*i-2),x(3*i-1),x(3*i-0),q(i),i=1,natom)
 
-  if (mpirank == 0) print*,'I/O done'
-  ista = 1
-  iend = natom
-  if (mpirank == 0) print*,'FMM init'
+  print*,'I/O done'
+  print*,'FMM init'
   path = trim(path)//c_null_char
   call fmm_init(natom,images,verbose)
-  if (mpirank == 0) print*,'FMM partition'
+  print*,'FMM partition'
   do i = 1,3*natom
      xsave(i) = x(i)
      vsave(i) = v(i)
@@ -689,7 +669,7 @@ program main
      f(3*i-0) = 0
   enddo
   call fmm_coulomb(natom,x,q,p,f,pcycle)
-  if (mpirank == 0) print*,'Ewald Coulomb'
+  print*,'Ewald Coulomb'
   do i = 1,natom
      p2(i) = 0
      f2(3*i-2) = 0
@@ -697,20 +677,18 @@ program main
      f2(3*i-0) = 0
   enddo
   call ewald_coulomb(natom,x,q,p2,f2,ksize,alpha,sigma,cutoff,pcycle)
-  if(mpirank == 0) print*,'Coulomb exclusion'
+  print*,'Coulomb exclusion'
   call coulomb_exclusion(natom,x,q,p,f,pcycle,numex,natex)
   call coulomb_exclusion(natom,x,q,p2,f2,pcycle,numex,natex)
   call verify(natom,p,p2,f,f2,pl2err,fl2err,enerf,enere,grmsf,grmse)
-  if (mpirank == 0) then
-     print "(a)",'--- Coulomb FMM vs. Ewald -------'
-     print "(a,f9.6)",'Rel. L2 Error (pot)  : ',pl2err
-     print "(a,f9.6)",'Rel. L2 Error (acc)  : ',fl2err
-     print "(a,f15.4)",'Energy (FMM)         : ',enerf
-     print "(a,f15.4)",'Energy (Ewald)       : ',enere
-     print "(a,f15.4)",'GRMS (FMM)           : ',grmsf
-     print "(a,f15.4)",'GRMS (Ewald)         : ',grmse
-     print "(a)",'--- Accuracy regression ---------'
-  endif
+  print "(a)",'--- Coulomb FMM vs. Ewald -------'
+  print "(a,f9.6)",'Rel. L2 Error (pot)  : ',pl2err
+  print "(a,f9.6)",'Rel. L2 Error (acc)  : ',fl2err
+  print "(a,f15.4)",'Energy (FMM)         : ',enerf
+  print "(a,f15.4)",'Energy (Ewald)       : ',enere
+  print "(a,f15.4)",'GRMS (FMM)           : ',grmsf
+  print "(a,f15.4)",'GRMS (Ewald)         : ',grmse
+  print "(a)",'--- Accuracy regression ---------'
 
   do i = 1,natom
      p(i) = 0
@@ -732,15 +710,13 @@ program main
        pcycle,nat,rscale,gscale,fgscale,numex,natex)
 
   call verify(natom,p,p2,f,f2,pl2err,fl2err,enerf,enere,grmsf,grmse)
-  if (mpirank == 0) then
-     print "(a)",'--- VdW FMM vs. Direct ----------'
-     print "(a,f9.6)",'Rel. L2 Error (pot)  : ',pl2err
-     print "(a,f9.6)",'Rel. L2 Error (acc)  : ',fl2err
-     print "(a,f15.4)",'Energy (FMM)         : ',enerf
-     print "(a,f15.4)",'Energy (Direct)      : ',enere
-     print "(a,f15.4)",'GRMS (FMM)           : ',grmsf
-     print "(a,f15.4)",'GRMS (Direct)        : ',grmse
-  endif
+  print "(a)",'--- VdW FMM vs. Direct ----------'
+  print "(a,f9.6)",'Rel. L2 Error (pot)  : ',pl2err
+  print "(a,f9.6)",'Rel. L2 Error (acc)  : ',fl2err
+  print "(a,f15.4)",'Energy (FMM)         : ',enerf
+  print "(a,f15.4)",'Energy (Direct)      : ',enere
+  print "(a,f15.4)",'GRMS (FMM)           : ',grmsf
+  print "(a,f15.4)",'GRMS (Direct)        : ',grmse
 
   do i = 1,3*natom
      x(i) = xsave(i)
@@ -750,7 +726,7 @@ program main
   ! run dynamics if third command line argument specified
   call get_command_argument(4,nstp,lnam,istat)
   read(nstp,*)dynsteps
-  if(mpirank == 0) write(*,*)'will run dynamics for ',dynsteps,' steps'
+  print*,'will run dynamics for ',dynsteps,' steps'
   ! for pure water systems there is no need for nbadd14() :-)
   printfrq=1
   imcentfrq=10
@@ -765,10 +741,6 @@ program main
 
   deallocate( x,q,v,p,f,p2,f2 )
   deallocate( ires,numex,natex,rscale,gscale,fgscale,atype )
-
-! from the end of run_dynamics():
-!    deallocate(xnew,xold,fac1,fac2)
-!    deallocate(ib,jb,it,jt,kt,rbond,cbond,mass,aangle,cangle,x)
 
   call fmm_finalize()
   call mpi_finalize(ierr)
