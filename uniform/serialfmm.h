@@ -4,7 +4,7 @@
 namespace exafmm {
   class SerialFMM : public Kernel {
   protected:
-    const int DP2P = 1; // Use 1 for parallel
+    const int DP2P = 2; // Use 1 for parallel
     int bodiesDispl[26];
     int bodiesCount[26];
     int sendBodiesDispl[1024];

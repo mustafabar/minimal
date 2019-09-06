@@ -365,7 +365,7 @@ contains
     f(1:3*nglobal)=0.0
     f2(1:3*nglobal)=0.0
     call fmm_coulomb(nglobal,icpumap,x,q,p,f,pcycle)
-    call ewald_coulomb(nglobal,icpumap,x,q,p2,f2,ksize,alpha,sigma,cutoff,pcycle)
+    !call ewald_coulomb(nglobal,icpumap,x,q,p2,f2,ksize,alpha,sigma,cutoff,pcycle)
     !call verify(nglobal,icpumap,p,p2,f,f2,pl2err,fl2err,enerf,enere,grmsf,grmse)
     ftotf=0.0
     ftote=0.0
@@ -632,9 +632,9 @@ program main
   include 'mpif.h'
   character(len=128) path,infile,outfile,nstp
   integer dynsteps,accuracy
-  integer i,itry,nitr,itr,ierr,images,ista,iend,istat,ksize,lnam,mpirank,mpisize
+  integer i,itry,nitr,itr,ierr,expansions,images,ista,iend,istat,ksize,lnam,mpirank,mpisize
   integer nat,nglobal,verbose,nbonds,ntheta,imcentfrq,printfrq,nres
-  real(8) alpha,sigma,cuton,cutoff,average,pcycle,time,tic,toc
+  real(8) alpha,sigma,cuton,cutoff,average,pcycle,theta,time,tic,toc
   real(8) pl2err,fl2err,enerf,enere,grmsf,grmse
   integer,dimension (128) :: iseed
   integer,allocatable,dimension(:) :: icpumap,numex,natex,atype,ib,jb,it,jt,kt,ires
@@ -648,7 +648,7 @@ program main
   call mpi_comm_size(mpi_comm_world,mpisize,ierr)
   call mpi_comm_rank(mpi_comm_world,mpirank,ierr)
   nglobal = 1000
-  images = 6
+  images = 3
   verbose = 0
   pcycle = 2 * nglobal ** (1. / 6)
   cutoff = 3 * nglobal ** (1. / 6)
@@ -688,9 +688,9 @@ program main
      call random_number(q)
      average = 0
      do i = 1,nglobal
-        x(3*i-2) = x(3*i-2) * pcycle
-        x(3*i-1) = x(3*i-1) * pcycle
-        x(3*i-0) = x(3*i-0) * pcycle
+        x(3*i-2) = x(3*i-2) * pcycle - pcycle / 2
+        x(3*i-1) = x(3*i-1) * pcycle - pcycle / 2
+        x(3*i-0) = x(3*i-0) * pcycle - pcycle / 2
         p(i) = 0
         p2(i) = 0
         f(3*i-2) = 0
@@ -737,10 +737,6 @@ program main
   if (mpirank == 0) print*,'FMM partition'
   call fmm_partition(nglobal,icpumap,x,q,v,pcycle)
 
-  if (mpirank == 0) then
-     print "(a,i2,a)",'--- Accuracy regression loop ',itry,' -'
-     print*,'FMM Coulomb'
-  endif
   do i = 1,nglobal
      p(i) = 0
      f(3*i-2) = 0
@@ -801,7 +797,6 @@ program main
      print "(a,f15.4)",'GRMS (Direct)        : ',grmse
   endif
 
-  if (1.eq.0) then
   ! run dynamics if third command line argument specified
   call get_command_argument(4,nstp,lnam,istat)
   read(nstp,*)dynsteps
@@ -820,8 +815,7 @@ program main
 
   deallocate( x,q,v,p,f,p2,f2,icpumap )
   deallocate( ires,numex,natex,rscale,gscale,fgscale,atype )
-  endif
-  
+
 ! from the end of run_dynamics():
 !    deallocate(xnew,xold,fac1,fac2)
 !    deallocate(ib,jb,it,jt,kt,rbond,cbond,mass,aangle,cangle,x)
