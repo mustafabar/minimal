@@ -136,14 +136,15 @@ namespace exafmm {
 
       start("P2M");
       int levelOffset = ((1 << 3 * maxLevel) - 1) / 7 + 0 * numCells;
+      real_t R = R0 / (1 << maxLevel);
 #pragma omp parallel for
       for (int i=0; i<numLeafs; i++) {
-	vec3 center;
-	getCenter(center,i,maxLevel);
+	vec3 X;
+	getCenter(X,i,maxLevel);
 	for (int j=Leafs[i].begin; j<Leafs[i].end; j++) {
 	  vec3 dX;
-          for_3d dX[d] = Jbodies[j][d] - center[d];
-          P2M(dX,Jbodies[j][3],Multipole[i+levelOffset]);
+          for_3d dX[d] = Jbodies[j][d] - X[d];
+          P2M(dX,R,Jbodies[j][3],Multipole[i+levelOffset]);
 	}
       }
       stop("P2M");
@@ -234,15 +235,16 @@ namespace exafmm {
 
       start("L2P");
       int levelOffset = ((1 << 3 * maxLevel) - 1) / 7;
+      real_t R = R0 / (1 << maxLevel);
 #pragma omp parallel for
       for (int i=0; i<numLeafs; i++) {
-	vec3 center;
-	getCenter(center,i,maxLevel);
+	vec3 X;
+	getCenter(X,i,maxLevel);
 	cvecP L = Local[i+levelOffset];
 	for (int j=Leafs[i].begin; j<Leafs[i].end; j++) {
 	  vec3 dX;
-	  for_3d dX[d] = Jbodies[j][d] - center[d];
-          L2P(dX,L,Ibodies[j]);
+	  for_3d dX[d] = Jbodies[j][d] - X[d];
+          L2P(dX,R,L,Ibodies[j]);
 	}
       }
       stop("L2P");
@@ -259,6 +261,8 @@ namespace exafmm {
       for (int i=0; i<numLeafs; i++) {
 	ivec3 iX = 0;
 	getIndex(iX,i);
+        vec3 Xi, Xj;
+	getCenter(Xi,i,maxLevel);
 	ivec3 jXmin = max(nxmin,iX - DP2P);
 	ivec3 jXmax = min(nxmax,iX + DP2P);
 	ivec3 jX;
@@ -267,12 +271,13 @@ namespace exafmm {
 	    for (jX[0]=jXmin[0]; jX[0]<=jXmax[0]; jX[0]++) {
 	      ivec3 jXp = (jX + nunit) % nunit;
 	      int j = getKey(jXp,maxLevel,false);
+              getCenter(Xj,j,maxLevel);
 	      jXp = (jX + nunit) / nunit;
 	      jXp = (jX + nunit) / nunit;
 	      vec3 periodic;
 	      for_3d periodic[d] = (jXp[d] - 1) * 2 * R0;
-	      P2P(Ibodies,Leafs[i].begin,Leafs[i].end,
-                  Jbodies,Leafs[j].begin,Leafs[j].end,periodic);
+	      P2P(Ibodies,Leafs[i].begin,Leafs[i].end,Xi,
+                  Jbodies,Leafs[j].begin,Leafs[j].end,Xj,R,periodic);
 	    }
 	  }
 	}

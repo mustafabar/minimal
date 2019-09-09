@@ -103,8 +103,17 @@ namespace exafmm {
       }
     }
 
+    inline real_t weight(vec3 dX, real_t R) {
+      real_t D = 2 * R;
+      vec3 X;
+      for_3d X[d] = fmax(fmin(R - std::abs(dX[d]), D), -D) / D;
+      real_t w = 1;
+      for_3d w *= (2 + 3 * X[d] - X[d] * X[d] * X[d]) / 4;
+      return w;
+    }
+
   public:
-    void P2M(vec3 dX, real_t SRC, complex_t *Mj) const {
+    void P2M(vec3 dX, real_t , real_t SRC, complex_t *Mj) const {
       complex_t Ynm[P*P], YnmTheta[P*P];
       real_t rho, alpha, beta;
       cart2sph(dX, rho, alpha, beta);
@@ -217,7 +226,7 @@ namespace exafmm {
       }
     }
 
-    void L2P(vec3 dX, complex_t *L, vec4 &TRG) const {
+    void L2P(vec3 dX, real_t, complex_t *L, vec4 &TRG) const {
       complex_t Ynm[P*P], YnmTheta[P*P];
       vec3 spherical = 0;
       vec3 cartesian = 0;
@@ -245,8 +254,8 @@ namespace exafmm {
       TRG[3] += cartesian[2];
     }
 
-    void P2P(std::vector<vec4> &Ibodies, int ibegin, int iend,
-             std::vector<vec4> &Jbodies, int jbegin, int jend, vec3 periodic) const {
+    void P2P(std::vector<vec4> &Ibodies, int ibegin, int iend, vec3,
+             std::vector<vec4> &Jbodies, int jbegin, int jend, vec3, real_t, vec3 periodic) const {
       for (int i=ibegin; i<iend; i++) {
         vec4 TRG = 0;
 	for (int j=jbegin; j<jend; j++) {

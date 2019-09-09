@@ -21,10 +21,11 @@ int main(int argc, char ** argv) {
   }
   Kernel kernel;
   cvecP Mc, Mp, Lc = complex_t(0), Lp = complex_t(0);
-  vec3 dX;
+  vec3 dX, Xj, Xi;
+  Xj = 0.5;
   for (int i=0; i<numBodies; i++) {
-    for_3d dX[d] = Jbodies[i][d] - 0.5;
-    kernel.P2M(dX, Jbodies[i][3], Mc);
+    for_3d dX[d] = Jbodies[i][d] - Xj[d];
+    kernel.P2M(dX, 0.5, Jbodies[i][3], Mc);
   }
   dX = 0.5;
   kernel.M2M(dX, Mc, Mp);
@@ -34,13 +35,14 @@ int main(int argc, char ** argv) {
   dX = -0.5;
   dX[0] = 0.5;
   kernel.L2L(dX, Lp, Lc);
+  Xi = 0.5;
+  Xi[0] = 5.5;
   for (int i=0; i<numBodies; i++) {
-    for_3d dX[d] = Jbodies[i+numBodies][d] - 0.5;
-    dX[0] = Jbodies[i+numBodies][0] - 5.5;
-    kernel.L2P(dX, Lc, Ibodies[i]);
+    for_3d dX[d] = Jbodies[i+numBodies][d] - Xi[d];
+    kernel.L2P(dX, 0.5, Lc, Ibodies[i]);
   }
   dX = 0;
-  kernel.P2P(Ibodies, numBodies, 2*numBodies, Jbodies, 0, numBodies, dX);
+  kernel.P2P(Ibodies, numBodies, 2*numBodies, Xi, Jbodies, 0, numBodies, Xj, 0.5, dX);
   double potDif = 0, potNrm = 0, accDif = 0, accNrm = 0;
   for (int i=0; i<numBodies; i++) {
     potDif += (Ibodies[i+numBodies][0] - Ibodies[i][0]) * (Ibodies[i+numBodies][0] - Ibodies[i][0]);
