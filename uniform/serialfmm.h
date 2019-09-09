@@ -84,10 +84,10 @@ namespace exafmm {
       numCells = ((1 << 3 * (L + 1)) - 1) / 7;
       numLeafs = 1 << 3 * L;
       Index.resize(numBodies);
-      Leafs.resize(27*numLeafs);
+      Leafs.resize(numLeafs);
       Ibodies.resize(numBodies);
       Jbodies.resize(numBodies);
-      Multipole.resize(27*numCells);
+      Multipole.resize(numCells);
       Local.resize(numCells);
     }
 
@@ -109,18 +109,17 @@ namespace exafmm {
     }
 
     void buildTree() {
-      int rankOffset = 13 * numLeafs;
-      for( int i=rankOffset; i<numLeafs+rankOffset; i++ ) {
+      for( int i=0; i<numLeafs; i++ ) {
 	Leafs[i].begin = Leafs[i].end = 0;
       }
       real_t diameter = 2 * R0 / (1 << maxLevel);
       ivec3 iX = 0;
       getIndex(0,iX,diameter);
-      int ileaf = getKey(iX,maxLevel,false) + rankOffset;
+      int ileaf = getKey(iX,maxLevel,false);
       Leafs[ileaf].begin = 0;
       for( int i=0; i<numBodies; i++ ) {
 	getIndex(i,iX,diameter);
-	int inew = getKey(iX,maxLevel,false) + rankOffset;
+	int inew = getKey(iX,maxLevel,false);
 	if( ileaf != inew ) {
 	  Leafs[ileaf].end = Leafs[inew].begin = i;
 	  ileaf = inew;
@@ -130,20 +129,18 @@ namespace exafmm {
     }
 
     void upwardPass() {
-      int rankOffset = 13 * numCells;
       for( int i=0; i<numCells; i++ ) {
-	Multipole[i+rankOffset] = 0;
+	Multipole[i] = 0;
 	Local[i] = 0;
       }
 
       start("P2M");
-      rankOffset = 13 * numLeafs;
-      int levelOffset = ((1 << 3 * maxLevel) - 1) / 7 + 13 * numCells;
+      int levelOffset = ((1 << 3 * maxLevel) - 1) / 7 + 0 * numCells;
 #pragma omp parallel for
       for (int i=0; i<numLeafs; i++) {
 	vec3 center;
 	getCenter(center,i,maxLevel);
-	for (int j=Leafs[i+rankOffset].begin; j<Leafs[i+rankOffset].end; j++) {
+	for (int j=Leafs[i].begin; j<Leafs[i].end; j++) {
 	  vec3 dX;
           for_3d dX[d] = Jbodies[j][d] - center[d];
           P2M(dX,Jbodies[j][3],Multipole[i+levelOffset]);
@@ -152,10 +149,9 @@ namespace exafmm {
       stop("P2M");
 
       start("M2M");
-      rankOffset = 13 * numCells;
       for (int lev=maxLevel; lev>0; lev--) {
-	int childOffset = ((1 << 3 * lev) - 1) / 7 + rankOffset;
-	int parentOffset = ((1 << 3 * (lev - 1)) - 1) / 7 + rankOffset;
+	int childOffset = ((1 << 3 * lev) - 1) / 7;
+	int parentOffset = ((1 << 3 * (lev - 1)) - 1) / 7;
 	real_t radius = R0 / (1 << lev);
 #pragma omp parallel for schedule(static, 8)
 	for (int i=0; i<(1 << 3 * lev); i++) {
@@ -204,8 +200,6 @@ namespace exafmm {
 		  ivec3 jXp = (jX + nunit) % nunit;
 		  int j = getKey(jXp,lev);
 		  jXp = (jX + nunit) / nunit;
-		  int rankOffset = 13 * numCells;
-		  j += rankOffset;
 		  vec3 dX;
                   for_3d dX[d]= (iX[d] - jX[d]) * diameter;
                   M2L(dX,Multipole[j],L);
@@ -239,14 +233,13 @@ namespace exafmm {
       stop("L2L");
 
       start("L2P");
-      int rankOffset = 13 * numLeafs;
       int levelOffset = ((1 << 3 * maxLevel) - 1) / 7;
 #pragma omp parallel for
       for (int i=0; i<numLeafs; i++) {
 	vec3 center;
 	getCenter(center,i,maxLevel);
 	cvecP L = Local[i+levelOffset];
-	for (int j=Leafs[i+rankOffset].begin; j<Leafs[i+rankOffset].end; j++) {
+	for (int j=Leafs[i].begin; j<Leafs[i].end; j++) {
 	  vec3 dX;
 	  for_3d dX[d] = Jbodies[j][d] - center[d];
           L2P(dX,L,Ibodies[j]);
@@ -275,13 +268,10 @@ namespace exafmm {
 	      ivec3 jXp = (jX + nunit) % nunit;
 	      int j = getKey(jXp,maxLevel,false);
 	      jXp = (jX + nunit) / nunit;
-	      int rankOffset = 13 * numLeafs;
-	      j += rankOffset;
-	      rankOffset = 13 * numLeafs;
 	      jXp = (jX + nunit) / nunit;
 	      vec3 periodic;
 	      for_3d periodic[d] = (jXp[d] - 1) * 2 * R0;
-	      P2P(Ibodies,Leafs[i+rankOffset].begin,Leafs[i+rankOffset].end,
+	      P2P(Ibodies,Leafs[i].begin,Leafs[i].end,
                   Jbodies,Leafs[j].begin,Leafs[j].end,periodic);
 	    }
 	  }
@@ -292,7 +282,7 @@ namespace exafmm {
 
     void periodicM2L() {
       cvecP M;
-      M = Multipole[13*numCells];
+      M = Multipole[0*numCells];
       cvecP L = complex_t(0);
       for( int lev=1; lev<numImages; lev++ ) {
 	vec3 diameter = R0 * 2 * std::pow(3.,lev-1);
@@ -347,13 +337,10 @@ namespace exafmm {
 	      ivec3 jXp = (jX + nunit) % nunit;
 	      int j = getKey(jXp,maxLevel,false);
 	      jXp = (jX + nunit) / nunit;
-	      int rankOffset = 13 * numLeafs;
-	      j += rankOffset;
-	      rankOffset = 13 * numLeafs;
 	      jXp = (jX + nunit) / nunit;
 	      vec3 periodic;
 	      for_3d periodic[d] = (jXp[d] - 1) * 2 * R0;
-	      EwaldP2P(Ibodies,Leafs[i+rankOffset].begin,Leafs[i+rankOffset].end,
+	      EwaldP2P(Ibodies,Leafs[i].begin,Leafs[i].end,
                        Jbodies,Leafs[j].begin,Leafs[j].end,periodic,
                        alpha,cutoff);
 	    }
@@ -384,13 +371,10 @@ namespace exafmm {
 	      ivec3 jXp = (jX + nunit) % nunit;
 	      int j = getKey(jXp,maxLevel,false);
 	      jXp = (jX + nunit) / nunit;
-	      int rankOffset = 13 * numLeafs;
-	      j += rankOffset;
-	      rankOffset = 13 * numLeafs;
 	      jXp = (jX + nunit) / nunit;
 	      vec3 periodic;
 	      for_3d periodic[d] = (jXp[d] - 1) * 2 * R0;
-	      VdWP2P(Ibodies,Leafs[i+rankOffset].begin,Leafs[i+rankOffset].end,
+	      VdWP2P(Ibodies,Leafs[i].begin,Leafs[i].end,
                      Jbodies,Leafs[j].begin,Leafs[j].end,periodic,
                      cuton,cutoff,numTypes,rscale,gscale,fgscale);
 	    }
