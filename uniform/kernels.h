@@ -103,26 +103,28 @@ namespace exafmm {
       }
     }
 
-    inline real_t weight(vec3 dX, real_t R) {
-      real_t D = 2 * R;
+    inline real_t weight(vec3 dX, real_t R) const {
+      real_t D = 0.2 * R;
       vec3 X;
       for_3d X[d] = fmax(fmin(R - std::abs(dX[d]), D), -D) / D;
       real_t w = 1;
       for_3d w *= (2 + 3 * X[d] - X[d] * X[d] * X[d]) / 4;
+      w = 1;
       return w;
     }
 
   public:
-    void P2M(vec3 dX, real_t , real_t SRC, complex_t *Mj) const {
+    void P2M(vec3 dX, real_t R, real_t SRC, complex_t *Mj) const {
       complex_t Ynm[P*P], YnmTheta[P*P];
       real_t rho, alpha, beta;
       cart2sph(dX, rho, alpha, beta);
       evalMultipole(rho, alpha, -beta, Ynm, YnmTheta);
+      real_t w = weight(dX, R);
       for (int n=0; n<P; n++) {
         for (int m=0; m<=n; m++) {
           int nm  = n * n + n + m;
           int nms = n * (n + 1) / 2 + m;
-          Mj[nms] += SRC * Ynm[nm];
+          Mj[nms] += w * SRC * Ynm[nm];
         }
       }
     }
@@ -226,26 +228,27 @@ namespace exafmm {
       }
     }
 
-    void L2P(vec3 dX, real_t, complex_t *L, vec4 &TRG) const {
+    void L2P(vec3 dX, real_t R, complex_t *L, vec4 &TRG) const {
       complex_t Ynm[P*P], YnmTheta[P*P];
       vec3 spherical = 0;
       vec3 cartesian = 0;
       real_t r, theta, phi;
       cart2sph(dX, r, theta, phi);
       evalMultipole(r, theta, phi, Ynm, YnmTheta);
+      real_t w = weight(dX, R);
       for (int n=0; n<P; n++) {
         int nm  = n * n + n;
         int nms = n * (n + 1) / 2;
-        TRG[0] += std::real(L[nms] * Ynm[nm]);
-        spherical[0] += std::real(L[nms] * Ynm[nm]) / r * n;
-        spherical[1] += std::real(L[nms] * YnmTheta[nm]);
+        TRG[0] += w * std::real(L[nms] * Ynm[nm]);
+        spherical[0] += w * std::real(L[nms] * Ynm[nm]) / r * n;
+        spherical[1] += w * std::real(L[nms] * YnmTheta[nm]);
         for (int m=1; m<=n; m++) {
           nm  = n * n + n + m;
           nms = n * (n + 1) / 2 + m;
-          TRG[0] += 2 * std::real(L[nms] * Ynm[nm]);
-          spherical[0] += 2 * std::real(L[nms] * Ynm[nm]) / r * n;
-          spherical[1] += 2 * std::real(L[nms] * YnmTheta[nm]);
-          spherical[2] += 2 * std::real(L[nms] * Ynm[nm] * I) * m;
+          TRG[0] += 2 * w * std::real(L[nms] * Ynm[nm]);
+          spherical[0] += 2 * w * std::real(L[nms] * Ynm[nm]) / r * n;
+          spherical[1] += 2 * w * std::real(L[nms] * YnmTheta[nm]);
+          spherical[2] += 2 * w * std::real(L[nms] * Ynm[nm] * I) * m;
         }
       }
       sph2cart(r, theta, phi, spherical, cartesian);
@@ -254,7 +257,32 @@ namespace exafmm {
       TRG[3] += cartesian[2];
     }
 
-    void P2P(std::vector<vec4> &Ibodies, int ibegin, int iend, vec3,
+    void P2P(std::vector<vec4> &Ibodies, int ibegin, int iend, vec3 Xi,
+             std::vector<vec4> &Jbodies, int jbegin, int jend, vec3 Xj, real_t R, vec3 periodic) const {
+      vec3 dX;
+      for (int i=ibegin; i<iend; i++) {
+        vec4 TRG = 0;
+        for_3d dX[d] = Jbodies[i][d] - Xi[d];
+        real_t wi = weight(dX, R);
+	for (int j=jbegin; j<jend; j++) {
+          for_3d dX[d] = Jbodies[j][d] - Xj[d];
+          real_t wj = weight(dX, R);
+	  for_3d dX[d] = Jbodies[i][d] - Jbodies[j][d] - periodic[d];
+	  real_t R2 = norm(dX);
+	  real_t invR2 = 1.0 / R2;
+	  if (R2 == 0) invR2 = 0;
+	  real_t invR = Jbodies[j][3] * sqrt(invR2) * wj;
+	  real_t invR3 = invR2 * invR;
+	  TRG[0] += invR;
+	  TRG[1] -= dX[0] * invR3;
+	  TRG[2] -= dX[1] * invR3;
+	  TRG[3] -= dX[2] * invR3;
+	}
+	Ibodies[i] += TRG * wi;
+      }
+    }
+
+    void P2PX(std::vector<vec4> &Ibodies, int ibegin, int iend, vec3,
              std::vector<vec4> &Jbodies, int jbegin, int jend, vec3, real_t, vec3 periodic) const {
       for (int i=ibegin; i<iend; i++) {
         vec4 TRG = 0;

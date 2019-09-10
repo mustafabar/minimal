@@ -20,26 +20,28 @@ int main(int argc, char ** argv) {
     Jbodies[i+numBodies][3] = drand48();
   }
   Kernel kernel;
-  cvecP Mc, Mp, Lc = complex_t(0), Lp = complex_t(0);
+  cvecP Mc[27], Mp[8], Lc[27], Lp[8];
   vec3 dX, Xj, Xi;
   Xj = 0.5;
   for (int i=0; i<numBodies; i++) {
     for_3d dX[d] = Jbodies[i][d] - Xj[d];
-    kernel.P2M(dX, 0.5, Jbodies[i][3], Mc);
+    kernel.P2M(dX, 0.5, Jbodies[i][3], Mc[13]);
   }
   dX = 0.5;
-  kernel.M2M(dX, Mc, Mp);
+  kernel.M2M(dX, Mc[13], Mp[0]);
   dX = 0;
   dX[0] = 4;
-  kernel.M2L(dX, Mp, Lp);
+  Lp[0] = complex_t(0);
+  kernel.M2L(dX, Mp[0], Lp[0]);
   dX = -0.5;
   dX[0] = 0.5;
-  kernel.L2L(dX, Lp, Lc);
+  Lc[13] = complex_t(0);
+  kernel.L2L(dX, Lp[0], Lc[13]);
   Xi = 0.5;
   Xi[0] = 5.5;
   for (int i=0; i<numBodies; i++) {
     for_3d dX[d] = Jbodies[i+numBodies][d] - Xi[d];
-    kernel.L2P(dX, 0.5, Lc, Ibodies[i]);
+    kernel.L2P(dX, 0.5, Lc[13], Ibodies[i]);
   }
   dX = 0;
   kernel.P2P(Ibodies, numBodies, 2*numBodies, Xi, Jbodies, 0, numBodies, Xj, 0.5, dX);
