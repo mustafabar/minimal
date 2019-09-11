@@ -1,5 +1,5 @@
 kernel:
-	icpc -I. -Wfatal-errors -fopenmp -mavx -O3 -c -o kernel.o kernel.cxx
+	icpc -I. -Wfatal-errors -fopenmp -mavx -O3 -c -o kernel.o kernel2.cxx
 	icpc -Wfatal-errors -fopenmp -mavx -O3 kernel.o -lmpi_cxx
 	./a.out -v -n 1000 -c 32 -i 6
 

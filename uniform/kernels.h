@@ -104,9 +104,9 @@ namespace exafmm {
     }
 
     inline real_t weight(vec3 dX, real_t R) const {
-      real_t D = 0.00001 * R;
+      real_t D = 0.05 * R;
       vec3 X;
-      for_3d X[d] = fmax(fmin(R - std::abs(dX[d]), D), -D) / D;
+      for_3d X[d] = std::max(std::min(R - std::abs(dX[d]), D), -D) / D;
       real_t w = 1;
       for_3d w *= (2 + 3 * X[d] - X[d] * X[d] * X[d]) / 4;
       return w;
