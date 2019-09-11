@@ -33,7 +33,6 @@ int main(int argc, char ** argv) {
           for_3d dX[d] = Jbodies[i][d] - iX[d] - Xj[d] + 1;
           kernel.P2M(dX, 0.5, Jbodies[i][3], Mc[iX[0]][iX[1]][iX[2]]);
         }
-        std::cout << iX << " " << Mc[iX[0]][iX[1]][iX[2]][0] << std::endl;
       }
     }
   }
@@ -96,7 +95,7 @@ int main(int argc, char ** argv) {
     }
   }
   dX = 0;
-  kernel.P2P(Ibodies, numBodies, 2*numBodies, Xi, Jbodies, 0, numBodies, Xj, 0.5, dX);
+  kernel.P2PX(Ibodies, numBodies, 2*numBodies, Xi, Jbodies, 0, numBodies, Xj, 0.5, dX);
   double potDif = 0, potNrm = 0, accDif = 0, accNrm = 0;
   for (int i=0; i<numBodies; i++) {
     potDif += (Ibodies[i+numBodies][0] - Ibodies[i][0]) * (Ibodies[i+numBodies][0] - Ibodies[i][0]);
