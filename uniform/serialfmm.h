@@ -234,6 +234,13 @@ namespace exafmm {
       stop("L2L");
 
       start("L2P");
+      ivec3 nunit = 1 << maxLevel;
+      ivec3 nxmin = 0;
+      ivec3 nxmax = nunit + nxmin - 1;
+      if (numImages != 0) {
+	nxmin -= nunit;
+	nxmax += nunit;
+      }
       int levelOffset = ((1 << 3 * maxLevel) - 1) / 7;
       real_t R = R0 / (1 << maxLevel);
 #pragma omp parallel for
@@ -250,19 +257,12 @@ namespace exafmm {
       stop("L2P");
 
       start("P2P");
-      ivec3 nunit = 1 << maxLevel;
-      ivec3 nxmin = 0;
-      ivec3 nxmax = nunit + nxmin - 1;
-      if (numImages != 0) {
-	nxmin -= nunit;
-	nxmax += nunit;
-      }
 #pragma omp parallel for
       for (int i=0; i<numLeafs; i++) {
-	ivec3 iX = 0;
-	getIndex(iX,i);
         vec3 Xi, Xj;
 	getCenter(Xi,i,maxLevel);
+	ivec3 iX = 0;
+	getIndex(iX,i);
 	ivec3 jXmin = max(nxmin,iX - DP2P);
 	ivec3 jXmax = min(nxmax,iX + DP2P);
 	ivec3 jX;
@@ -272,7 +272,6 @@ namespace exafmm {
 	      ivec3 jXp = (jX + nunit) % nunit;
 	      int j = getKey(jXp,maxLevel,false);
               getCenter(Xj,j,maxLevel);
-	      jXp = (jX + nunit) / nunit;
 	      jXp = (jX + nunit) / nunit;
 	      vec3 periodic;
 	      for_3d periodic[d] = (jXp[d] - 1) * 2 * R0;
