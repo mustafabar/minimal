@@ -94,8 +94,27 @@ int main(int argc, char ** argv) {
       }
     }
   }
-  dX = 0;
-  kernel.P2PX(Ibodies, numBodies, 2*numBodies, Xi, Jbodies, 0, numBodies, Xj, 0.5, dX);
+  vec3 periodic = 0;
+#if 0
+  kernel.P2PX(Ibodies, numBodies, 2*numBodies, Xi, Jbodies, 0, numBodies, Xj, 0.5, periodic);
+#else
+  for (iX[0]=0; iX[0]<3; iX[0]++) {
+    for (iX[1]=0; iX[1]<3; iX[1]++) {
+      for (iX[2]=0; iX[2]<3; iX[2]++) {
+        for_3d Xi[d] = iX[d] - 0.5;
+        Xi[0] = iX[0] + 4.5;
+        for (jX[0]=0; jX[0]<3; jX[0]++) {
+          for (jX[1]=0; jX[1]<3; jX[1]++) {
+            for (jX[2]=0; jX[2]<3; jX[2]++) {
+              for_3d Xj[d] = jX[d] - 0.5;
+              kernel.P2P(Ibodies, numBodies, 2*numBodies, Xi, Jbodies, 0, numBodies, Xj, 0.5, periodic);
+            }
+          }
+        }
+      }
+    }
+  }
+#endif
   double potDif = 0, potNrm = 0, accDif = 0, accNrm = 0;
   for (int i=0; i<numBodies; i++) {
     potDif += (Ibodies[i+numBodies][0] - Ibodies[i][0]) * (Ibodies[i+numBodies][0] - Ibodies[i][0]);
