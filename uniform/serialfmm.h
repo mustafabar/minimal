@@ -5,6 +5,7 @@ namespace exafmm {
   class SerialFMM : public Kernel {
   protected:
     const int DP2P = 2;
+    const int DREG = 1;
 
   public:
     static vec3 Xperiodic;
@@ -48,11 +49,15 @@ namespace exafmm {
       return id;
     }
 
-    void getCenter(vec3 &dX, int index, int level) const {
+    void getCenter(vec3 &dX, ivec3 iX, int level) const {
       real_t R = R0 / (1 << level);
+      for_3d dX[d] = X0[d] - R0 + (2 * iX[d] + 1) * R;
+    }
+    
+    void getCenter(vec3 &dX, int index, int level) const {
       ivec3 iX = 0;
       getIndex(iX, index);
-      for_3d dX[d] = X0[d] - R0 + (2 * iX[d] + 1) * R;
+      getCenter(dX, iX, level);
     }
 
     void sort(std::vector<vec4> &bodies, std::vector<fvec4> &buffer, std::vector<int> &index,
@@ -135,16 +140,36 @@ namespace exafmm {
       }
 
       start("P2M");
+      ivec3 nunit = 1 << maxLevel;
+      ivec3 nxmin = 0;
+      ivec3 nxmax = nunit + nxmin - 1;
+      if (numImages != 0) {
+	nxmin -= nunit;
+	nxmax += nunit;
+      }
       int levelOffset = ((1 << 3 * maxLevel) - 1) / 7 + 0 * numCells;
       real_t R = R0 / (1 << maxLevel);
 #pragma omp parallel for
-      for (int i=0; i<numLeafs; i++) {
-	vec3 X;
-	getCenter(X,i,maxLevel);
-	for (int j=Leafs[i].begin; j<Leafs[i].end; j++) {
-	  vec3 dX;
-          for_3d dX[d] = Jbodies[j][d] - X[d];
-          P2M(dX,R,Jbodies[j][3],Multipole[i+levelOffset]);
+      for (int j=0; j<numLeafs; j++) {
+	ivec3 jX = 0;
+	getIndex(jX,j);
+	ivec3 iXmin = max(nxmin,jX - DREG);
+	ivec3 iXmax = min(nxmax,jX + DREG);
+	ivec3 iX;
+	for (iX[2]=iXmin[2]; iX[2]<=iXmax[2]; iX[2]++) {
+	  for (iX[1]=iXmin[1]; iX[1]<=iXmax[1]; iX[1]++) {
+	    for (iX[0]=iXmin[0]; iX[0]<=iXmax[0]; iX[0]++) {
+	      ivec3 iXwrap = (iX + nunit) % nunit;
+	      int i = getKey(iXwrap,maxLevel,false);
+              vec3 X;
+              getCenter(X,i,maxLevel);
+              for (int b=Leafs[j].begin; b<Leafs[j].end; b++) {
+                vec3 dX;
+                for_3d dX[d] = Jbodies[b][d] - X[d];
+                P2M(dX,R,Jbodies[b][3],Multipole[i+levelOffset]);
+              }
+            }
+          }
 	}
       }
       stop("P2M");
@@ -198,9 +223,8 @@ namespace exafmm {
 		if(jX[0] < iX[0]-DM2LC || iX[0]+DM2LC < jX[0] ||
 		   jX[1] < iX[1]-DM2LC || iX[1]+DM2LC < jX[1] ||
 		   jX[2] < iX[2]-DM2LC || iX[2]+DM2LC < jX[2]) {
-		  ivec3 jXp = (jX + nunit) % nunit;
-		  int j = getKey(jXp,lev);
-		  jXp = (jX + nunit) / nunit;
+		  ivec3 jXwrap = (jX + nunit) % nunit;
+		  int j = getKey(jXwrap,lev);
 		  vec3 dX;
                   for_3d dX[d]= (iX[d] - jX[d]) * diameter;
                   M2L(dX,Multipole[j],L);
@@ -245,13 +269,26 @@ namespace exafmm {
       real_t R = R0 / (1 << maxLevel);
 #pragma omp parallel for
       for (int i=0; i<numLeafs; i++) {
-	vec3 X;
-	getCenter(X,i,maxLevel);
-	cvecP L = Local[i+levelOffset];
-	for (int j=Leafs[i].begin; j<Leafs[i].end; j++) {
-	  vec3 dX;
-	  for_3d dX[d] = Jbodies[j][d] - X[d];
-          L2P(dX,R,L,Ibodies[j]);
+	ivec3 iX = 0;
+	getIndex(iX,i);
+	ivec3 jXmin = max(nxmin,iX - DREG);
+	ivec3 jXmax = min(nxmax,iX + DREG);
+	ivec3 jX;
+	for (jX[2]=jXmin[2]; jX[2]<=jXmax[2]; jX[2]++) {
+	  for (jX[1]=jXmin[1]; jX[1]<=jXmax[1]; jX[1]++) {
+	    for (jX[0]=jXmin[0]; jX[0]<=jXmax[0]; jX[0]++) {
+	      ivec3 jXwrap = (jX + nunit) % nunit;
+	      int j = getKey(jXwrap,maxLevel,false);
+              vec3 X;
+              getCenter(X,jX,maxLevel);
+              cvecP L = Local[j+levelOffset];
+              for (int b=Leafs[i].begin; b<Leafs[i].end; b++) {
+                vec3 dX;
+                for_3d dX[d] = Jbodies[b][d] - X[d];
+                L2P(dX,R,L,Ibodies[b]);
+              }
+            }
+          }
 	}
       }
       stop("L2P");
@@ -260,26 +297,45 @@ namespace exafmm {
 #pragma omp parallel for
       for (int i=0; i<numLeafs; i++) {
         vec3 Xi, Xj;
-	getCenter(Xi,i,maxLevel);
-	ivec3 iX = 0;
-	getIndex(iX,i);
-	ivec3 jXmin = max(nxmin,iX - DP2P);
-	ivec3 jXmax = min(nxmax,iX + DP2P);
-	ivec3 jX;
-	for (jX[2]=jXmin[2]; jX[2]<=jXmax[2]; jX[2]++) {
-	  for (jX[1]=jXmin[1]; jX[1]<=jXmax[1]; jX[1]++) {
-	    for (jX[0]=jXmin[0]; jX[0]<=jXmax[0]; jX[0]++) {
-	      ivec3 jXp = (jX + nunit) % nunit;
-	      int j = getKey(jXp,maxLevel,false);
-              getCenter(Xj,j,maxLevel);
-	      jXp = (jX + nunit) / nunit;
-	      vec3 periodic;
-	      for_3d periodic[d] = (jXp[d] - 1) * 2 * R0;
-	      P2P(Ibodies,Leafs[i].begin,Leafs[i].end,Xi,
-                  Jbodies,Leafs[j].begin,Leafs[j].end,Xj,R,periodic);
-	    }
-	  }
-	}
+        getCenter(Xi,i,maxLevel);
+        ivec3 iX = 0;
+        getIndex(iX,i); 
+	ivec3 irXmin = max(nxmin,iX - DREG);
+	ivec3 irXmax = min(nxmax,iX + DREG);
+	ivec3 irX;
+	for (irX[2]=irXmin[2]; irX[2]<=irXmax[2]; irX[2]++) {
+	  for (irX[1]=irXmin[1]; irX[1]<=irXmax[1]; irX[1]++) {
+	    for (irX[0]=irXmin[0]; irX[0]<=irXmax[0]; irX[0]++) {
+              getCenter(Xi,irX,maxLevel);
+              ivec3 jXmin = max(nxmin,iX - DP2P);
+              ivec3 jXmax = min(nxmax,iX + DP2P);
+              ivec3 jX;
+              for (jX[2]=jXmin[2]; jX[2]<=jXmax[2]; jX[2]++) {
+                for (jX[1]=jXmin[1]; jX[1]<=jXmax[1]; jX[1]++) {
+                  for (jX[0]=jXmin[0]; jX[0]<=jXmax[0]; jX[0]++) {
+                    ivec3 jXwrap = (jX + nunit) % nunit;
+                    int j = getKey(jXwrap,maxLevel,false);
+                    ivec3 pX = (jX + nunit) / nunit;
+                    vec3 periodic;
+                    for_3d periodic[d] = (pX[d] - 1) * 2 * R0;
+                    ivec3 jrXmin = max(nxmin,jX - DREG);
+                    ivec3 jrXmax = min(nxmax,jX + DREG);
+                    ivec3 jrX;
+                    for (jrX[2]=jrXmin[2]; jrX[2]<=jrXmax[2]; jrX[2]++) {
+                      for (jrX[1]=jrXmin[1]; jrX[1]<=jrXmax[1]; jrX[1]++) {
+                        for (jrX[0]=jrXmin[0]; jrX[0]<=jrXmax[0]; jrX[0]++) {
+                          getCenter(Xj,jrX,maxLevel);
+                          P2P(Ibodies,Leafs[i].begin,Leafs[i].end,Xi,
+                              Jbodies,Leafs[j].begin,Leafs[j].end,Xj,R,periodic);
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
       stop("P2P");
     }
@@ -338,12 +394,11 @@ namespace exafmm {
 	for (jX[2]=jXmin[2]; jX[2]<=jXmax[2]; jX[2]++) {
 	  for (jX[1]=jXmin[1]; jX[1]<=jXmax[1]; jX[1]++) {
 	    for (jX[0]=jXmin[0]; jX[0]<=jXmax[0]; jX[0]++) {
-	      ivec3 jXp = (jX + nunit) % nunit;
-	      int j = getKey(jXp,maxLevel,false);
-	      jXp = (jX + nunit) / nunit;
-	      jXp = (jX + nunit) / nunit;
+	      ivec3 jXwrap = (jX + nunit) % nunit;
+	      int j = getKey(jXwrap,maxLevel,false);
+	      ivec3 pX = (jX + nunit) / nunit;
 	      vec3 periodic;
-	      for_3d periodic[d] = (jXp[d] - 1) * 2 * R0;
+	      for_3d periodic[d] = (pX[d] - 1) * 2 * R0;
 	      EwaldP2P(Ibodies,Leafs[i].begin,Leafs[i].end,
                        Jbodies,Leafs[j].begin,Leafs[j].end,periodic,
                        alpha,cutoff);
@@ -372,12 +427,11 @@ namespace exafmm {
 	for (jX[2]=jXmin[2]; jX[2]<=jXmax[2]; jX[2]++) {
 	  for (jX[1]=jXmin[1]; jX[1]<=jXmax[1]; jX[1]++) {
 	    for (jX[0]=jXmin[0]; jX[0]<=jXmax[0]; jX[0]++) {
-	      ivec3 jXp = (jX + nunit) % nunit;
-	      int j = getKey(jXp,maxLevel,false);
-	      jXp = (jX + nunit) / nunit;
-	      jXp = (jX + nunit) / nunit;
+	      ivec3 jXwrap = (jX + nunit) % nunit;
+	      int j = getKey(jXwrap,maxLevel,false);
+	      ivec3 pX = (jX + nunit) / nunit;
 	      vec3 periodic;
-	      for_3d periodic[d] = (jXp[d] - 1) * 2 * R0;
+	      for_3d periodic[d] = (pX[d] - 1) * 2 * R0;
 	      VdWP2P(Ibodies,Leafs[i].begin,Leafs[i].end,
                      Jbodies,Leafs[j].begin,Leafs[j].end,periodic,
                      cuton,cutoff,numTypes,rscale,gscale,fgscale);

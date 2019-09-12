@@ -264,7 +264,7 @@ namespace exafmm {
         for_3d dX[d] = Jbodies[i][d] - Xi[d];
         real_t wi = weight(dX, R);
 	for (int j=jbegin; j<jend; j++) {
-          for_3d dX[d] = Jbodies[j][d] - Xj[d];
+          for_3d dX[d] = Jbodies[j][d] + periodic[d] - Xj[d];
           real_t wj = weight(dX, R);
 	  for_3d dX[d] = Jbodies[i][d] - Jbodies[j][d] - periodic[d];
 	  real_t R2 = norm(dX);
