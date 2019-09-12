@@ -162,7 +162,7 @@ namespace exafmm {
 	      ivec3 iXwrap = (iX + nunit) % nunit;
 	      int i = getKey(iXwrap,maxLevel,false);
               vec3 X;
-              getCenter(X,i,maxLevel);
+              getCenter(X,iX,maxLevel);
               for (int b=Leafs[j].begin; b<Leafs[j].end; b++) {
                 vec3 dX;
                 for_3d dX[d] = Jbodies[b][d] - X[d];
