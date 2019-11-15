@@ -35,8 +35,8 @@ int main(int argc, char ** argv) {
     for (int iy=0; iy<4; iy++) {
       for (int iz=0; iz<4; iz++, i++) {
         FMM.Jbodies[i][0] = FMM.R0 * (ix + 0.1) / 2;
-        FMM.Jbodies[i][1] = FMM.R0 * (iy + 0.5) / 2;
-        FMM.Jbodies[i][2] = FMM.R0 * (iz + 0.5) / 2;
+        FMM.Jbodies[i][1] = FMM.R0 * (iy + 0.1) / 2;
+        FMM.Jbodies[i][2] = FMM.R0 * (iz + 0.1) / 2;
         //FMM.Jbodies[i][0] = 2 * FMM.R0 * drand48();
         //FMM.Jbodies[i][1] = 2 * FMM.R0 * drand48();
         //FMM.Jbodies[i][2] = 2 * FMM.R0 * drand48();

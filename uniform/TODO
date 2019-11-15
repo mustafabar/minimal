@@ -1,10 +1,7 @@
 Debug P2P
-nxmin and nxmax are the problem?
-Try 0.1, 0.1, 0.1
+Only works for linear smoothing function
 
 [Once debugged]
 Remove DEBUG macro
-cycle = 10 * M_PI
 dipoleCorrection
-OpenMP for P2M, M2M
 Compare energy drift
