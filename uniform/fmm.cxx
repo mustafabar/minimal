@@ -9,7 +9,7 @@ int main(int argc, char ** argv) {
 #if DEBUG
   const real_t cycle = 4;
 #else 
-  const real_t cycle = 2 * M_PI;
+  const real_t cycle = 10 * M_PI;
 #endif 
   const real_t alpha = 10 / cycle;
   const real_t sigma = .25 / M_PI;
