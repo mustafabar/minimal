@@ -153,7 +153,7 @@ namespace exafmm {
       }
       int levelOffset = ((1 << 3 * maxLevel) - 1) / 7 + 0 * numCells;
       real_t R = R0 / (1 << maxLevel);
-      //#pragma omp parallel for
+#pragma omp parallel for
       for (int j=0; j<numLeafs; j++) {
 	ivec3 jX = 0;
 	getIndex(jX,j);
@@ -183,7 +183,7 @@ namespace exafmm {
 	int childOffset = ((1 << 3 * lev) - 1) / 7;
 	int parentOffset = ((1 << 3 * (lev - 1)) - 1) / 7;
 	real_t radius = R0 / (1 << lev);
-        //#pragma omp parallel for schedule(static, 8)
+#pragma omp parallel for schedule(static, 8)
 	for (int i=0; i<(1 << 3 * lev); i++) {
 	  int c = i + childOffset;
 	  int p = (i >> 3) + parentOffset;
@@ -266,8 +266,8 @@ namespace exafmm {
       ivec3 nxmin = 0;
       ivec3 nxmax = nunit + nxmin - 1;
       if (numImages != 0) {
-	nxmin -= nunit;
-	nxmax += nunit;
+	nxmin -= nunit * 2;
+	nxmax += nunit * 2;
       }
       int levelOffset = ((1 << 3 * maxLevel) - 1) / 7;
       real_t R = R0 / (1 << maxLevel);

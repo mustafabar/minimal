@@ -1,7 +1,9 @@
 Debug P2P
+nxmin and nxmax are the problem?
 Try 0.1, 0.1, 0.1
 
 [Once debugged]
+Remove DEBUG macro
 cycle = 10 * M_PI
 dipoleCorrection
 OpenMP for P2M, M2M

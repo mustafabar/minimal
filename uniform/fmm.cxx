@@ -6,11 +6,7 @@ using namespace exafmm;
 
 int main(int argc, char ** argv) {
   const int ksize = 14;
-#if DEBUG
-  const real_t cycle = 4;
-#else 
   const real_t cycle = 10 * M_PI;
-#endif 
   const real_t alpha = 10 / cycle;
   const real_t sigma = .25 / M_PI;
   const real_t cutoff = 10;
@@ -97,7 +93,7 @@ int main(int argc, char ** argv) {
   stop("Ewald wave part");
   ewald.selfTerm(FMM.Ibodies, FMM.Jbodies);
   for (int b=0; b<FMM.numBodies; b++) {
-    if (b==0) std::cout << b << " " << Ibodies[b][0] << " " << FMM.numBodies*27 << std::endl;
+    std::cout << b << " " << Ibodies[b][0] << " " << FMM.numBodies*27 << std::endl;
     FMM.Ibodies[b][0] *= FMM.Jbodies[b][3];
   }
   stop("Total Ewald");
