@@ -4,4 +4,5 @@ Only works for linear smoothing function
 [Once debugged]
 Remove DEBUG macro
 dipoleCorrection
+OpenMP for P2M, M2M
 Compare energy drift

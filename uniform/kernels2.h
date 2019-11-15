@@ -108,8 +108,8 @@ namespace exafmm {
       vec3 X;
       for_3d X[d] = std::max(std::min(R - std::abs(dX[d]), D), -D) / D;
       real_t w = 1;
-      //for_3d w *= (2 + 3 * X[d] - X[d] * X[d] * X[d]) / 4;
-      for_3d w *= (X[d] + 1) / 2;
+      for_3d w *= (2 + 3 * X[d] - X[d] * X[d] * X[d]) / 4;
+      //for_3d w *= (X[d] + 1) / 2;
       return w;
     }
 
