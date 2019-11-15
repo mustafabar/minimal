@@ -6,7 +6,7 @@ using namespace exafmm;
 
 int main(int argc, char ** argv) {
   const int ksize = 14;
-  const real_t cycle = 10 * M_PI;
+  const real_t cycle = 4;
   const real_t alpha = 10 / cycle;
   const real_t sigma = .25 / M_PI;
   const real_t cutoff = 10;
@@ -30,17 +30,18 @@ int main(int argc, char ** argv) {
   FMM.R0 = 0.5 * cycle;
   for_3d FMM.X0[d] = FMM.R0;
   srand48(0);
-  real_t average = 0;
-  for (int i=0; i<FMM.numBodies; i++) {
-    FMM.Jbodies[i][0] = 2 * FMM.R0 * drand48();
-    FMM.Jbodies[i][1] = 2 * FMM.R0 * drand48();
-    FMM.Jbodies[i][2] = 2 * FMM.R0 * drand48();
-    FMM.Jbodies[i][3] = drand48();
-    average += FMM.Jbodies[i][3];
-  }
-  average /= FMM.numBodies;
-  for (int i=0; i<FMM.numBodies; i++) {
-    FMM.Jbodies[i][3] -= average;
+  for (int i=0, ix=0; ix<4; ix++) {
+    for (int iy=0; iy<4; iy++) {
+      for (int iz=0; iz<4; iz++, i++) {
+        FMM.Jbodies[i][0] = FMM.R0 * (ix + 0.1) / 2;
+        FMM.Jbodies[i][1] = FMM.R0 * (iy + 0.5) / 2;
+        FMM.Jbodies[i][2] = FMM.R0 * (iz + 0.5) / 2;
+        //FMM.Jbodies[i][0] = 2 * FMM.R0 * drand48();
+        //FMM.Jbodies[i][1] = 2 * FMM.R0 * drand48();
+        //FMM.Jbodies[i][2] = 2 * FMM.R0 * drand48();
+        FMM.Jbodies[i][3] = 1;
+      }
+    }
   }
 
   start("Grow tree");
@@ -53,7 +54,7 @@ int main(int argc, char ** argv) {
   stop("Total FMM");
 
   vec3 dipole = FMM.getDipole();
-  FMM.dipoleCorrection(dipole);
+  //FMM.dipoleCorrection(dipole);
 
   start("Total Ewald");
   std::vector<vec4> Ibodies(FMM.numBodies);
@@ -75,6 +76,7 @@ int main(int argc, char ** argv) {
   stop("Ewald wave part");
   ewald.selfTerm(FMM.Ibodies, FMM.Jbodies);
   for (int b=0; b<FMM.numBodies; b++) {
+    if (b==0) std::cout << b << " " << Ibodies[b][0] << " " << FMM.numBodies*27 << std::endl;
     FMM.Ibodies[b][0] *= FMM.Jbodies[b][3];
   }
   stop("Total Ewald");

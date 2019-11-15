@@ -1,12 +1,12 @@
 kernel:
 	icpc -I. -Wfatal-errors -fopenmp -mavx -O3 -c -o kernel.o kernel.cxx
 	icpc -Wfatal-errors -fopenmp -mavx -O3 kernel.o -lmpi_cxx
-	./a.out -v -n 1000 -c 32 -i 6
+	./a.out
 
 serial:
 	icpc -I. -Wfatal-errors -fopenmp -mavx -O3 -c -o fmm.o fmm.cxx
 	icpc -Wfatal-errors -fopenmp -mavx -O3 fmm.o -lmpi_cxx
-	./a.out -v -n 1000 -c 32 -i 6
+	./a.out -v -n 64 -c 32 -i 1
 
 charmm:
 	icpc -I. -Wfatal-errors -fopenmp -mavx -O3 -c -o charmm.o charmm.cxx

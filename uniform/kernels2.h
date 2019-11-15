@@ -108,152 +108,32 @@ namespace exafmm {
       vec3 X;
       for_3d X[d] = std::max(std::min(R - std::abs(dX[d]), D), -D) / D;
       real_t w = 1;
-      for_3d w *= (2 + 3 * X[d] - X[d] * X[d] * X[d]) / 4;
+      //for_3d w *= (2 + 3 * X[d] - X[d] * X[d] * X[d]) / 4;
+      for_3d w *= (X[d] + 1) / 2;
       return w;
     }
 
   public:
     void P2M(vec3 dX, real_t R, real_t SRC, complex_t *Mj) const {
-      complex_t Ynm[P*P], YnmTheta[P*P];
-      real_t rho, alpha, beta;
-      cart2sph(dX, rho, alpha, beta);
-      evalMultipole(rho, alpha, -beta, Ynm, YnmTheta);
       real_t w = weight(dX, R);
-      for (int n=0; n<P; n++) {
-        for (int m=0; m<=n; m++) {
-          int nm  = n * n + n + m;
-          int nms = n * (n + 1) / 2 + m;
-          Mj[nms] += w * SRC * Ynm[nm];
-        }
-      }
+      Mj[0] += w * SRC;
     }
 
-    void M2M(vec3 dX, complex_t *Mc, complex_t *Mp) const {
-      complex_t Ynm[P*P], YnmTheta[P*P];
-      real_t rho, alpha, beta;
-      cart2sph(dX, rho, alpha, beta);
-      evalMultipole(rho, alpha, -beta, Ynm, YnmTheta);
-      for (int j=0; j<P; j++) {
-        for (int k=0; k<=j; k++) {
-          int jk = j * j + j + k;
-          int jks = j * (j + 1) / 2 + k;
-          complex_t M = 0;
-          for (int n=0; n<=j; n++) {
-            for (int m=-n; m<=std::min(k-1,n); m++) {
-              if (j-n >= k-m) {
-                int jnkm  = (j - n) * (j - n) + j - n + k - m;
-                int jnkms = (j - n) * (j - n + 1) / 2 + k - m;
-                int nm    = n * n + n + m;
-                M += Mc[jnkms] * std::pow(I,real_t(m-abs(m))) * Ynm[nm]
-                  * real_t(oddOrEven(n) * Anm[nm] * Anm[jnkm] / Anm[jk]);
-              }
-            }
-            for (int m=k; m<=n; m++) {
-              if (j-n >= m-k) {
-                int jnkm  = (j - n) * (j - n) + j - n + k - m;
-                int jnkms = (j - n) * (j - n + 1) / 2 - k + m;
-                int nm    = n * n + n + m;
-                M += std::conj(Mc[jnkms]) * Ynm[nm]
-                  * real_t(oddOrEven(k+n+m) * Anm[nm] * Anm[jnkm] / Anm[jk]);
-              }
-            }
-          }
-          Mp[jks] += M * EPS;
-        }
-      }
+    void M2M(vec3, complex_t *Mc, complex_t *Mp) const {
+      Mp[0] += Mc[0];
     }
 
-    void M2L(vec3 dX, complex_t *M, complex_t *L) const {
-      complex_t Ynm2[4*P*P];
-      real_t rho, alpha, beta;
-      cart2sph(dX, rho, alpha, beta);
-      evalLocal(rho, alpha, beta, Ynm2);
-      for (int j=0; j<P; j++) {
-        for (int k=0; k<=j; k++) {
-          int jk = j * j + j + k;
-          int jks = j * (j + 1) / 2 + k;
-          complex_t Ljk = 0;
-          for (int n=0; n<P; n++) {
-            for (int m=-n; m<0; m++) {
-              int nm   = n * n + n + m;
-              int nms  = n * (n + 1) / 2 - m;
-              int jknm = jk * P * P + nm;
-              int jnkm = (j + n) * (j + n) + j + n + m - k;
-              Ljk += std::conj(M[nms]) * Cnm[jknm] * Ynm2[jnkm];
-            }
-            for (int m=0; m<=n; m++) {
-              int nm   = n * n + n + m;
-              int nms  = n * (n + 1) / 2 + m;
-              int jknm = jk * P * P + nm;
-              int jnkm = (j + n) * (j + n) + j + n + m - k;
-              Ljk += M[nms] * Cnm[jknm] * Ynm2[jnkm];
-            }
-          }
-          L[jks] += Ljk;
-        }
-      }
+    void M2L(vec3, complex_t *M, complex_t *L) const {
+      L[0] += M[0];
     }
 
-    void L2L(vec3 dX, complex_t *Lp, complex_t *Lc) const {
-      complex_t Ynm[P*P], YnmTheta[P*P];
-      real_t rho, alpha, beta;
-      cart2sph(dX, rho, alpha, beta);
-      evalMultipole(rho, alpha, beta, Ynm, YnmTheta);
-      for (int j=0; j<P; j++) {
-    	for (int k=0; k<=j; k++) {
-          int jk = j * j + j + k;
-          int jks = j * (j + 1) / 2 + k;
-          complex_t L = 0;
-          for (int n=j; n<P; n++) {
-            for (int m=j+k-n; m<0; m++) {
-              int jnkm = (n - j) * (n - j) + n - j + m - k;
-              int nm   = n * n + n - m;
-              int nms  = n * (n + 1) / 2 - m;
-              L += std::conj(Lp[nms]) * Ynm[jnkm]
-                * real_t(oddOrEven(k) * Anm[jnkm] * Anm[jk] / Anm[nm]);
-            }
-            for (int m=0; m<=n; m++) {
-              if (n-j >= abs(m-k)) {
-                int jnkm = (n - j) * (n - j) + n - j + m - k;
-                int nm   = n * n + n + m;
-                int nms  = n * (n + 1) / 2 + m;
-                L += Lp[nms] * std::pow(I,real_t(m-k-abs(m-k)))
-                  * Ynm[jnkm] * Anm[jnkm] * Anm[jk] / Anm[nm];
-              }
-            }
-          }
-          Lc[jks] += L * EPS;
-        }
-      }
+    void L2L(vec3, complex_t *Lp, complex_t *Lc) const {
+      Lc[0] += Lp[0];
     }
 
     void L2P(vec3 dX, real_t R, complex_t *L, vec4 &TRG) const {
-      complex_t Ynm[P*P], YnmTheta[P*P];
-      vec3 spherical = 0;
-      vec3 cartesian = 0;
-      real_t r, theta, phi;
-      cart2sph(dX, r, theta, phi);
-      evalMultipole(r, theta, phi, Ynm, YnmTheta);
       real_t w = weight(dX, R);
-      for (int n=0; n<P; n++) {
-        int nm  = n * n + n;
-        int nms = n * (n + 1) / 2;
-        TRG[0] += w * std::real(L[nms] * Ynm[nm]);
-        spherical[0] += w * std::real(L[nms] * Ynm[nm]) / r * n;
-        spherical[1] += w * std::real(L[nms] * YnmTheta[nm]);
-        for (int m=1; m<=n; m++) {
-          nm  = n * n + n + m;
-          nms = n * (n + 1) / 2 + m;
-          TRG[0] += 2 * w * std::real(L[nms] * Ynm[nm]);
-          spherical[0] += 2 * w * std::real(L[nms] * Ynm[nm]) / r * n;
-          spherical[1] += 2 * w * std::real(L[nms] * YnmTheta[nm]);
-          spherical[2] += 2 * w * std::real(L[nms] * Ynm[nm] * I) * m;
-        }
-      }
-      sph2cart(r, theta, phi, spherical, cartesian);
-      TRG[1] += cartesian[0];
-      TRG[2] += cartesian[1];
-      TRG[3] += cartesian[2];
+      TRG[0] += std::real(L[0]) * w;
     }
 
     void P2P(std::vector<vec4> &Ibodies, int ibegin, int iend, vec3 Xi,
@@ -266,16 +146,7 @@ namespace exafmm {
 	for (int j=jbegin; j<jend; j++) {
           for_3d dX[d] = Jbodies[j][d] + periodic[d] - Xj[d];
           real_t wj = weight(dX, R);
-	  for_3d dX[d] = Jbodies[i][d] - Jbodies[j][d] - periodic[d];
-	  real_t R2 = norm(dX);
-	  real_t invR2 = 1.0 / R2;
-	  if (R2 == 0) invR2 = 0;
-	  real_t invR = Jbodies[j][3] * sqrt(invR2) * wj;
-	  real_t invR3 = invR2 * invR;
-	  TRG[0] += invR;
-	  TRG[1] -= dX[0] * invR3;
-	  TRG[2] -= dX[1] * invR3;
-	  TRG[3] -= dX[2] * invR3;
+	  TRG[0] += Jbodies[j][3] * wj;;
 	}
 	Ibodies[i] += TRG * wi;
       }

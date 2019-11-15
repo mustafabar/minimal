@@ -1,3 +1,8 @@
-add smoothing
-test kernel.cxx with D=0 and no srand48
+Debug P2P
+Try 0.1, 0.1, 0.1
+
+[Once debugged]
+cycle = 10 * M_PI
+dipoleCorrection
+OpenMP for P2M, M2M
 Compare energy drift

@@ -1,5 +1,5 @@
 #include <mpi.h>
-#include "kernels.h"
+#include "kernels2.h"
 
 namespace exafmm {
   class SerialFMM : public Kernel {
@@ -60,7 +60,7 @@ namespace exafmm {
       getCenter(dX, iX, level);
     }
 
-    void sort(std::vector<vec4> &bodies, std::vector<fvec4> &buffer, std::vector<int> &index,
+    void sort(std::vector<vec4> &bodies, std::vector<vec4> &buffer, std::vector<int> &index,
               std::vector<int> &ibuffer, std::vector<int> &key) const {
       int Imax = key[0];
       int Imin = key[0];
@@ -105,7 +105,7 @@ namespace exafmm {
 	key[i] = getKey(iX,maxLevel);
       }
       std::vector<int> Index2(numBodies);
-      std::vector<fvec4> Jbodies2(numBodies);
+      std::vector<vec4> Jbodies2(numBodies);
       sort(Jbodies,Jbodies2,Index,Index2,key);
       for( int i=0; i<numBodies; i++ ) {
 	Index[i] = Index2[i];
@@ -149,7 +149,7 @@ namespace exafmm {
       }
       int levelOffset = ((1 << 3 * maxLevel) - 1) / 7 + 0 * numCells;
       real_t R = R0 / (1 << maxLevel);
-#pragma omp parallel for
+      //#pragma omp parallel for
       for (int j=0; j<numLeafs; j++) {
 	ivec3 jX = 0;
 	getIndex(jX,j);
@@ -179,7 +179,7 @@ namespace exafmm {
 	int childOffset = ((1 << 3 * lev) - 1) / 7;
 	int parentOffset = ((1 << 3 * (lev - 1)) - 1) / 7;
 	real_t radius = R0 / (1 << lev);
-#pragma omp parallel for schedule(static, 8)
+        //#pragma omp parallel for schedule(static, 8)
 	for (int i=0; i<(1 << 3 * lev); i++) {
 	  int c = i + childOffset;
 	  int p = (i >> 3) + parentOffset;
@@ -296,8 +296,6 @@ namespace exafmm {
       start("P2P");
 #pragma omp parallel for
       for (int i=0; i<numLeafs; i++) {
-        vec3 Xi, Xj;
-        getCenter(Xi,i,maxLevel);
         ivec3 iX = 0;
         getIndex(iX,i); 
 	ivec3 irXmin = max(nxmin,iX - DREG);
@@ -306,6 +304,7 @@ namespace exafmm {
 	for (irX[2]=irXmin[2]; irX[2]<=irXmax[2]; irX[2]++) {
 	  for (irX[1]=irXmin[1]; irX[1]<=irXmax[1]; irX[1]++) {
 	    for (irX[0]=irXmin[0]; irX[0]<=irXmax[0]; irX[0]++) {
+              vec3 Xi;
               getCenter(Xi,irX,maxLevel);
               ivec3 jXmin = max(nxmin,iX - DP2P);
               ivec3 jXmax = min(nxmax,iX + DP2P);
@@ -324,6 +323,7 @@ namespace exafmm {
                     for (jrX[2]=jrXmin[2]; jrX[2]<=jrXmax[2]; jrX[2]++) {
                       for (jrX[1]=jrXmin[1]; jrX[1]<=jrXmax[1]; jrX[1]++) {
                         for (jrX[0]=jrXmin[0]; jrX[0]<=jrXmax[0]; jrX[0]++) {
+                          vec3 Xj;
                           getCenter(Xj,jrX,maxLevel);
                           P2P(Ibodies,Leafs[i].begin,Leafs[i].end,Xi,
                               Jbodies,Leafs[j].begin,Leafs[j].end,Xj,R,periodic);
