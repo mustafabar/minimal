@@ -12,8 +12,12 @@ namespace exafmm {
   const real_t EPS = 1e-16;                                     //!< Double precision epsilon
   typedef std::complex<real_t> complex_t;                       //!< Complex type
   const complex_t I(0.,1.);                                     //!< Imaginary unit
- 
-  const int P = 1;                                             //!< Order of expansion
+
+#if DEBUG
+  const int P = 1;                                              //!< Order of expansion
+#else
+  const int P = 12;                                             //!< Order of expansion
+#endif
   const int NTERM = P*(P+1)/2;                                  //!< Number of expansion terms
   
   typedef vec<3,int> ivec3;                                     //!< Vector of 3 int types

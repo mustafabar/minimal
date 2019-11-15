@@ -1,5 +1,9 @@
 #include <mpi.h>
+#if DEBUG
 #include "kernels2.h"
+#else
+#include "kernels.h"
+#endif
 
 namespace exafmm {
   class SerialFMM : public Kernel {

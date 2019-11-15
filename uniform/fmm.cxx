@@ -6,7 +6,11 @@ using namespace exafmm;
 
 int main(int argc, char ** argv) {
   const int ksize = 14;
+#if DEBUG
   const real_t cycle = 4;
+#else 
+  const real_t cycle = 2 * M_PI;
+#endif 
   const real_t alpha = 10 / cycle;
   const real_t sigma = .25 / M_PI;
   const real_t cutoff = 10;
@@ -30,6 +34,7 @@ int main(int argc, char ** argv) {
   FMM.R0 = 0.5 * cycle;
   for_3d FMM.X0[d] = FMM.R0;
   srand48(0);
+#if DEBUG
   for (int i=0, ix=0; ix<4; ix++) {
     for (int iy=0; iy<4; iy++) {
       for (int iz=0; iz<4; iz++, i++) {
@@ -43,6 +48,20 @@ int main(int argc, char ** argv) {
       }
     }
   }
+#else
+  real_t average = 0;
+  for (int i=0; i<FMM.numBodies; i++) {
+    FMM.Jbodies[i][0] = 2 * FMM.R0 * drand48();
+    FMM.Jbodies[i][1] = 2 * FMM.R0 * drand48();
+    FMM.Jbodies[i][2] = 2 * FMM.R0 * drand48();
+    FMM.Jbodies[i][3] = drand48();
+    average += FMM.Jbodies[i][3];
+  }
+  average /= FMM.numBodies;
+  for (int i=0; i<FMM.numBodies; i++) {
+    FMM.Jbodies[i][3] -= average;
+  }
+#endif
 
   start("Grow tree");
   FMM.sortBodies();
@@ -54,7 +73,9 @@ int main(int argc, char ** argv) {
   stop("Total FMM");
 
   vec3 dipole = FMM.getDipole();
-  //FMM.dipoleCorrection(dipole);
+#ifndef DEBUG
+  FMM.dipoleCorrection(dipole);
+#endif
 
   start("Total Ewald");
   std::vector<vec4> Ibodies(FMM.numBodies);
