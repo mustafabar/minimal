@@ -1,5 +1,5 @@
 Debug P2P
-Only works for linear smoothing function
+  Only works for lattice distributions
 
 [Once debugged]
 Remove DEBUG macro
