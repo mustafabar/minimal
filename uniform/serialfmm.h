@@ -194,7 +194,8 @@ namespace exafmm {
 	  vec3 dX;
 	  for_3d dX[d] = iX[d] * radius;
           M2M(dX,Multipole[c],Multipole[p]);
-	}
+	}  
+        std::cout << Multipole[parentOffset][0] << std::endl;
       }
       stop("M2M");
     }
@@ -209,8 +210,8 @@ namespace exafmm {
 	ivec3 nxmin = 0;
 	ivec3 nxmax = (nunit >> 1) + nxmin - 1;
 	if (numImages != 0) {
-	  nxmin -= (nunit >> 1);
-	  nxmax += (nunit >> 1);
+	  nxmin -= nunit;
+	  nxmax += nunit;
 	}
 	real_t diameter = 2 * R0 / (1 << lev);
 #pragma omp parallel for
