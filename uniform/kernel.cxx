@@ -11,7 +11,7 @@ int main(int argc, char ** argv) {
   std::vector<vec4> Ibodies(2*numBodies);
   std::vector<vec4> Jbodies(2*numBodies);
   srand48(0);
-#if 1
+#if 0
   for (int i=0; i<numBodies; i++) {
     Ibodies[i] = 0;
     Jbodies[i][0] = drand48();
@@ -82,7 +82,7 @@ int main(int argc, char ** argv) {
     for (iX[1]=0; iX[1]<2; iX[1]++) {
       for (iX[2]=0; iX[2]<2; iX[2]++) {
         for_3d Xi[d] = 2 * iX[d] - 1;
-        Xi[0] += 2 * (dist - 1) / 2;
+        Xi[0] += 2 * ((dist - 1) / 2);
         for (jX[0]=0; jX[0]<2; jX[0]++) {
           for (jX[1]=0; jX[1]<2; jX[1]++) {
             for (jX[2]=0; jX[2]<2; jX[2]++) {
@@ -110,7 +110,7 @@ int main(int argc, char ** argv) {
               for_3d Xj[d] = jX[d] - 0.5;
               ivec3 jpX = (jX + 1) / 2;
               for_3d dX[d] = Xi[d] - Xj[d];
-              if ((2*ipX[0] - 2*jpX[0] + 2 * (dist - 1) / 2 < 2 + eps) && (dX[0] > 2 + eps)) {
+              if ((2*ipX[0] - 2*jpX[0] + 2 * ((dist - 1) / 2) < 2 + eps) && (dX[0] > 2 + eps)) {
                 kernel.M2L(dX, Mc[jX[0]][jX[1]][jX[2]], Lc[iX[0]][iX[1]][iX[2]]);
               }
             }
@@ -127,7 +127,7 @@ int main(int argc, char ** argv) {
         jX = (iX + 1) / 2;
         jX[0] = (iX[0] + (dist & 1)) / 2;
         for_3d Xj[d] = 2 * jX[d] - 1;
-        Xj[0] += 2 * (dist - 1) / 2;
+        Xj[0] += 2 * ((dist - 1) / 2);
         for_3d dX[d] = Xi[d] - Xj[d];
         kernel.L2L(dX, Lp[jX[0]][jX[1]][jX[2]], Lc[iX[0]][iX[1]][iX[2]]);
       }

@@ -8,6 +8,7 @@ kernel:
 	./a.out 5
 	./a.out 4
 	./a.out 3
+	./a.out 2
 
 serial:
 	icpc -I. -Wfatal-errors -fopenmp -mavx -O3 -c -o fmm.o fmm.cxx

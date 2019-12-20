@@ -1,4 +1,6 @@
-Gradually move boxes closer in kernel.cxx
+Gradually complicate kernel.cxx
+  Move boxes closer
+  More boxes
 Debug P2P
   Only works for lattice distributions
 
