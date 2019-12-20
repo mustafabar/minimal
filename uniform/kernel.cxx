@@ -103,7 +103,6 @@ int main(int argc, char ** argv) {
         for_3d Xi[d] = iX[d] - 0.5;
         Xi[0] += dist - 1;
         ivec3 ipX = (iX + 1) / 2;
-        ipX[0] = (iX[0] + (dist & 1)) / 2;
         for (jX[0]=0; jX[0]<3; jX[0]++) {
           for (jX[1]=0; jX[1]<3; jX[1]++) {
             for (jX[2]=0; jX[2]<3; jX[2]++) {
@@ -125,7 +124,6 @@ int main(int argc, char ** argv) {
         for_3d Xi[d] = iX[d] - 0.5;
         Xi[0] += dist - 1;
         jX = (iX + 1) / 2;
-        jX[0] = (iX[0] + (dist & 1)) / 2;
         for_3d Xj[d] = 2 * jX[d] - 1;
         Xj[0] += 2 * ((dist - 1) / 2);
         for_3d dX[d] = Xi[d] - Xj[d];
