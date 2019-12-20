@@ -5,12 +5,12 @@ using namespace exafmm;
 
 int main(int argc, char ** argv) {
   const int numBodies = 8;
-  const int dist = 5;
+  const int dist = 4;
   const double eps = 1e-6;
   std::vector<vec4> Ibodies(2*numBodies);
   std::vector<vec4> Jbodies(2*numBodies);
   srand48(0);
-#if 0
+#if 1
   for (int i=0; i<numBodies; i++) {
     Ibodies[i] = 0;
     Jbodies[i][0] = drand48();
@@ -78,7 +78,6 @@ int main(int argc, char ** argv) {
       }
     }
   }
-  int count = 0;
   for (iX[0]=0; iX[0]<2; iX[0]++) {
     for (iX[1]=0; iX[1]<2; iX[1]++) {
       for (iX[2]=0; iX[2]<2; iX[2]++) {
@@ -91,7 +90,6 @@ int main(int argc, char ** argv) {
               for_3d dX[d] = Xi[d] - Xj[d];
               if (dX[0] > 2 + eps) {
                 kernel.M2L(dX, Mp[jX[0]][jX[1]][jX[2]], Lp[iX[0]][iX[1]][iX[2]]);
-                count++;
               }
             }
           }
@@ -99,8 +97,6 @@ int main(int argc, char ** argv) {
       }
     }
   }
-  std::cout << count << std::endl;
-  count = 0;
   for (iX[0]=0; iX[0]<3; iX[0]++) {
     for (iX[1]=0; iX[1]<3; iX[1]++) {
       for (iX[2]=0; iX[2]<3; iX[2]++) {
@@ -117,7 +113,6 @@ int main(int argc, char ** argv) {
               for_3d dX[d] = Xi[d] - Xj[d];
               if ((ipX[0] - jpX[0] + dist*0.5 < 1 + eps) && (dX[0] > 2 + eps)) {
                 kernel.M2L(dX, Mc[jX[0]][jX[1]][jX[2]], Lc[iX[0]][iX[1]][iX[2]]);
-                count++;
               }
             }
           }
@@ -125,7 +120,6 @@ int main(int argc, char ** argv) {
       }
     }
   }
-  std::cout << count << std::endl;
   for (iX[0]=0; iX[0]<3; iX[0]++) {
     for (iX[1]=0; iX[1]<3; iX[1]++) {
       for (iX[2]=0; iX[2]<3; iX[2]++) {
@@ -147,12 +141,11 @@ int main(int argc, char ** argv) {
         Xi[0] += dist - 1;
         for (int i=0; i<numBodies; i++) {
           for_3d dX[d] = Jbodies[i+numBodies][d] - Xi[d];
-          kernel.L2P(dX, 0.5, Lc[iX[0]][iX[1]][iX[2]], Ibodies[i]);
+          kernel.L2P(dX, 0.5, Lc[iX[0]][iX[1]][iX[2]], Ibodies[i+numBodies]);
         }
       }
     }
   }
-  count = 0;
   vec3 periodic = 0;
   for (iX[0]=0; iX[0]<3; iX[0]++) {
     for (iX[1]=0; iX[1]<3; iX[1]++) {
@@ -164,8 +157,7 @@ int main(int argc, char ** argv) {
             for (jX[2]=0; jX[2]<3; jX[2]++) {
               for_3d Xj[d] = jX[d] - 0.5;
               if (Xi[0] - Xj[0] < 2 + eps) {
-                kernel.P2P(Ibodies, 0, numBodies, Xi, Jbodies, 0, numBodies, Xj, 0.5, periodic);
-                count++;
+                kernel.P2P(Ibodies, numBodies, 2*numBodies, Xi, Jbodies, 0, numBodies, Xj, 0.5, periodic);
               }
             }
           }
@@ -173,7 +165,10 @@ int main(int argc, char ** argv) {
       }
     }
   }
-  std::cout << count << std::endl;
+  for (int i=0; i<numBodies; i++) {
+    Ibodies[i] = Ibodies[i+numBodies];
+    Ibodies[i+numBodies] = 0;
+  }
   kernel.P2PX(Ibodies, numBodies, 2*numBodies, Xi, Jbodies, 0, numBodies, Xj, 0.5, periodic);
   double potDif = 0, potNrm = 0, accDif = 0, accNrm = 0;
   for (int i=0; i<numBodies; i++) {

@@ -282,7 +282,7 @@ namespace exafmm {
     }
 
     void P2PX(std::vector<vec4> &Ibodies, int ibegin, int iend, vec3,
-             std::vector<vec4> &Jbodies, int jbegin, int jend, vec3, real_t, vec3 periodic) const {
+              std::vector<vec4> &Jbodies, int jbegin, int jend, vec3, real_t, vec3 periodic) const {
       for (int i=ibegin; i<iend; i++) {
         vec4 TRG = 0;
 	for (int j=jbegin; j<jend; j++) {
