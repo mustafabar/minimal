@@ -1,8 +1,9 @@
-Gradually complicate kernel.cxx
-  Move boxes closer
+Extend kernel.cxx
   More boxes
-Debug P2P
+Debug fmm.cxx
   Only works for lattice distributions
+  Turn off periodic
+  Make one box vs one box case
 
 [Once debugged]
 Remove DEBUG macro

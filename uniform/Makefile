@@ -16,9 +16,9 @@ serial:
 	./a.out -v -n 1000 -c 32 -i 6
 
 debug:
-	icpc -I. -Wfatal-errors -fopenmp -mavx -O3 -c -o fmm.o fmm.cxx -DDEBUG
+	icpc -I. -Wfatal-errors -fopenmp -mavx -O3 -c -o fmm.o fmm2.cxx -DDEBUG
 	icpc -Wfatal-errors -fopenmp -mavx -O3 fmm.o -lmpi_cxx
-	./a.out -v -n 64 -c 32 -i 1
+	./a.out -v -n 64 -c 32 -i 0
 
 charmm:
 	icpc -I. -Wfatal-errors -fopenmp -mavx -O3 -c -o charmm.o charmm.cxx

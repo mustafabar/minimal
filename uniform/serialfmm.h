@@ -1,9 +1,5 @@
 #include <mpi.h>
-#if DEBUG
-#include "kernels2.h"
-#else
 #include "kernels.h"
-#endif
 
 namespace exafmm {
   class SerialFMM : public Kernel {
@@ -145,20 +141,14 @@ namespace exafmm {
 
       start("P2M");
       ivec3 nunit = 1 << maxLevel;
-      ivec3 nxmin = 0;
-      ivec3 nxmax = nunit + nxmin - 1;
-      if (numImages != 0) {
-	nxmin -= nunit;
-	nxmax += nunit;
-      }
       int levelOffset = ((1 << 3 * maxLevel) - 1) / 7 + 0 * numCells;
       real_t R = R0 / (1 << maxLevel);
       //#pragma omp parallel for
       for (int j=0; j<numLeafs; j++) {
 	ivec3 jX = 0;
 	getIndex(jX,j);
-	ivec3 iXmin = max(nxmin,jX - DREG);
-	ivec3 iXmax = min(nxmax,jX + DREG);
+	ivec3 iXmin = jX - DREG;
+	ivec3 iXmax = jX + DREG;
 	ivec3 iX;
 	for (iX[2]=iXmin[2]; iX[2]<=iXmax[2]; iX[2]++) {
 	  for (iX[1]=iXmin[1]; iX[1]<=iXmax[1]; iX[1]++) {
@@ -209,10 +199,10 @@ namespace exafmm {
 	ivec3 nunit = 1 << lev;
 	ivec3 nxmin = 0;
 	ivec3 nxmax = (nunit >> 1) + nxmin - 1;
-	if (numImages != 0) {
-	  nxmin -= nunit;
-	  nxmax += nunit;
-	}
+        if (numImages != 0) {
+          nxmin -= nunit;
+          nxmax += nunit;
+        }
 	real_t diameter = 2 * R0 / (1 << lev);
 #pragma omp parallel for
 	for (int i=0; i<(1 << 3 * lev); i++) {
@@ -264,20 +254,14 @@ namespace exafmm {
 
       start("L2P");
       ivec3 nunit = 1 << maxLevel;
-      ivec3 nxmin = 0;
-      ivec3 nxmax = nunit + nxmin - 1;
-      if (numImages != 0) {
-	nxmin -= nunit * 2;
-	nxmax += nunit * 2;
-      }
       int levelOffset = ((1 << 3 * maxLevel) - 1) / 7;
       real_t R = R0 / (1 << maxLevel);
 #pragma omp parallel for
       for (int i=0; i<numLeafs; i++) {
 	ivec3 iX = 0;
 	getIndex(iX,i);
-	ivec3 jXmin = max(nxmin,iX - DREG);
-	ivec3 jXmax = min(nxmax,iX + DREG);
+	ivec3 jXmin = iX - DREG;
+	ivec3 jXmax = iX + DREG;
 	ivec3 jX;
 	for (jX[2]=jXmin[2]; jX[2]<=jXmax[2]; jX[2]++) {
 	  for (jX[1]=jXmin[1]; jX[1]<=jXmax[1]; jX[1]++) {
@@ -299,12 +283,18 @@ namespace exafmm {
       stop("L2P");
 
       start("P2P");
+      ivec3 nxmin = 0;
+      ivec3 nxmax = nunit + nxmin - 1;
+      if (numImages != 0) {
+        nxmin -= nunit * 2;
+        nxmax += nunit * 2;
+      }
 #pragma omp parallel for
       for (int i=0; i<numLeafs; i++) {
         ivec3 iX = 0;
         getIndex(iX,i); 
-	ivec3 irXmin = max(nxmin,iX - DREG);
-	ivec3 irXmax = min(nxmax,iX + DREG);
+	ivec3 irXmin = iX - DREG;
+	ivec3 irXmax = iX + DREG;
 	ivec3 irX;
 	for (irX[2]=irXmin[2]; irX[2]<=irXmax[2]; irX[2]++) {
 	  for (irX[1]=irXmin[1]; irX[1]<=irXmax[1]; irX[1]++) {
@@ -322,8 +312,8 @@ namespace exafmm {
                     ivec3 pX = (jX + nunit) / nunit;
                     vec3 periodic;
                     for_3d periodic[d] = (pX[d] - 1) * 2 * R0;
-                    ivec3 jrXmin = max(nxmin,jX - DREG);
-                    ivec3 jrXmax = min(nxmax,jX + DREG);
+                    ivec3 jrXmin = jX - DREG;
+                    ivec3 jrXmax = jX + DREG;
                     ivec3 jrX;
                     for (jrX[2]=jrXmin[2]; jrX[2]<=jrXmax[2]; jrX[2]++) {
                       for (jrX[1]=jrXmin[1]; jrX[1]<=jrXmax[1]; jrX[1]++) {

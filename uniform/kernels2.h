@@ -153,21 +153,11 @@ namespace exafmm {
     }
 
     void P2PX(std::vector<vec4> &Ibodies, int ibegin, int iend, vec3,
-             std::vector<vec4> &Jbodies, int jbegin, int jend, vec3, real_t, vec3 periodic) const {
+              std::vector<vec4> &Jbodies, int jbegin, int jend, vec3, real_t, vec3 periodic) const {
       for (int i=ibegin; i<iend; i++) {
         vec4 TRG = 0;
 	for (int j=jbegin; j<jend; j++) {
-	  vec3 dX;
-	  for_3d dX[d] = Jbodies[i][d] - Jbodies[j][d] - periodic[d];
-	  real_t R2 = norm(dX);
-	  real_t invR2 = 1.0 / R2;
-	  if (R2 == 0) invR2 = 0;
-	  real_t invR = Jbodies[j][3] * sqrt(invR2);
-	  real_t invR3 = invR2 * invR;
-	  TRG[0] += invR;
-	  TRG[1] -= dX[0] * invR3;
-	  TRG[2] -= dX[1] * invR3;
-	  TRG[3] -= dX[2] * invR3;
+	  TRG[0] += Jbodies[j][3];
 	}
 	Ibodies[i] += TRG;
       }

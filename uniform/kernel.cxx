@@ -11,7 +11,7 @@ int main(int argc, char ** argv) {
   std::vector<vec4> Ibodies(2*numBodies);
   std::vector<vec4> Jbodies(2*numBodies);
   srand48(0);
-#if 0
+#if 1
   for (int i=0; i<numBodies; i++) {
     Ibodies[i] = 0;
     Jbodies[i][0] = drand48();
