@@ -8,10 +8,10 @@ int main(int argc, char ** argv) {
   Args args(argc, argv);
   Verify verify;
 
-  const int numBodies = args.numBodies;
-  const int ncrit = args.ncrit;
+  const int numBodies = 16;
+  const int ncrit = 9;
   const int maxLevel = 3;
-  const int numImages = args.images;
+  const int numImages = 0;
 
   SerialFMM FMM(numBodies, maxLevel, numImages);
   VERBOSE = 1;
@@ -29,7 +29,7 @@ int main(int argc, char ** argv) {
     FMM.Jbodies[i][1] = drand48();
     FMM.Jbodies[i][2] = drand48();
     FMM.Jbodies[i][3] = drand48();
-    FMM.Jbodies[i+8][0] = drand48() + 2;
+    FMM.Jbodies[i+8][0] = drand48() - 3;
     FMM.Jbodies[i+8][1] = drand48();
     FMM.Jbodies[i+8][2] = drand48();
     FMM.Jbodies[i+8][3] = 0;

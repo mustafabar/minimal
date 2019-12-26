@@ -280,6 +280,9 @@ namespace exafmm {
 	  iX[2] = ((i / 4) & 1) * 2 - 1;
 	  vec3 dX;
 	  for_3d dX[d] = iX[d] * radius;
+          if (i==165&&lev==3) {
+            std::cout << std::fixed << std::setprecision(9) << Local[c][1] << std::endl;
+          }
           L2L(dX,Local[p],Local[c]);
 	}
       }
@@ -309,9 +312,13 @@ namespace exafmm {
                 for_3d dX[d] = Jbodies[b][d] - X[d];
                 L2P(dX,R,L,Ibodies[b]);
               }
+              if (i==385&&jX[0]==1&&jX[1]==4&&jX[2]==3) std::cout << std::fixed << std::setprecision(9) << Ibodies[4] << std::endl;
             }
           }
 	}
+      }
+      for (int i=0; i<8; i++) {
+        //std::cout << i+8 << " " << std::fixed << std::setprecision(6) << Ibodies[i] << std::endl;
       }
       stop("L2P");
 
@@ -360,6 +367,12 @@ namespace exafmm {
                                 Jbodies,Leafs[j].begin,Leafs[j].end,Xj,R,periodic);
                           }
                         }
+                      }
+                    }
+                    if (i==385 && j==448) {
+                      //std::cout << irX << std::endl;
+                      for (int i=0; i<8; i++) {
+                        //std::cout << i+8 << " " << std::fixed << std::setprecision(6) << Ibodies[i] << std::endl;
                       }
                     }
                   }
