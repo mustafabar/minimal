@@ -1,8 +1,6 @@
 Extend kernel.cxx
   More boxes
 Debug fmm.cxx
-  Only works for lattice distributions
-  Turn off periodic
   Make one box vs one box case
 
 [Once debugged]

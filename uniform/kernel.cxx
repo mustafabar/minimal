@@ -22,7 +22,7 @@ int main(int argc, char ** argv) {
     Jbodies[i+numBodies][0] = drand48() + dist - 1;
     Jbodies[i+numBodies][1] = drand48();
     Jbodies[i+numBodies][2] = drand48();
-    Jbodies[i+numBodies][3] = drand48();
+    Jbodies[i+numBodies][3] = 0;
   }
 #else
   for (int i=0,ix=0; ix<2; ix++) {
@@ -144,14 +144,18 @@ int main(int argc, char ** argv) {
     }
   }
   vec3 periodic = 0;
-  for (iX[0]=0; iX[0]<3; iX[0]++) {
+  ivec3 iiX = 0;
+  iiX[0] = 5;
+  iiX[1] = 3;
+  iiX[2] = 3;
+  for (iX[2]=0; iX[2]<3; iX[2]++) {
     for (iX[1]=0; iX[1]<3; iX[1]++) {
-      for (iX[2]=0; iX[2]<3; iX[2]++) {
+      for (iX[0]=0; iX[0]<3; iX[0]++) {
         for_3d Xi[d] = iX[d] - 0.5;
         Xi[0] += dist - 1;
-        for (jX[0]=0; jX[0]<3; jX[0]++) {
+        for (jX[2]=0; jX[2]<3; jX[2]++) {
           for (jX[1]=0; jX[1]<3; jX[1]++) {
-            for (jX[2]=0; jX[2]<3; jX[2]++) {
+            for (jX[0]=0; jX[0]<3; jX[0]++) {
               for_3d Xj[d] = jX[d] - 0.5;
               if (Xi[0] - Xj[0] < 2 + eps) {
                 kernel.P2P(Ibodies, numBodies, 2*numBodies, Xi, Jbodies, 0, numBodies, Xj, 0.5, periodic);

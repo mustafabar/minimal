@@ -10,7 +10,7 @@ int main(int argc, char ** argv) {
 
   const int numBodies = args.numBodies;
   const int ncrit = args.ncrit;
-  const int maxLevel = numBodies >= ncrit ? 1 + int(log(numBodies / ncrit)/M_LN2/3) : 0;
+  const int maxLevel = 3;
   const int numImages = args.images;
 
   SerialFMM FMM(numBodies, maxLevel, numImages);
@@ -21,21 +21,18 @@ int main(int argc, char ** argv) {
 
   print("FMM Profiling");
   start("Total FMM");
-  FMM.R0 = 0.5;
-  for_3d FMM.X0[d] = FMM.R0;
+  FMM.R0 = 4;
+  for_3d FMM.X0[d] = 0;
   srand48(0);
-  for (int i=0, ix=0; ix<4; ix++) {
-    for (int iy=0; iy<4; iy++) {
-      for (int iz=0; iz<4; iz++, i++) {
-        FMM.Jbodies[i][0] = FMM.R0 * (ix + 0.1) / 2;
-        FMM.Jbodies[i][1] = FMM.R0 * (iy + 0.1) / 2;
-        FMM.Jbodies[i][2] = FMM.R0 * (iz + 0.1) / 2;
-        //FMM.Jbodies[i][0] = 2 * FMM.R0 * drand48();
-        //FMM.Jbodies[i][1] = 2 * FMM.R0 * drand48();
-        //FMM.Jbodies[i][2] = 2 * FMM.R0 * drand48();
-        FMM.Jbodies[i][3] = 1;
-      }
-    }
+  for (int i=0; i<8; i++) {
+    FMM.Jbodies[i][0] = drand48();
+    FMM.Jbodies[i][1] = drand48();
+    FMM.Jbodies[i][2] = drand48();
+    FMM.Jbodies[i][3] = drand48();
+    FMM.Jbodies[i+8][0] = drand48() + 2;
+    FMM.Jbodies[i+8][1] = drand48();
+    FMM.Jbodies[i+8][2] = drand48();
+    FMM.Jbodies[i+8][3] = 0;
   }
 
   start("Grow tree");
@@ -57,9 +54,6 @@ int main(int argc, char ** argv) {
   FMM.P2PX(FMM.Ibodies,0,FMM.numBodies,FMM.X0,
            FMM.Jbodies,0,FMM.numBodies,FMM.X0,FMM.R0,periodic);
 
-  for (int b=0; b<FMM.numBodies; b++) {
-    std::cout << b << " " << Ibodies[b][0] << " " << FMM.Ibodies[b][0] << std::endl;
-  }
   stop("Direct");
   double potSum = verify.getSumScalar(FMM.Ibodies);
   double potSum2 = verify.getSumScalar(Ibodies);

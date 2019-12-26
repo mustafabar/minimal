@@ -1,14 +1,7 @@
 kernel:
 	icpc -I. -Wfatal-errors -fopenmp -mavx -O3 -c -o kernel.o kernel.cxx
 	icpc -Wfatal-errors -fopenmp -mavx -O3 kernel.o -lmpi_cxx
-	./a.out 9
-	./a.out 8
-	./a.out 7
-	./a.out 6
-	./a.out 5
-	./a.out 4
-	./a.out 3
-	./a.out 2
+	./a.out 3 # 2 - 9
 
 serial:
 	icpc -I. -Wfatal-errors -fopenmp -mavx -O3 -c -o fmm.o fmm.cxx
@@ -18,7 +11,7 @@ serial:
 debug:
 	icpc -I. -Wfatal-errors -fopenmp -mavx -O3 -c -o fmm.o fmm2.cxx -DDEBUG
 	icpc -Wfatal-errors -fopenmp -mavx -O3 fmm.o -lmpi_cxx
-	./a.out -v -n 64 -c 32 -i 0
+	./a.out -v -n 16 -c 9 -i 0
 
 charmm:
 	icpc -I. -Wfatal-errors -fopenmp -mavx -O3 -c -o charmm.o charmm.cxx

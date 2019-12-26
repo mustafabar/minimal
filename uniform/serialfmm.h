@@ -185,13 +185,45 @@ namespace exafmm {
 	  for_3d dX[d] = iX[d] * radius;
           M2M(dX,Multipole[c],Multipole[p]);
 	}  
-        std::cout << Multipole[parentOffset][0] << std::endl;
       }
       stop("M2M");
     }
 
     void downwardPass() {
       start("M2L");
+#if 0
+      {
+      int lev = maxLevel;
+      int levelOffset = ((1 << 3 * lev) - 1) / 7;
+      ivec3 nunit = 1 << lev;
+      ivec3 nxmin = 0;
+      ivec3 nxmax = (nunit >> 1) + nxmin - 1;
+      if (numImages != 0) {
+        nxmin -= nunit;
+        nxmax += nunit;
+      }
+      real_t diameter = 2 * R0 / (1 << lev);
+      for (int i=0; i<(1 << 3 * lev); i++) {
+        cvecP L = complex_t(0);
+        ivec3 iX = 0;
+        getIndex(iX,i);
+        for (int j=0; j<(1 << 3 * lev); j++) {
+          ivec3 jX = 0;
+          getIndex(jX,j);
+          if(jX[0] < iX[0]-DP2P || iX[0]+DP2P < jX[0] ||
+             jX[1] < iX[1]-DP2P || iX[1]+DP2P < jX[1] ||
+             jX[2] < iX[2]-DP2P || iX[2]+DP2P < jX[2]) {
+            ivec3 jXwrap = (jX + nunit) % nunit;
+            int j = getKey(jXwrap,lev);
+            vec3 dX;
+            for_3d dX[d]= (iX[d] - jX[d]) * diameter;
+            M2L(dX,Multipole[j],L);
+          }
+        }
+        Local[i+levelOffset] += L;
+      }
+      }
+#else
       int DM2LC = 1;
       for (int lev=1; lev<=maxLevel; lev++) {
 	if (lev==maxLevel) DM2LC = DP2P;
@@ -230,6 +262,7 @@ namespace exafmm {
 	  Local[i+levelOffset] += L;
 	}
       }
+#endif
       stop("M2L");
 
       start("L2L");
@@ -318,10 +351,14 @@ namespace exafmm {
                     for (jrX[2]=jrXmin[2]; jrX[2]<=jrXmax[2]; jrX[2]++) {
                       for (jrX[1]=jrXmin[1]; jrX[1]<=jrXmax[1]; jrX[1]++) {
                         for (jrX[0]=jrXmin[0]; jrX[0]<=jrXmax[0]; jrX[0]++) {
-                          vec3 Xj;
-                          getCenter(Xj,jrX,maxLevel);
-                          P2P(Ibodies,Leafs[i].begin,Leafs[i].end,Xi,
-                              Jbodies,Leafs[j].begin,Leafs[j].end,Xj,R,periodic);
+                          if(irX[0]-DP2P <= jrX[0] && jrX[0] <= irX[0]+DP2P &&
+                             irX[1]-DP2P <= jrX[1] && jrX[1] <= irX[1]+DP2P &&
+                             irX[2]-DP2P <= jrX[2] && jrX[2] <= irX[2]+DP2P) {
+                            vec3 Xj;
+                            getCenter(Xj,jrX,maxLevel);
+                            P2P(Ibodies,Leafs[i].begin,Leafs[i].end,Xi,
+                                Jbodies,Leafs[j].begin,Leafs[j].end,Xj,R,periodic);
+                          }
                         }
                       }
                     }
