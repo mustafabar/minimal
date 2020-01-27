@@ -1,7 +1,8 @@
 kernel:
 	icpc -I. -Wfatal-errors -fopenmp -mavx -O3 -c -o kernel.o kernel.cxx
 	icpc -Wfatal-errors -fopenmp -mavx -O3 kernel.o -lmpi_cxx
-	./a.out 3
+	./a.out -2
+	./a.out -3
 
 serial:
 	icpc -I. -Wfatal-errors -fopenmp -mavx -O3 -c -o fmm.o fmm.cxx

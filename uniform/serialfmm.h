@@ -244,6 +244,9 @@ namespace exafmm {
 	  ivec3 jXmin = (max(nxmin,(iX >> 1) - 1) << 1);
 	  ivec3 jXmax = (min(nxmax,(iX >> 1) + 1) << 1) + 1;
 	  ivec3 jX;
+          if (i==165&&lev==3) {
+            std::cout << "M2L before: " << std::fixed << std::setprecision(9) << Local[i+levelOffset][1] << std::endl;
+          }
 	  for (jX[2]=jXmin[2]; jX[2]<=jXmax[2]; jX[2]++) {
 	    for (jX[1]=jXmin[1]; jX[1]<=jXmax[1]; jX[1]++) {
 	      for (jX[0]=jXmin[0]; jX[0]<=jXmax[0]; jX[0]++) {
@@ -260,6 +263,9 @@ namespace exafmm {
 	    }
 	  }
 	  Local[i+levelOffset] += L;
+          if (i==165&&lev==3) {
+            std::cout << "M2L after : " << std::fixed << std::setprecision(9) << Local[i+levelOffset][1] << std::endl;
+          }
 	}
       }
 #endif
@@ -281,7 +287,7 @@ namespace exafmm {
 	  vec3 dX;
 	  for_3d dX[d] = iX[d] * radius;
           if (i==165&&lev==3) {
-            std::cout << std::fixed << std::setprecision(9) << Local[c][1] << std::endl;
+            //std::cout << "L2L before: " << std::fixed << std::setprecision(9) << Local[c][1] << std::endl;
           }
           L2L(dX,Local[p],Local[c]);
 	}
@@ -312,7 +318,7 @@ namespace exafmm {
                 for_3d dX[d] = Jbodies[b][d] - X[d];
                 L2P(dX,R,L,Ibodies[b]);
               }
-              if (i==385&&jX[0]==1&&jX[1]==4&&jX[2]==3) std::cout << std::fixed << std::setprecision(9) << Ibodies[4] << std::endl;
+              //if (i==385&&jX[0]==1&&jX[1]==4&&jX[2]==3) std::cout << j << " " << std::fixed << std::setprecision(9) << Ibodies[4] << std::endl;
             }
           }
 	}
