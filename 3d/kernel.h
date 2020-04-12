@@ -149,6 +149,41 @@ namespace exafmm {
     }
   }
 
+  void P2P(Cell * Ci, Cell * Cj, int nthread, int nthreads) {
+    Body * Bi = Ci->BODY;
+    Body * Bj = Cj->BODY;
+    int ni = Ci->NBODY;
+    int sz = ni / nthreads;
+    int rem = ni % nthreads;
+    int ni0 = nthread * sz;
+    int ni1 = (nthread == nthreads - 1)? sz + rem : sz;
+    ni1 += ni0;
+    int nj = Cj->NBODY;
+    for (int i=ni0; i<ni1; i++) {
+      real_t pot = 0;
+      real_t ax = 0;
+      real_t ay = 0;
+      real_t az = 0;
+      for (int j=0; j<nj; j++) {
+        for (int d=0; d<3; d++) dX[d] = Bi[i].X[d] - Bj[j].X[d];
+        real_t R2 = norm(dX);
+        if (R2 != 0) {
+          real_t invR2 = 1.0 / R2;
+          real_t invR = Bj[j].q * sqrt(invR2);
+          for (int d=0; d<3; d++) dX[d] *= invR2 * invR;
+          pot += invR;
+          ax += dX[0];
+          ay += dX[1];
+          az += dX[2];
+        }
+      }
+      Bi[i].p += pot;
+      Bi[i].F[0] -= ax;
+      Bi[i].F[1] -= ay;
+      Bi[i].F[2] -= az;
+    }
+  }
+
   void P2M(Cell * C) {
     complex_t Ynm[P*P], YnmTheta[P*P];
     for (Body * B=C->BODY; B!=C->BODY+C->NBODY; B++) {
@@ -223,7 +258,7 @@ namespace exafmm {
       }
     }
   }
-
+  
   void L2L(Cell * Cj) {
     complex_t Ynm[P*P], YnmTheta[P*P];
     for (Cell * Ci=Cj->CHILD; Ci!=Cj->CHILD+Cj->NCHILD; Ci++) {
