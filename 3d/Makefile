@@ -2,7 +2,7 @@ XITAO_HOME=/home/musabdu/Repos/xitao/
 include ${XITAO_HOME}/makefile.sched
 
 CXX = g++ 
-//CXXFLAGS+= -DUSE_XITAO
+#CXXFLAGS+= -DUSE_XITAO
 CXXFLAGS+= -g -O3 -Wall -Wfatal-errors -fopenmp -I${XITAO_HOME}/include 
 LDFLAGS = -L${XITAO_HOME}/lib -lxitao
 
