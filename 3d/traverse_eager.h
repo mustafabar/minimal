@@ -86,6 +86,39 @@ namespace exafmm {
     gotao_push(parent, 0);
     gotao_fini();
   }
+
+  class downwardPass_TAO : public AssemblyTask {
+  public:
+    Cell* Cj;
+    bool spawn_task;
+    downwardPass_TAO(Cell* _cj, bool _spawn) : AssemblyTask(1, _spawn), Cj(_cj), spawn_task(_spawn) {
+      //no_mold = true;
+    }
+    void execute(int nthread) {
+      if(spawn_task && nthread != leader) return;
+      L2L(Cj);                                                    // L2L kernel
+      if (Cj->NCHILD==0) L2P(Cj);                                 // L2P kernel
+      for (Cell * Ci=Cj->CHILD; Ci!=Cj->CHILD+Cj->NCHILD; Ci++) { // Loop over child cells
+        if(Ci->NBODY > 100) {
+          downwardPass_TAO* tao = new downwardPass_TAO(Ci, true);
+          gotao_push(tao, rand()%gotao_nthreads);
+        } else {
+          downwardPass_TAO* tao = new downwardPass_TAO(Ci, false);
+          tao->execute(nthread);
+        }
+      }  
+    }
+    void cleanup() { }
+  };
+
+  void downwardPass(Cells & cells) {
+    gotao_init();
+    downwardPass_TAO* parent = new downwardPass_TAO(&cells[0], true);
+    gotao_start(); 
+    gotao_push(parent, 0);
+    gotao_fini();
+  }
+
 }
 #endif
 namespace exafmm {
@@ -138,8 +171,6 @@ namespace exafmm {
     horizontalPass(&icells[0], &jcells[0]);                     // Pass root cell to recursive call
   }
 
-#endif
-
   //! Recursive call to pre-order tree traversal for downward pass
   void downwardPass(Cell * Cj) {
     L2L(Cj);                                                    // L2L kernel
@@ -157,7 +188,7 @@ namespace exafmm {
 #pragma omp single nowait                                       // Start OpenMP single region with nowait
     downwardPass(&cells[0]);                                    // Pass root cell to recursive call
   }
-
+#endif
   //! Direct summation
   void direct(Bodies & bodies, Bodies & jbodies) {
     Cells cells(2);                                             // Define a pair of cells to pass to P2P kernel
